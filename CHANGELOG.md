@@ -6,7 +6,101 @@ versioning follows [SemVer](https://semver.org/).
 
 ## [Unreleased]
 
+### Security
+
+- **Server-side session revocation via session epochs (SEC-01, schema v4).**
+  The 7-day stateless `akentros_token` JWT had no server-side kill switch:
+  logout only deleted the browser cookie, a stolen token stayed valid until
+  expiry, and the only global off-switch was rotating `JWT_SECRET` (which
+  logs out every user). Schema migration v4 adds `users.session_epoch`
+  (default 0; tokens issued before the upgrade carry no `epv` claim and are
+  treated as epoch 0, so existing sessions survive the upgrade). The JWT
+  contract gains exactly one fixed claim — `epv` — bound to the account's
+  epoch at signing time (still no arbitrary claims; malformed `epv` values
+  invalidate the whole token), and `authenticateToken` rejects tokens whose
+  `epv` diverges from `users.session_epoch` with `401 session_revoked`.
+  Revoking is `UPDATE users SET session_epoch = session_epoch + 1`, exposed
+  as `node apps/gateway/scripts/revokeAkentrosSessions.ts --all | --id <user>
+  | --email <addr>` (also `npm run revoke:sessions -- --all` from
+  `apps/gateway`; the script applies v4
+  idempotently first, and the same `revokeAkentrosSessions` util is the hook
+  for the future change-password / admin-block flows). Bootstrap order
+  changed: `ensureUsersSchema` now runs before the versioned migrations
+  (v4 ALTERs `users`, mirroring how v1's partial indexes depend on
+  `ledger_entries` existing). Pinned by the v3→v4 upgrade test in
+  `packages/core/tests/schema-migration.test.ts` and the epoch
+  mismatch / match / legacy-token cases in
+  `apps/gateway/tests/sessionEpoch.test.ts`.
+- **Untrusted-header rate-limit identity branch now warns (SEC-02).** When
+  no socket address is injected and `AKENTROS_TRUST_PROXY` is unset, the
+  auth rate limiter falls back to the spoofable `cf-connecting-ip` header
+  (behavior kept: falling back to the shared `"local"` bucket would
+  reintroduce the SN-2 site-wide lockout). That branch previously bypassed
+  the one-time `akentros_auth_rate_limit_identity_degraded` alert —
+  embedders of `createApp()` (test harnesses, sidecars) were invisible to
+  operators. It now emits the one-time
+  `akentros_auth_rate_limit_identity_untrusted_header` warning with an
+  integration hint; pinned by `apps/gateway/tests/rateLimit.test.ts`.
+- **Fixed-window rate-limit boundary documented (SEC-03, accepted).** The
+  fixed-window counter allows up to `2 × max` requests across a window
+  boundary (60/15 min login limit → theoretical 120 in seconds). With the
+  8-character password minimum and PBKDF2-SHA256 at 600k iterations this
+  does not weaken the brute-force defense target; eliminating it would
+  need a multi-row sliding-window store plus a new forward-only migration.
+  Documented as a known boundary in the header of
+  `apps/gateway/src/middleware/rateLimit.ts` and in
+  `docs/DEPLOYMENT.md` (new "Session revocation" and "Rate-limit window
+  boundary" subsections).
+
 ### Added
+
+- **OpenAI Responses API bridge (`ECO-04`).** `POST /api/ai/v1/responses`
+  now serves a bridged subset of the OpenAI Responses API on top of the chat
+  pipeline: `model`, `input` (string or message items, including
+  `input_text`/`input_image` parts on vision models), `instructions`,
+  `stream`, `max_output_tokens`, `temperature` and `top_p`. Execution,
+  provider routing, the reserve→settle→refund ledger, idempotency and
+  metrics are shared with chat completions and labeled `endpoint='responses'`.
+  Non-streaming results are wrapped into a Responses object
+  (`finish_reason=length` → `status=incomplete` with
+  `incomplete_details.reason=max_output_tokens`); streaming responses are
+  translated into the `response.*` SSE event sequence
+  (`response.created` → `response.output_text.delta` → `response.completed`/
+  `response.incomplete`) with in-band `error` events on mid-stream failures.
+  Advanced Responses parameters (`background`, `previous_response_id`,
+  `tools`, `reasoning`, `text`, `truncation`, …) return
+  `400 unsupported_feature`; neutral ones (`user`, `store`, `metadata`,
+  `service_tier`) are tolerated and dropped. New keys gain the `responses`
+  scope by default and existing `chat:completions` keys keep working. The
+  README and `docs/openapi.yaml` now carry a full OpenAI compatibility
+  matrix (models / chat / embeddings / responses supported; audio, images,
+  moderations, files, batches, realtime and legacy completions explicitly
+  not), and the public path set is pinned by contract tests.
+
+- **Structured outputs and JSON mode (`ECO-01`).** `response_format` is no
+  longer rejected wholesale: `{type:"text"}` is silently accepted (the
+  default), `json_object` is forwarded for models with the `json_mode`
+  capability, and `json_schema` — validated for shape, depth (64) and size
+  (64 KB) — is forwarded verbatim for models with the new
+  `structured_outputs` capability (`openai`, `google`, `xai` routes; Anthropic
+  models stay false because the Messages API has no response_format). Models
+  without the capability return `400 unsupported_feature` with
+  `param=response_format`. Catalog revision `2026-10-11.1` adds
+  `structured_outputs` to every model and flips `json_mode` per provider
+  documentation.
+
+- **Vision (multimodal) message input (`ECO-03`).** Models with
+  `capabilities.vision: true` (GPT-6 Astra, GPT-5.2, Claude 4.x, Gemini 3.x,
+  Grok 4.6, Kimi K3, GLM-5.3 Flash, Qwen 3.8 Max/Flash — aligned with the
+  console catalog's `input_modalities`) accept user messages whose `content`
+  is an array of `text` / `image_url` parts. Image URLs must use `https://`
+  or `data:image/` sources (1-8k chars, at most 64 parts per message, 32 MB
+  body cap unchanged); every other role keeps the string-or-null contract and
+  non-vision models reject parts. OpenAI-compatible upstreams receive the
+  parts verbatim; the Anthropic adapter converts them into image source
+  blocks (`https://` → url source, base64 data URLs → base64 source with the
+  parsed media type). Each image part adds a conservative flat 1,000 input
+  tokens to the reservation estimate.
 
 - **Serverless PostgreSQL support across deployment platforms.** Setting
   `DATABASE_URL` to a `postgres://` string now works beyond long-lived
@@ -82,6 +176,24 @@ versioning follows [SemVer](https://semver.org/).
   `akentros_process_uptime_seconds` and a live `akentros_db_up` probe. Set
   `AKENTROS_METRICS_ENABLED=false` to opt out. The metrics module uses no
   Node-specific APIs and no dependencies; Workers imports remain inert.
+
+### Changed
+
+- **Neutral OpenAI parameters are tolerated instead of rejected
+  (`ECO-02`).** `user`, `store`, `metadata` and `service_tier` — common in
+  OpenAI SDK defaults and official examples — are accepted and dropped
+  (never forwarded, never fingerprinted), matching LiteLLM/one-api's ignore
+  posture. Semantically meaningful parameters (`logprobs`, `top_logprobs`,
+  `parallel_tool_calls`, `functions`, `function_call`) still return
+  `400 unsupported_parameter` naming the field.
+- **`n > 1` now fails with a distinguishable error (`ECO-05`).** Multiple
+  choices remain unsupported, but the rejection is
+  `400 unsupported_feature` ("send separate requests") instead of an opaque
+  integer-range message; `n = 1` is still forwarded.
+- **Dropped the stale root `sharp` override (`ECO-06`).** The pin to
+  `^0.35.5` was dead configuration: miniflare resolves the same version on
+  its own, so `npm ls sharp` output and the lockfile are unchanged after
+  removal.
 
 ### Fixed
 

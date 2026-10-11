@@ -43,7 +43,9 @@ try {
   const inFlightReconciled = await reconcileAkentrosProviderInFlight(process.env)
     .then((reconciled: Array<{ credentialId: string }>) => reconciled.length)
     .catch(() => 0);
-  console.log(`Akentros provider in-flight reconciliation: ${JSON.stringify({ reconciled: inFlightReconciled })}`);
+  console.log(
+    `Akentros provider in-flight reconciliation: ${JSON.stringify({ reconciled: inFlightReconciled })}`,
+  );
 } catch (error: any) {
   console.error("Akentros reconciliation failed:", error?.code || error?.name || "unknown");
   process.exitCode = 1;

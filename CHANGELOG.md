@@ -179,6 +179,24 @@ versioning follows [SemVer](https://semver.org/).
 
 ### Changed
 
+- **Console theme repainted to a dark monochrome black/white/gray palette.** The
+  developer console design system (`apps/console/src/index.css`) previously
+  used a light blue-accent theme (`#2563eb` on white) with green/red/blue
+  semantic colors and slate-tinted neutrals. All CSS custom properties are
+  now achromatic on a dark base: page/surface neutrals run `#0a0a0a` →
+  `#141414` → `#1a1a1a` → `#242424` with gray hairlines, text is
+  white-on-black (`#f5f5f5` / `#a8a8a8` / `#7a7a7a`), and the accent is
+  near-white (`#fafafa`, hover `#ffffff`) with white-alpha soft/line tints —
+  primary buttons render white with black label text. Semantic status colors
+  are expressed as gray levels (error brightest `#ffffff`, success
+  `#d6d6d6`, info `#a8a8a8`) so badges and alerts stay distinguishable
+  without hue. Hardcoded values elsewhere in the stylesheet
+  (`::selection`, badge/alert borders, auth-page gradient, dialog/drawer
+  backdrops, shadows, code-block tints, demo badge) were flipped in place;
+  the favicon `brand/akentros/models/akentros.svg` now renders in light
+  gray and the static `api-404.html` already matches the dark base.
+  Third-party provider logos under `public/brand/akentros/providers/` are
+  trademarks and are intentionally untouched.
 - **Neutral OpenAI parameters are tolerated instead of rejected
   (`ECO-02`).** `user`, `store`, `metadata` and `service_tier` — common in
   OpenAI SDK defaults and official examples — are accepted and dropped

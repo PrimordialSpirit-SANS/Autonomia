@@ -2,7 +2,7 @@
 
 本專案的 `apps/console/public/brand/akentros/` 包含:
 
-1. **自有標誌** `models/akentros.svg`(Akentros 信號燈塔標誌,MIT 授權隨本專案散布)。
+1. **自有標誌** `models/akentros.svg`(Akentros 蜂巢節點網路標誌,MIT 授權隨本專案散布)。
 2. **官方第三方圖示** `providers/*.svg`、`providers/*.png`——自 2026-09-14 起,
    模型目錄改用各家**官方品牌圖示**,已從官方網站或權威公開來源下載為本地檔案,
    供自架控制台離線顯示。`providers/manifest.v1.json` 的

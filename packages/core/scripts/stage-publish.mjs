@@ -33,7 +33,7 @@
 import { spawnSync } from "node:child_process";
 import { cp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const pkgRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const stageDir = join(pkgRoot, ".publish-stage");
@@ -102,7 +102,7 @@ for (const target of Object.values(stagedManifest.exports)) {
 let imported = 0;
 for (const file of await walk(join(stageDir, "dist"))) {
   if (!file.endsWith(".js")) continue;
-  await import(file);
+  await import(pathToFileURL(file).href); // pathToFileURL: Windows ESM rejects C:\ paths
   imported += 1;
 }
 

@@ -42,7 +42,7 @@ import { spawnSync } from "node:child_process";
 import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { dirname, join, relative, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const pkgRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const srcDir = join(pkgRoot, "src");
@@ -120,10 +120,11 @@ for (const file of await walk(distDir)) {
 }
 
 // 4. smoke-import every built module from dist — a broken strip or specifier
-//    rewrite fails the build loudly instead of shipping.
+//    rewrite fails the build loudly instead of shipping. pathToFileURL:
+//    Windows ESM dynamic import rejects plain absolute paths (C:\…).
 for (const file of await walk(distDir)) {
   if (!file.endsWith(".js")) continue;
-  await import(file);
+  await import(pathToFileURL(file).href);
 }
 console.log(
   `core dist build: ${sourceFiles} modules, ` +

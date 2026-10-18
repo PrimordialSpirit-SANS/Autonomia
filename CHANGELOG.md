@@ -6,6 +6,26 @@ versioning follows [SemVer](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- **Release pipeline workflow lands (ECO-SUPPLY-3 completion).**
+  `.github/workflows/release.yml` — pushing an annotated `v*` tag runs the
+  CI gauntlet (`verify`), hard-fails if any of the four workspace manifests
+  diverges from the tag (`guard-version-alignment`), stages + publishes
+  `@akentros/core` to npm with `NPM_TOKEN` (`publish-npm`), builds and pushes
+  the `gateway`/`console` Docker targets to GHCR with version + `latest`
+  tags and a lowercased owner path (`publish-ghcr`), and opens the GitHub
+  Release with generated notes plus an npm registry availability probe
+  (`github-release`). Stage 1 (#43) documented this pipeline in the
+  CHANGELOG/docs before the `workflow`-scoped files could land; this commit
+  is the file-level completion. Tag `v0.1.0` only after this lands
+  (docs/RELEASING.md).
+- **CI publish-face dry-run guardrail (ECO-SUPPLY-1).** A CI step assembles
+  the staged publish artifact with the same `stage` pipeline the release
+  job uses and pins the tarball shape: `dist/billing.js` present, no `src/`
+  sources inside. Shape drift fails the build before anything can be
+  published; no upload happens in CI.
+
 ## [0.1.0] - 2026-10-15
 
 ### Security

@@ -36,6 +36,23 @@ jobs:
       - name: Build console
         run: npm run build
 
+      # ECO-SUPPLY-1 — publish-face dry-run guardrail: assemble the staged
+      # artifact with the same pipeline the release workflow uses, then pin
+      # the tarball shape (dist/ output present, src/ sources absent). No
+      # upload happens here; a shape drift fails the build before anything
+      # can ever be published.
+      - name: Publish artifact sanity (stage dry-run, no upload)
+        run: |
+          set -euo pipefail
+          npm run stage --workspace @akentros/core
+          TARBALL="$(npm pack --pack-destination "$RUNNER_TEMP" packages/core/.publish-stage | tail -n1)"
+          tar -tzf "$RUNNER_TEMP/$TARBALL" > "$RUNNER_TEMP/tarball-listing.txt"
+          grep -qx "package/dist/billing.js" "$RUNNER_TEMP/tarball-listing.txt" \
+            || { echo "::error::staged tarball is missing dist/billing.js"; exit 1; }
+          if grep -qx "package/src/billing.ts" "$RUNNER_TEMP/tarball-listing.txt"; then
+            echo "::error::staged tarball leaked src/ sources"; exit 1
+          fi
+
       # gitleaks-action@v2 requires a paid license for organization-owned
       # repositories (it can never pass here), so run the same open-source
       # gitleaks binary directly against the full history with the repo's

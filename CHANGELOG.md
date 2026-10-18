@@ -26,6 +26,23 @@ versioning follows [SemVer](https://semver.org/).
   sources inside. Shape drift fails the build before anything can be
   published; no upload happens in CI.
 
+### Fixed
+
+- **Windows: core dist build smoke-import now uses `file://` URLs
+  (ECO-SUPPLY-1 follow-up).** `packages/core/scripts/build-dist.mjs` and
+  `packages/core/scripts/stage-publish.mjs` passed absolute paths to dynamic
+  `import()`, which the Windows ESM loader rejects
+  (`ERR_UNSUPPORTED_ESM_URL_SCHEME`) — the repo-standard root `npm run build`
+  failed on the smoke-import step for Windows contributors. Both scripts now
+  convert via `pathToFileURL`; Linux/macOS behavior is unchanged.
+- **nginx console proxy body limit aligned with the gateway contract
+  (ECO-SUPPLY-2 follow-up).** `client_max_body_size` was 20m while the
+  gateway's contract-tested public body limit is 32MiB
+  (`AKENTROS_PUBLIC_BODY_MAX_BYTES`), so 20–32 MiB bodies (e.g. base64 vision
+  parts) were rejected with a raw 413 by nginx before the gateway's precise
+  error path could run. The proxy guard is now 32m — never tighter than the
+  gateway contract.
+
 ## [0.1.0] - 2026-10-15
 
 ### Security

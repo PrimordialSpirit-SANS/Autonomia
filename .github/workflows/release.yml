@@ -1,0 +1,186 @@
+name: Release
+
+# ECO-SUPPLY-3 — tag-driven release pipeline. Runbook: docs/RELEASING.md.
+#
+# Pushing an annotated `v*` tag runs, in order:
+#   1. verify                   — the same gauntlet as CI
+#   2. guard-version-alignment  — every workspace manifest must equal the tag
+#   3. publish-npm              — stage + publish @akentros/core (NPM_TOKEN)
+#   4. publish-ghcr             — gateway/console images, version + latest
+#   5. github-release           — generated notes + npm registry probe
+#
+# One-time platform prerequisites (docs/RELEASING.md §0): the `NPM_TOKEN`
+# Actions secret. The `verify` job mirrors ci.yml's `ci` job on purpose —
+# keep the two step lists in sync.
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint and format check (Biome)
+        run: npm run lint
+
+      - name: Typecheck (all workspaces)
+        run: npm run typecheck
+
+      - name: Tests (all workspaces, incl. gateway)
+        run: npm test
+
+      - name: Dependency audit (high severity fails)
+        run: npm audit --audit-level=high
+
+      - name: Build console
+        run: npm run build
+
+      # Same rationale as ci.yml: the gitleaks-action@v2 App needs a paid
+      # license for organization-owned repos, so run the OSS binary directly
+      # against the full history with the repo's own .gitleaks.toml ruleset.
+      - name: Secret scan (gitleaks)
+        run: |
+          set -euo pipefail
+          GITLEAKS_VERSION="8.30.1"
+          curl -fsSL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" -o /tmp/gitleaks.tgz
+          tar -xzf /tmp/gitleaks.tgz -C /tmp gitleaks
+          /tmp/gitleaks git . --redact --no-banner
+
+  guard-version-alignment:
+    runs-on: ubuntu-latest
+    needs: [verify]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Every workspace manifest must equal the tag
+        run: |
+          set -euo pipefail
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          FAILED=0
+          for MANIFEST in package.json packages/core/package.json apps/gateway/package.json apps/console/package.json; do
+            VERSION="$(node -p "require('./${MANIFEST}').version")"
+            if [ "$VERSION" != "$TAG_VERSION" ]; then
+              echo "::error file=${MANIFEST}::version ${VERSION} diverges from tag ${GITHUB_REF_NAME} (expected ${TAG_VERSION})"
+              FAILED=1
+            fi
+          done
+          exit "$FAILED"
+
+  publish-npm:
+    runs-on: ubuntu-latest
+    needs: [verify, guard-version-alignment]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          registry-url: https://registry.npmjs.org
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Assembles packages/core/.publish-stage (dist build via the amaro
+      # type-stripper + the derived exports→dist manifest). The in-repo
+      # manifest stays private: true, so nothing but the staged directory
+      # can ever be published — see packages/core/scripts/stage-publish.mjs.
+      - name: Stage publishable artifact
+        run: npm run stage --workspace @akentros/core
+
+      - name: Publish staged artifact to npm
+        run: npm publish packages/core/.publish-stage
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  publish-ghcr:
+    runs-on: ubuntu-latest
+    needs: [verify, guard-version-alignment]
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # GHCR requires lowercase image paths; the owner may not be.
+      - name: Compute lowercased image prefix
+        id: image
+        run: echo "prefix=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push gateway image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: gateway
+          push: true
+          tags: |
+            ${{ steps.image.outputs.prefix }}/gateway:${{ github.ref_name }}
+            ${{ steps.image.outputs.prefix }}/gateway:latest
+          cache-from: type=gha,scope=gateway
+          cache-to: type=gha,scope=gateway,mode=max
+
+      - name: Build and push console image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: console
+          push: true
+          tags: |
+            ${{ steps.image.outputs.prefix }}/console:${{ github.ref_name }}
+            ${{ steps.image.outputs.prefix }}/console:latest
+          cache-from: type=gha,scope=console
+          cache-to: type=gha,scope=console,mode=max
+
+  github-release:
+    runs-on: ubuntu-latest
+    needs: [publish-npm, publish-ghcr]
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      # RELEASING.md §3: the release is only "done" when the registry
+      # surfaces the published version. npm is the slow side, so probe it
+      # here and warn (not fail) if propagation outlasts the window.
+      - name: npm registry availability probe (warn only)
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#v}"
+          for ATTEMPT in $(seq 1 12); do
+            if npm view "@akentros/core@${VERSION}" version >/dev/null 2>&1; then
+              echo "@akentros/core@${VERSION} is visible on the npm registry."
+              exit 0
+            fi
+            echo "attempt ${ATTEMPT}/12: not surfaced yet; waiting 10s…"
+            sleep 10
+          done
+          echo "::warning::@akentros/core@${VERSION} not visible on the npm registry after 2 minutes — publish propagation may be slow. Verify manually (docs/RELEASING.md §3)."
+
+      - name: Open GitHub Release with generated notes
+        run: gh release create "$GITHUB_REF_NAME" --generate-notes --verify-tag
+        env:
+          GH_TOKEN: ${{ github.token }}

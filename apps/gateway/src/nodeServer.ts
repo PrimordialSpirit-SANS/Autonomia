@@ -8,12 +8,12 @@ import { fileURLToPath } from "node:url";
 import { serve } from "@hono/node-server";
 import dotenv from "dotenv";
 import { createApp } from "./app.ts";
-import type { AkentrosRuntimeEnv } from "./types.ts";
-import { assertAkentrosConfigBundleAtStartup } from "./utils/configGuard.ts";
-import { dbQuery, installNodeAkentrosDbAdapter } from "./utils/db.ts";
-import { logAkentrosEvent } from "./utils/logger.ts";
-import { runAkentrosMaintenance } from "./utils/maintenance.ts";
-import { akentrosMetricsHandler } from "./utils/metrics.ts";
+import type { AutonomiaRuntimeEnv } from "./types.ts";
+import { assertAutonomiaConfigBundleAtStartup } from "./utils/configGuard.ts";
+import { dbQuery, installNodeAutonomiaDbAdapter } from "./utils/db.ts";
+import { logAutonomiaEvent } from "./utils/logger.ts";
+import { runAutonomiaMaintenance } from "./utils/maintenance.ts";
+import { autonomiaMetricsHandler } from "./utils/metrics.ts";
 
 // .dev.vars 相對於此檔;dotenv/config 預設只讀 .env,這裡補載 .dev.vars。
 dotenv.config({
@@ -24,24 +24,34 @@ dotenv.config({
 
 // Node 自架部署:啟動時安裝 node:sqlite adapter(Workers 部署由 DO 建構子
 // 安裝 storage.sql adapter,見 src/worker/)。
-await installNodeAkentrosDbAdapter();
+await installNodeAutonomiaDbAdapter();
 
-const env = process.env as AkentrosRuntimeEnv;
+const env = process.env as AutonomiaRuntimeEnv;
 
-const port = Number(env.AKENTROS_PORT || env.PORT || 8787);
+const port = Number(env.AUTONOMIA_PORT || env.PORT || 8787);
 
 // 綁定位址:預設僅接上 loopback(127.0.0.1),避免自架部署一啟動就暴露在
 // 所有網路介面(0.0.0.0)。需要對外服務——反向代理、容器、叢集——時,明確
-// 設定 AKENTROS_HOST(或 HOST)=0.0.0.0 /特定介面位址,並自行確保前方有
+// 設定 AUTONOMIA_HOST(或 HOST)=0.0.0.0 /特定介面位址,並自行確保前方有
 // 適當的存取控制。
-const host = String(env.AKENTROS_HOST || env.HOST || "127.0.0.1").trim() || "127.0.0.1";
+const host = String(env.AUTONOMIA_HOST || env.HOST || "127.0.0.1").trim() || "127.0.0.1";
 
-const intervalMs = Number(env.AKENTROS_MAINTENANCE_INTERVAL_MS) || 30 * 60_000;
+const intervalMs = Number(env.AUTONOMIA_MAINTENANCE_INTERVAL_MS) || 30 * 60_000;
 
 // 關機緩衝:等在途請求自然完成;逾時後主動斷開仍在串流的連線(SSE 等)。
-const SHUTDOWN_GRACE_MS = 3_000;
+// 預設 3 秒夠短促重啟;但上游推論串流可達 route.timeout_ms(上限 240s),
+// 滾動部署(k8s / compose 重啟)若希望串流 drain 完再換版,可調高
+// AUTONOMIA_SHUTDOWN_GRACE_MS(例:60000)。緩衝必須小於硬上限。
+function positiveEnvMs(name: string, fallback: number): number {
+  const parsed = Number(env[name]);
+  return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : fallback;
+}
+const SHUTDOWN_GRACE_MS = positiveEnvMs("AUTONOMIA_SHUTDOWN_GRACE_MS", 3_000);
 // 關機硬上限:無論斷開流程結果如何都強制退出,避免掛死。
-const SHUTDOWN_HARD_TIMEOUT_MS = 10_000;
+const SHUTDOWN_HARD_TIMEOUT_MS = Math.max(
+  SHUTDOWN_GRACE_MS + 2_000,
+  positiveEnvMs("AUTONOMIA_SHUTDOWN_HARD_TIMEOUT_MS", 10_000),
+);
 
 function socketRemoteAddress(incoming: unknown): string {
   try {
@@ -55,21 +65,21 @@ function socketRemoteAddress(incoming: unknown): string {
 // Hono app 只建一次:每個請求重建整個 app(路由註冊、中介層組裝)只是
 // 配置與 GC 的浪費。env 為 process.env 的活引用,設定仍即時生效。
 // FN-7 fix:啟動時強制驗證設定檔(原本只有測試會驗證),壞設定 fail-fast。
-assertAkentrosConfigBundleAtStartup();
+assertAutonomiaConfigBundleAtStartup();
 const app = createApp(env);
 
 // /metrics 是 Node 拓撲限定的維運端點(Prometheus 文字格式):程序內計數器
 // 對 Workers 隔離區沒有意義,那邊的觀測走 Cloudflare observability。
-// AKENTROS_METRICS_ENABLED=false 可關閉;與 /healthz 相同,不在
-// AKENTROS_ENABLED fail-closed 閘門管轄範圍。
+// AUTONOMIA_METRICS_ENABLED=false 可關閉;與 /healthz 相同,不在
+// AUTONOMIA_ENABLED fail-closed 閘門管轄範圍。
 if (
-  String(env.AKENTROS_METRICS_ENABLED ?? "true")
+  String(env.AUTONOMIA_METRICS_ENABLED ?? "true")
     .trim()
     .toLowerCase() !== "false"
 ) {
   app.get(
     "/metrics",
-    akentrosMetricsHandler(() =>
+    autonomiaMetricsHandler(() =>
       dbQuery(env, "SELECT 1 AS ok").then(
         () => true,
         () => false,
@@ -81,12 +91,12 @@ if (
 const server = serve(
   {
     // 第二個參數是 @hono/node-server 的連線綁定({ incoming, outgoing })。
-    // 把 socket 來源位址以 AKENTROS_REMOTE_ADDR 注入每請求 env 供 auth 限流
+    // 把 socket 來源位址以 AUTONOMIA_REMOTE_ADDR 注入每請求 env 供 auth 限流
     // 使用(見 routes/auth.ts);其餘照抄 env,行為與其他部署一致。
     fetch: (request, binding) => {
       const perRequestEnv = {
         ...env,
-        AKENTROS_REMOTE_ADDR: socketRemoteAddress((binding as { incoming?: unknown } | undefined)?.incoming),
+        AUTONOMIA_REMOTE_ADDR: socketRemoteAddress((binding as { incoming?: unknown } | undefined)?.incoming),
       };
       return app.fetch(request, perRequestEnv as unknown as typeof env);
     },
@@ -94,10 +104,12 @@ const server = serve(
     hostname: host,
   },
   (info) => {
-    logAkentrosEvent("info", "akentros_gateway_listening", {
+    logAutonomiaEvent("info", "autonomia_gateway_listening", {
       address: info.address,
       port: info.port,
       maintenanceIntervalMinutes: Math.round(intervalMs / 60_000),
+      shutdownGraceMs: SHUTDOWN_GRACE_MS,
+      shutdownHardTimeoutMs: SHUTDOWN_HARD_TIMEOUT_MS,
     });
   },
 );
@@ -111,8 +123,8 @@ server.on("connection", (socket) => {
 });
 
 const maintenanceTimer = setInterval(() => {
-  runAkentrosMaintenance(env).catch((error: any) => {
-    logAkentrosEvent("error", "akentros_scheduled_maintenance_failed", {
+  runAutonomiaMaintenance(env).catch((error: any) => {
+    logAutonomiaEvent("error", "autonomia_scheduled_maintenance_failed", {
       errorCode: error?.code || error?.name || "unknown",
     });
   });

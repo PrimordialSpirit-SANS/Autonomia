@@ -1,28 +1,28 @@
-import type { AkentrosCredentialClaim } from "@akentros/core/providerPool";
+import type { AutonomiaCredentialClaim } from "@autonomia/core/providerPool";
 import {
-  claimConfiguredAkentrosProviderCredential,
-  createAkentrosProviderPoolStore,
-} from "@akentros/core/providerPool";
-import { PROVIDER_POOLS, requireProviderPool } from "@akentros/core/providers";
-import type { AkentrosRuntimeEnv } from "../types.ts";
+  claimConfiguredAutonomiaProviderCredential,
+  createAutonomiaProviderPoolStore,
+} from "@autonomia/core/providerPool";
+import { PROVIDER_POOLS, requireProviderPool } from "@autonomia/core/providers";
+import type { AutonomiaRuntimeEnv } from "../types.ts";
 import { ensureAiSchema } from "./aiSchema.ts";
-import { createAkentrosQuery } from "./db.ts";
+import { createAutonomiaQuery } from "./db.ts";
 
-const stores = new Map<string, ReturnType<typeof createAkentrosProviderPoolStore>>();
+const stores = new Map<string, ReturnType<typeof createAutonomiaProviderPoolStore>>();
 const syncPromises = new Map<string, Promise<unknown>>();
 
-function databaseKey(env: AkentrosRuntimeEnv) {
+function databaseKey(env: AutonomiaRuntimeEnv) {
   // SN-13 fix:與 rateLimit 的 limiterStoreKey 對齊,額外涵蓋
-  // AKENTROS_DB_PATH —— 單行程多 SQLite 路徑(測試情境)時,
+  // AUTONOMIA_DB_PATH —— 單行程多 SQLite 路徑(測試情境)時,
   // 只認 DATABASE_URL 會讓不同路徑共用同一個 store(錯的 query 閉包)。
-  return env?.DATABASE_URL?.trim() || env?.AKENTROS_DB_PATH?.trim() || "unconfigured-main";
+  return env?.DATABASE_URL?.trim() || env?.AUTONOMIA_DB_PATH?.trim() || "unconfigured-main";
 }
 
-async function ready(env: AkentrosRuntimeEnv) {
+async function ready(env: AutonomiaRuntimeEnv) {
   await ensureAiSchema(env);
   const key = databaseKey(env);
   if (!stores.has(key)) {
-    stores.set(key, createAkentrosProviderPoolStore(createAkentrosQuery(env)));
+    stores.set(key, createAutonomiaProviderPoolStore(createAutonomiaQuery(env)));
   }
   if (!syncPromises.has(key)) {
     syncPromises.set(
@@ -40,17 +40,17 @@ async function ready(env: AkentrosRuntimeEnv) {
   return stores.get(key)!;
 }
 
-export async function claimAkentrosProviderCredential(
-  env: AkentrosRuntimeEnv,
+export async function claimAutonomiaProviderCredential(
+  env: AutonomiaRuntimeEnv,
   route: { credential_pool: string; timeout_ms?: number },
   requestId: string,
   excludedCredentialIds: string[] = [],
-): Promise<AkentrosCredentialClaim | null> {
+): Promise<AutonomiaCredentialClaim | null> {
   const store = await ready(env);
   const pool = requireProviderPool(route.credential_pool);
   const environment: Record<string, string | undefined> = {};
   Object.assign(environment, globalThis.process?.env || {}, env || {});
-  return claimConfiguredAkentrosProviderCredential({
+  return claimConfiguredAutonomiaProviderCredential({
     store,
     pool,
     poolId: route.credential_pool,
@@ -62,9 +62,9 @@ export async function claimAkentrosProviderCredential(
   });
 }
 
-export async function releaseAkentrosProviderCredential(
-  env: AkentrosRuntimeEnv,
-  claim: Pick<AkentrosCredentialClaim, "leaseId" | "pool">,
+export async function releaseAutonomiaProviderCredential(
+  env: AutonomiaRuntimeEnv,
+  claim: Pick<AutonomiaCredentialClaim, "leaseId" | "pool">,
   outcome: unknown,
 ) {
   const store = await ready(env);
@@ -75,7 +75,7 @@ export async function releaseAkentrosProviderCredential(
 // credential 的 in_flight,回傳被修正的列。租約逾期未歸還(程序崩潰)後
 // in_flight 會高估到下一次 claim 才自癒;此函式讓 */30 維護週期得以提前
 // 歸零/歸真,不影響入場判定(權威是 claim 的 lease 子查詢)。
-export async function reconcileAkentrosProviderInFlight(env: AkentrosRuntimeEnv) {
+export async function reconcileAutonomiaProviderInFlight(env: AutonomiaRuntimeEnv) {
   const store = await ready(env);
   return store.reconcileInFlight();
 }

@@ -1,0 +1,451 @@
+{
+  "schema_version": 1,
+  "pricing_revision": "2026-10-11.1",
+  "updated_at": "2026-10-11",
+  "billing_disclaimer": "點數依實際輸入與輸出 Token 計算，每次請求至少扣 1 點。",
+  "models": [
+    {
+      "id": "autonomia/gpt-6-astra",
+      "display_name": "GPT-6 Astra",
+      "owner": "OpenAI",
+      "owner_brand_asset_id": "openai",
+      "description": "OpenAI 新世代旗艦「Astra」，2026 年 9 月公開發布，在長程代理任務與複雜推理上大幅超越前代；Autonomia 目前提供文字對話、串流與工具呼叫介面。",
+      "status": "available",
+      "capabilities": ["chat", "streaming", "reasoning", "tools"],
+      "input_modalities": ["text", "image"],
+      "output_modalities": ["text"],
+      "context_window_tokens": 1000000,
+      "max_output_tokens": 8192,
+      "provider_ids": ["openai"],
+      "tags": ["flagship", "reasoning", "agentic", "long-context"],
+      "official_docs_url": "https://platform.openai.com/docs/models/gpt-6-astra",
+      "billing": {
+        "input_usd_per_million_tokens": "10.00",
+        "output_usd_per_million_tokens": "50.01",
+        "minimum_charge_usd": "0.0001"
+      }
+    },
+    {
+      "id": "autonomia/gpt-5.2",
+      "display_name": "GPT-5.2",
+      "owner": "OpenAI",
+      "owner_brand_asset_id": "openai",
+      "description": "OpenAI GPT-5 系列的最新通用旗艦，主打專業工作場景的頂級推理與長上下文理解；Autonomia 目前提供文字對話、串流與工具呼叫介面。",
+      "status": "available",
+      "capabilities": ["chat", "streaming", "reasoning", "tools"],
+      "input_modalities": ["text", "image"],
+      "output_modalities": ["text"],
+      "context_window_tokens": 400000,
+      "max_output_tokens": 8192,
+      "provider_ids": ["openai"],
+      "tags": ["reasoning", "long-context", "agentic", "multilingual"],
+      "official_docs_url": "https://platform.openai.com/docs/models/gpt-5.2",
+      "billing": {
+        "input_usd_per_million_tokens": "1.26",
+        "output_usd_per_million_tokens": "10.02",
+        "minimum_charge_usd": "0.0001"
+      }
+    },
+    {
+      "id": "autonomia/gpt-5.2-codex",
+      "display_name": "GPT-5.2 Codex",
+      "owner": "OpenAI",
+      "owner_brand_asset_id": "openai",
+      "description": "OpenAI 最強的程式開發模型，以長程推理處理大型重構與代理式編碼任務；Autonomia 目前提供文字對話、串流與工具呼叫介面。",
+      "status": "available",
+      "capabilities": ["chat", "streaming", "reasoning", "tools"],
+      "input_modalities": ["text"],
+      "output_modalities": ["text"],
+      "context_window_tokens": 400000,
+      "max_output_tokens": 8192,
+      "provider_ids": ["openai"],
+      "tags": ["coding", "reasoning", "agentic"],
+      "official_docs_url": "https://platform.openai.com/docs/models/gpt-5.2-codex",
+      "billing": {
+        "input_usd_per_million_tokens": "1.26",
+        "output_usd_per_million_tokens": "10.02",
+        "minimum_charge_usd": "0.0001"
+      }
+    },
+    {
+      "id": "autonomia/claude-opus-4-8",
+      "display_name": "Claude Opus 4.8",
+      "owner": "Anthropic",
+      "owner_brand_asset_id": "anthropic",
+      "description": "Anthropic Claude Opus 系列現行旗艦，適合需要深度推理與長時間代理任務的情境；Autonomia 目前提供文字對話、串流與工具呼叫介面。",
+      "status": "available",
+      "capabilities": ["chat", "streaming", "reasoning", "tools"],
+      "input_modalities": ["text", "image"],
+      "output_modalities": ["text"],
+      "context_window_tokens": 200000,
+      "max_output_tokens": 8192,
+      "provider_ids": ["anthropic"],
+      "tags": ["flagship", "reasoning", "agentic", "long-context"],
+      "official_docs_url": "https://platform.claude.com/docs/en/models/overview",
+      "billing": {
+        "input_usd_per_million_tokens": "5.00",
+        "output_usd_per_million_tokens": "25.01",
+        "minimum_charge_usd": "0.0001"
+      }
+    },
+    {
+      "id": "autonomia/claude-sonnet-5",
+      "display_name": "Claude Sonnet 5",
+      "owner": "Anthropic",
+      "owner_brand_asset_id": "anthropic",
+      "description": "Anthropic 最新一代 Sonnet，在代理編碼與日常專業任務上以更低價格提供接近旗艦的表現；Autonomia 目前提供文字對話、串流與工具呼叫介面。",
+      "status": "available",
+      "capabilities": ["chat", "streaming", "reasoning", "tools"],
+      "input_modalities": ["text", "image"],
+      "output_modalities": ["text"],
+      "context_window_tokens": 200000,
+      "max_output_tokens": 8192,
+      "provider_ids": ["anthropic"],
+      "tags": ["reasoning", "agentic", "coding", "cost-effective"],
+      "official_docs_url": "https://platform.claude.com/docs/en/models/overview",
+      "billing": {
+        "input_usd_per_million_tokens": "2.00",
+        "output_usd_per_million_tokens": "10.01",
+        "minimum_charge_usd": "0.0001"
+      }
+    },
+    {
+      "id": "autonomia/claude-haiku-4-5",
+      "display_name": "Claude Haiku 4.5",
+      "owner": "Anthropic",
+      "owner_brand_asset_id": "anthropic",
+      "description": "Anthropic Claude 家族中最快的模型，以極低延遲提供接近 Sonnet 的代理與編碼表現；Autonomia 目前提供文字對話、串流與工具呼叫介面。",
+      "status": "available",
+      "capabilities": ["chat", "streaming", "reasoning", "tools"],
+      "input_modalities": ["text", "image"],
+      "output_modalities": ["text"],
+      "context_window_tokens": 200000,
+      "max_output_tokens": 8192,
+      "provider_ids": ["anthropic"],
+      "tags": ["fast", "low-latency", "cost-effective", "agentic"],
+      "official_docs_url": "https://platform.claude.com/docs/en/models/overview",
+      "billing": {
+        "input_usd_per_million_tokens": "1.02",
+        "output_usd_per_million_tokens": "5.01",
+        "minimum_charge_usd": "0.0001"
+      }
+    },
+    {
+      "id": "autonomia/gemini-3.5-pro",
+      "display_name": "Gemini 3.5 Pro",
+      "owner": "Google",
+      "owner_brand_asset_id": "google",
+      "description": "Google DeepMind Gemini 3 系列旗艦，原生多模態思考模型，擅長複雜任務與創意發想；Autonomia 目前提供文字對話、串流與工具呼叫介面。",
+      "status": "available",
+      "capabilities": ["chat", "streaming", "reasoning", "tools"],
+      "input_modalities": ["text", "image"],
+      "output_modalities": ["text"],
+      "context_window_tokens": 1048576,
+      "max_output_tokens": 8192,
+      "provider_ids": ["google"],
+      "tags": ["flagship", "reasoning", "long-context", "multimodal-native"],
+      "official_docs_url": "https://ai.google.dev/gemini-api/docs/models",
+      "billing": {
+        "input_usd_per_million_tokens": "2.01",
+        "output_usd_per_million_tokens": "12.02",
+        "minimum_charge_usd": "0.0001"
+      }
+    },
+    {
+      "id": "autonomia/gemini-3.8-flash",
+      "display_name": "Gemini 3.8 Flash",
+      "owner": "Google",
+      "owner_brand_asset_id": "google",
+      "description": "Gemini 3 系列最新的 Flash 模型，為長程軟體工程與自主代理打造，兼顧速度與推理品質；Autonomia 目前提供文字對話、串流與工具呼叫介面。",
+      "status": "available",
+      "capabilities": ["chat", "streaming", "reasoning", "tools"],
+      "input_modalities": ["text", "image"],
+      "output_modalities": ["text"],
+      "context_window_tokens": 1048576,
+      "max_output_tokens": 8192,
+      "provider_ids": ["google"],
+      "tags": ["fast", "reasoning", "agentic", "multimodal-native"],
+      "official_docs_url": "https://ai.google.dev/gemini-api/docs/models",
+      "billing": {
+        "input_usd_per_million_tokens": "0.30",
+        "output_usd_per_million_tokens": "2.52",
+        "minimum_charge_usd": "0.0001"
+      }
+    },
+    {
+      "id": "autonomia/gemini-3.5-flash-lite",
+      "display_name": "Gemini 3.5 Flash-Lite",
+      "owner": "Google",
+      "owner_brand_asset_id": "google",
+      "description": "Gemini 3.5 家族中最快、最省成本的型號，適合高吞吐量與低延遲工作負載；Autonomia 目前提供文字對話、串流與工具呼叫介面。",
+      "status": "available",
+      "capabilities": ["chat", "streaming", "tools"],
+      "input_modalities": ["text", "image"],
+      "output_modalities": ["text"],
+      "context_window_tokens": 1048576,
+      "max_output_tokens": 8192,
+      "provider_ids": ["google"],
+      "tags": ["fast", "low-latency", "cost-effective"],
+      "official_docs_url": "https://ai.google.dev/gemini-api/docs/models",
+      "billing": {
+        "input_usd_per_million_tokens": "0.12",
+        "output_usd_per_million_tokens": "0.42",
+        "minimum_charge_usd": "0.0001"
+      }
+    },
+    {
+      "id": "autonomia/grok-4.6",
+      "display_name": "Grok 4.6",
+      "owner": "xAI",
+      "owner_brand_asset_id": "xai",
+      "description": "xAI 於 2026 年 8 月發布的旗艦推理模型，擅長複雜推理、長上下文與代理工具使用；Autonomia 目前提供文字對話、串流與工具呼叫介面。",
+      "status": "available",
+      "capabilities": ["chat", "streaming", "reasoning", "tools"],
+      "input_modalities": ["text", "image"],
+      "output_modalities": ["text"],
+      "context_window_tokens": 2000000,
+      "max_output_tokens": 8192,
+      "provider_ids": ["xai"],
+      "tags": ["flagship", "reasoning", "long-context", "agentic"],
+      "official_docs_url": "https://docs.x.ai/developers/models",
+      "billing": {
+        "input_usd_per_million_tokens": "2.00",
+        "output_usd_per_million_tokens": "6.01",
+        "minimum_charge_usd": "0.0001"
+      }
+    },
+    {
+      "id": "autonomia/grok-4.1-fast",
+      "display_name": "Grok 4.1 Fast",
+      "owner": "xAI",
+      "owner_brand_asset_id": "xai",
+      "description": "xAI 高效率快速模型，以極低成本提供 200 萬 Token 上下文的低延遲推理；Autonomia 目前提供文字對話、串流與工具呼叫介面。",
+      "status": "available",
+      "capabilities": ["chat", "streaming", "reasoning", "tools"],
+      "input_modalities": ["text"],
+      "output_modalities": ["text"],
+      "context_window_tokens": 2000000,
+      "max_output_tokens": 8192,
+      "provider_ids": ["xai"],
+      "tags": ["fast", "long-context", "cost-effective"],
+      "official_docs_url": "https://docs.x.ai/developers/models",
+      "billing": {
+        "input_usd_per_million_tokens": "0.21",
+        "output_usd_per_million_tokens": "0.51",
+        "minimum_charge_usd": "0.0001"
+      }
+    },
+    {
+      "id": "autonomia/deepseek-v4-pro",
+      "display_name": "DeepSeek V4 Pro",
+      "owner": "DeepSeek",
+      "owner_brand_asset_id": "deepseek",
+      "description": "DeepSeek V4 旗艦推理模型，擅長程式開發、數學與複雜任務；Autonomia 目前提供文字對話、串流與工具呼叫介面。",
+      "status": "available",
+      "capabilities": ["chat", "streaming", "reasoning", "tools"],
+      "input_modalities": ["text"],
+      "output_modalities": ["text"],
+      "context_window_tokens": 1000000,
+      "max_output_tokens": 8192,
+      "provider_ids": ["deepseek", "qwencloud"],
+      "tags": ["reasoning", "long-context", "coding", "open-weight"],
+      "official_docs_url": "https://api-docs.deepseek.com/quick_start/pricing",
+      "billing": {
+        "input_usd_per_million_tokens": "1.32",
+        "output_usd_per_million_tokens": "3.96",
+        "minimum_charge_usd": "0.0001"
+      }
+    },
+    {
+      "id": "autonomia/deepseek-v4.1-flash",
+      "display_name": "DeepSeek V4.1 Flash",
+      "owner": "DeepSeek",
+      "owner_brand_asset_id": "deepseek",
+      "description": "DeepSeek 於 2026 年 9 月發布的開放權重高效模型，以 MIT 授權釋出並具備百萬級上下文；Autonomia 目前提供文字對話、串流與工具呼叫介面。",
+      "status": "available",
+      "capabilities": ["chat", "streaming", "reasoning", "tools"],
+      "input_modalities": ["text"],
+      "output_modalities": ["text"],
+      "context_window_tokens": 1000000,
+      "max_output_tokens": 8192,
+      "provider_ids": ["deepseek", "qwencloud"],
+      "tags": ["fast", "open-weight", "cost-effective", "long-context"],
+      "official_docs_url": "https://api-docs.deepseek.com/updates/",
+      "billing": {
+        "input_usd_per_million_tokens": "0.15",
+        "output_usd_per_million_tokens": "0.60",
+        "minimum_charge_usd": "0.0001"
+      }
+    },
+    {
+      "id": "autonomia/kimi-k3",
+      "display_name": "Kimi K3",
+      "owner": "Moonshot AI",
+      "owner_brand_asset_id": "moonshot",
+      "description": "Moonshot AI 於 2026 年 7 月發布的開放權重旗艦，2.8 兆參數混合專家架構並原生支援視覺理解；Autonomia 目前提供文字對話、串流與工具呼叫介面。",
+      "status": "available",
+      "capabilities": ["chat", "streaming", "reasoning", "tools"],
+      "input_modalities": ["text", "image"],
+      "output_modalities": ["text"],
+      "context_window_tokens": 1048576,
+      "max_output_tokens": 8192,
+      "provider_ids": ["moonshot", "qwencloud"],
+      "tags": ["flagship", "open-weight", "reasoning", "long-context"],
+      "official_docs_url": "https://platform.moonshot.ai/docs/introduction",
+      "billing": {
+        "input_usd_per_million_tokens": "3.00",
+        "output_usd_per_million_tokens": "15.00",
+        "minimum_charge_usd": "0.0001"
+      }
+    },
+    {
+      "id": "autonomia/glm-5.3",
+      "display_name": "GLM-5.3",
+      "owner": "Z.ai",
+      "owner_brand_asset_id": "z-ai",
+      "description": "Z.ai 於 2026 年 8 月發布的開放權重旗艦，程式開發能力較 GLM-5.2 提升五成並具備百萬級上下文；Autonomia 目前提供文字對話、串流與工具呼叫介面。",
+      "status": "available",
+      "capabilities": ["chat", "streaming", "reasoning", "tools"],
+      "input_modalities": ["text"],
+      "output_modalities": ["text"],
+      "context_window_tokens": 1000000,
+      "max_output_tokens": 8192,
+      "provider_ids": ["zhipu", "qwencloud"],
+      "tags": ["flagship", "coding", "reasoning", "open-weight"],
+      "official_docs_url": "https://docs.z.ai/guides/llm/glm-5.3",
+      "billing": {
+        "input_usd_per_million_tokens": "1.41",
+        "output_usd_per_million_tokens": "4.41",
+        "minimum_charge_usd": "0.0001"
+      }
+    },
+    {
+      "id": "autonomia/glm-5.3-flash",
+      "display_name": "GLM-5.3 Flash",
+      "owner": "Z.ai",
+      "owner_brand_asset_id": "z-ai",
+      "description": "GLM-5 系列首個原生多模態模型，320B 總參數僅 18B 激活，為低成本代理部署而生；Autonomia 目前提供文字對話、串流與工具呼叫介面。",
+      "status": "available",
+      "capabilities": ["chat", "streaming", "reasoning", "tools"],
+      "input_modalities": ["text", "image"],
+      "output_modalities": ["text"],
+      "context_window_tokens": 1000000,
+      "max_output_tokens": 8192,
+      "provider_ids": ["zhipu", "qwencloud"],
+      "tags": ["fast", "multimodal-native", "cost-effective", "agentic"],
+      "official_docs_url": "https://z.ai/blog/glm-5.3-flash",
+      "billing": {
+        "input_usd_per_million_tokens": "0.15",
+        "output_usd_per_million_tokens": "0.60",
+        "minimum_charge_usd": "0.0001"
+      }
+    },
+    {
+      "id": "autonomia/qwen-3.8-max",
+      "display_name": "Qwen 3.8 Max",
+      "owner": "Qwen",
+      "owner_brand_asset_id": "qwen",
+      "description": "阿里巴巴 2026 年 8 月發布的 Qwen3.8 旗艦，約 2.4 兆參數，在自主編碼與長程軟體工程上表現突出；Autonomia 目前提供文字對話、串流與工具呼叫介面。",
+      "status": "available",
+      "capabilities": ["chat", "streaming", "reasoning", "tools"],
+      "input_modalities": ["text", "image"],
+      "output_modalities": ["text"],
+      "context_window_tokens": 1000000,
+      "max_output_tokens": 8192,
+      "provider_ids": ["qwencloud"],
+      "tags": ["flagship", "reasoning", "agentic", "long-context"],
+      "official_docs_url": "https://www.alibabacloud.com/help/en/model-studio/qwen3-8-max",
+      "billing": {
+        "input_usd_per_million_tokens": "2.01",
+        "output_usd_per_million_tokens": "6.00",
+        "minimum_charge_usd": "0.0001"
+      }
+    },
+    {
+      "id": "autonomia/qwen-3.8-flash",
+      "display_name": "Qwen 3.8 Flash",
+      "owner": "Qwen",
+      "owner_brand_asset_id": "qwen",
+      "description": "Qwen3.8 家族的高效率多模態型號，以更低的成本與延遲兼顧推理品質；Autonomia 目前提供文字對話、串流與工具呼叫介面。",
+      "status": "available",
+      "capabilities": ["chat", "streaming", "reasoning", "tools"],
+      "input_modalities": ["text", "image"],
+      "output_modalities": ["text"],
+      "context_window_tokens": 1000000,
+      "max_output_tokens": 8192,
+      "provider_ids": ["qwencloud"],
+      "tags": ["fast", "multimodal-native", "cost-effective"],
+      "official_docs_url": "https://www.alibabacloud.com/help/en/model-studio/qwen3-8-flash",
+      "billing": {
+        "input_usd_per_million_tokens": "0.15",
+        "output_usd_per_million_tokens": "0.48",
+        "minimum_charge_usd": "0.0001"
+      }
+    },
+    {
+      "id": "autonomia/qwen-3.8-27b",
+      "display_name": "Qwen 3.8 27B",
+      "owner": "Qwen",
+      "owner_brand_asset_id": "qwen",
+      "description": "Qwen3.8 開放權重輕量型號，經 Cloudflare Workers AI 以極低延遲提供日常對話與文字任務；Autonomia 目前提供文字對話與串流介面。",
+      "status": "available",
+      "capabilities": ["chat", "streaming", "reasoning"],
+      "input_modalities": ["text"],
+      "output_modalities": ["text"],
+      "context_window_tokens": 262144,
+      "max_output_tokens": 8192,
+      "provider_ids": ["cloudflare"],
+      "tags": ["open-weight", "fast", "small-model"],
+      "official_docs_url": "https://developers.cloudflare.com/workers-ai/models/qwen3.8-27b/",
+      "billing": {
+        "input_usd_per_million_tokens": "0.42",
+        "output_usd_per_million_tokens": "3.00",
+        "minimum_charge_usd": "0.0001"
+      }
+    },
+    {
+      "id": "autonomia/text-embedding-3-small",
+      "display_name": "Text Embedding 3 Small",
+      "owner": "OpenAI",
+      "owner_brand_asset_id": "openai",
+      "description": "OpenAI 高性價比文字向量模型,適合語意搜尋、分類與 RAG 檢索;透過 /v1/embeddings 端點使用,僅計輸入 token 費用。",
+      "status": "available",
+      "capabilities": ["embeddings"],
+      "input_modalities": ["text"],
+      "output_modalities": ["embedding"],
+      "context_window_tokens": 8192,
+      "max_output_tokens": 1,
+      "provider_ids": ["openai"],
+      "tags": ["embeddings", "rag", "search"],
+      "official_docs_url": "https://platform.openai.com/docs/models/text-embedding-3-small",
+      "billing": {
+        "input_usd_per_million_tokens": "0.02",
+        "output_usd_per_million_tokens": "0",
+        "minimum_charge_usd": "0.0001"
+      }
+    },
+    {
+      "id": "autonomia/text-embedding-3-large",
+      "display_name": "Text Embedding 3 Large",
+      "owner": "OpenAI",
+      "owner_brand_asset_id": "openai",
+      "description": "OpenAI 最高品質文字向量模型,適合需要更高召回率的語意搜尋與 RAG 場景;透過 /v1/embeddings 端點使用,僅計輸入 token 費用。",
+      "status": "available",
+      "capabilities": ["embeddings"],
+      "input_modalities": ["text"],
+      "output_modalities": ["embedding"],
+      "context_window_tokens": 8192,
+      "max_output_tokens": 1,
+      "provider_ids": ["openai"],
+      "tags": ["embeddings", "rag", "search"],
+      "official_docs_url": "https://platform.openai.com/docs/models/text-embedding-3-large",
+      "billing": {
+        "input_usd_per_million_tokens": "0.13",
+        "output_usd_per_million_tokens": "0",
+        "minimum_charge_usd": "0.0001"
+      }
+    }
+  ],
+  "currency": "usd",
+  "billing_unit": "per_million_tokens"
+}

@@ -1,10 +1,10 @@
 import pg from "pg";
-import type { AkentrosRuntimeEnv } from "../types.ts";
-import { type AkentrosPgLikePool, createAkentrosPgAdapter, pgPoolOptions } from "./db.pg.shared.ts";
+import type { AutonomiaRuntimeEnv } from "../types.ts";
+import { type AutonomiaPgLikePool, createAutonomiaPgAdapter, pgPoolOptions } from "./db.pg.shared.ts";
 
 // Node 部署的 PostgreSQL adapter(TCP pg Pool):以 pg Pool 實作
 // (sql, params) => { rows } 查詢介面,契約與 db.node.ts 相同。由 db.ts 的
-// installNodeAkentrosDbAdapter() 在 DATABASE_URL 為 postgres(ql):// 且
+// installNodeAutonomiaDbAdapter() 在 DATABASE_URL 為 postgres(ql):// 且
 // 驅動選擇為 pg-pool 時動態載入(非字面量 specifier,Workers 打包不會把
 // 本檔連同 pg 拉進 DO-SQLite 部署的執行路徑;Workers 的 PG 模式改經
 // db.runtime.ts 以字面量動態 import 載入)。
@@ -18,7 +18,7 @@ import { type AkentrosPgLikePool, createAkentrosPgAdapter, pgPoolOptions } from 
 
 // 連線字串解析:Workers 的 HYPERDRIVE 綁定優先(binding 的本地通道),
 // 其餘環境一律 DATABASE_URL。若兩者皆無,查詢時以明確錯誤拒絕。
-export function pgTcpConnectionString(env: AkentrosRuntimeEnv): string {
+export function pgTcpConnectionString(env: AutonomiaRuntimeEnv): string {
   const hyperdrive = env?.HYPERDRIVE as { connectionString?: unknown } | undefined;
   const fromBinding = typeof hyperdrive?.connectionString === "string" ? hyperdrive.connectionString : "";
   const url =
@@ -29,7 +29,7 @@ export function pgTcpConnectionString(env: AkentrosRuntimeEnv): string {
   return url;
 }
 
-function isViaHyperdrive(env: AkentrosRuntimeEnv): boolean {
+function isViaHyperdrive(env: AutonomiaRuntimeEnv): boolean {
   const hyperdrive = env?.HYPERDRIVE as { connectionString?: unknown } | undefined;
   return Boolean(typeof hyperdrive?.connectionString === "string" && hyperdrive.connectionString);
 }
@@ -38,12 +38,12 @@ function isViaHyperdrive(env: AkentrosRuntimeEnv): boolean {
 // 模組級 Map 會在每次重載時重建、舊池的連線卻未釋放,連線數隨部署次數
 // 累積;掛在 globalThis 讓同一實例內的所有模組版本共用同一批池。
 const globalCache = globalThis as typeof globalThis & {
-  __akentrosPgPools?: Map<string, AkentrosPgLikePool>;
+  __autonomiaPgPools?: Map<string, AutonomiaPgLikePool>;
 };
-globalCache.__akentrosPgPools ??= new Map<string, AkentrosPgLikePool>();
+globalCache.__autonomiaPgPools ??= new Map<string, AutonomiaPgLikePool>();
 
-const adapter = createAkentrosPgAdapter({
-  pools: globalCache.__akentrosPgPools,
+const adapter = createAutonomiaPgAdapter({
+  pools: globalCache.__autonomiaPgPools,
   createPool(connectionString, env) {
     // SSL / 池上限判定需要同時看得到 Node 的 process.env 與 Workers 的
     // bindings env(前者涵蓋 Node 進入點,後者涵蓋 wrangler vars/secrets)。
@@ -60,15 +60,15 @@ const adapter = createAkentrosPgAdapter({
       max: options.max,
       ssl: options.ssl,
       connectionTimeoutMillis: options.connectionTimeoutMillis,
-    }) as unknown as AkentrosPgLikePool;
+    }) as unknown as AutonomiaPgLikePool;
   },
   resolveConnectionString: pgTcpConnectionString,
 });
 
 export const dbQuery = adapter.dbQuery;
 export const dbGet = adapter.dbGet;
-export const withAkentrosTransaction = adapter.withAkentrosTransaction;
-export const createAkentrosQuery = adapter.createAkentrosQuery;
+export const withAutonomiaTransaction = adapter.withAutonomiaTransaction;
+export const createAutonomiaQuery = adapter.createAutonomiaQuery;
 // scripts 結束時釋放連線池(與 db.node.ts 的 closePostgresClients 對齊)。
 export const closePostgresClients = adapter.closePostgresClients;
 

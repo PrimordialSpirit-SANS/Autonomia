@@ -1,32 +1,32 @@
 # gitleaks 設定:本 repo 不應出現任何真實金鑰。
 # 供應商金鑰只允許以「環境變數名稱」(如 OPENROUTER_API_KEY_1)出現於設定與文件。
-# 預設規則集之外,額外攔截 Akentros 金鑰形態的明文。
+# 預設規則集之外,額外攔截 Autonomia 金鑰形態的明文。
 
-title = "Akentros Gateway secret scan"
+title = "Autonomia Gateway secret scan"
 
 [extend]
 useDefault = true
 
 [[rules]]
-id = "akentros-key-plaintext"
-description = "Akentros API key plaintext"
-regex = '''sk-akentros-(?:live|test)_[A-Za-z0-9]{16,}'''
-keywords = ["sk-akentros"]
-tags = ["key", "akentros"]
+id = "autonomia-key-plaintext"
+description = "Autonomia API key plaintext"
+regex = '''sk-autonomia-(?:live|test)_[A-Za-z0-9]{16,}'''
+keywords = ["sk-autonomia"]
+tags = ["key", "autonomia"]
 
 [allowlist]
 description = "文件、範例與測試中的佔位/遮罩形式,以及 secret_refs 的環境變數名稱形態"
 regexes = [
   # 文件中的遮罩形式(以省略號截斷,不足以還原金鑰)
-  '''sk-akentros-live_…''',
+  '''sk-autonomia-live_…''',
   # 文件/設定中的佔位前綴(YOUR/xxx/變數插入)
-  '''sk-akentros-(live|test)_(YOUR|xxx|\$\{)''',
+  '''sk-autonomia-(live|test)_(YOUR|xxx|\$\{)''',
   # docs/DEPLOYMENT.md 示範 401 回應的刻意無效金鑰(含 Beacon 改名前的歷史版本)
-  '''^sk-(?:akentros|beacon)-(?:live|test)_invalid$''',
+  '''^sk-(?:autonomia|beacon)-(?:live|test)_invalid$''',
   # 控制台 demo 資料僅含 4 字元前綴片段(key_prefix 顯示用),不足以構成金鑰
-  '''^sk-akentros-(live|test)_[A-Za-z0-9]{4}$''',
+  '''^sk-autonomia-(live|test)_[A-Za-z0-9]{4}$''',
   # packages/core/tests 的 HMAC 測試向量:固定字母順序序列,非金鑰
-  '''^sk-akentros-live_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnop$''',
+  '''^sk-autonomia-live_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnop$''',
   # secret_refs 機制:設定檔與 .dev.vars.example 中的環境變數「名稱」(值由環境注入,非金鑰本體)
   '''^[A-Z][A-Z0-9_]*_(API_KEY|API_TOKEN|ACCOUNT_ID)_[0-9]+=?$''',
 ]

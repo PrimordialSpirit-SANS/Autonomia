@@ -1,13 +1,13 @@
 import React from "react";
 import { Alert, PageHeader, StateBlock } from "../components/ui";
-import { getAkentrosRequestDetail, listAkentrosLogs } from "../lib/akentros/api/akentrosDeveloperApi";
-import type { AkentrosRequestDetail, AkentrosUsageLog } from "../lib/akentros/types";
+import { getAutonomiaRequestDetail, listAutonomiaLogs } from "../lib/autonomia/api/autonomiaDeveloperApi";
+import type { AutonomiaRequestDetail, AutonomiaUsageLog } from "../lib/autonomia/types";
 import {
-  formatAkentrosTimestamp,
+  formatAutonomiaTimestamp,
   formatLatency,
   formatTokens,
   formatUsd,
-} from "../lib/akentros/utils/formatAkentros";
+} from "../lib/autonomia/utils/formatAutonomia";
 
 const STATUS_LABELS: Record<string, { label: string; className: string }> = {
   succeeded: { label: "成功", className: "badge badge-ok" },
@@ -26,12 +26,12 @@ function statusBadge(status: string) {
 }
 
 export function LogsPage() {
-  const [logs, setLogs] = React.useState<AkentrosUsageLog[]>([]);
+  const [logs, setLogs] = React.useState<AutonomiaUsageLog[]>([]);
   const [pagination, setPagination] = React.useState({ next_cursor: null as string | null, has_more: false });
   const [status, setStatus] = React.useState("");
   const [error, setError] = React.useState("");
   const [loading, setLoading] = React.useState(true);
-  const [detail, setDetail] = React.useState<AkentrosRequestDetail | null>(null);
+  const [detail, setDetail] = React.useState<AutonomiaRequestDetail | null>(null);
   const loadAbortRef = React.useRef<AbortController | null>(null);
   const detailAbortRef = React.useRef<AbortController | null>(null);
 
@@ -45,7 +45,7 @@ export function LogsPage() {
       setLoading(true);
       setError("");
       try {
-        const page = await listAkentrosLogs(
+        const page = await listAutonomiaLogs(
           { cursor, limit: 25, status: status || undefined },
           controller.signal,
         );
@@ -81,7 +81,7 @@ export function LogsPage() {
     const controller = new AbortController();
     detailAbortRef.current = controller;
     try {
-      const loaded = await getAkentrosRequestDetail(requestId, controller.signal);
+      const loaded = await getAutonomiaRequestDetail(requestId, controller.signal);
       if (controller.signal.aborted) return;
       setDetail(loaded);
     } catch (cause) {
@@ -165,7 +165,7 @@ export function LogsPage() {
                   }}
                 >
                   <td className="cell-time">
-                    {formatAkentrosTimestamp(log.created_at)}
+                    {formatAutonomiaTimestamp(log.created_at)}
                     <code>{log.request_id}</code>
                   </td>
                   <td className="cell-model">

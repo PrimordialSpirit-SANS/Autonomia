@@ -1,36 +1,36 @@
-import type { AkentrosAttemptAuditor } from "@akentros/core/providerAttempts";
-import { createAkentrosProviderAttemptStore } from "@akentros/core/providerAttempts";
-import type { AkentrosRuntimeEnv } from "../types.ts";
+import type { AutonomiaAttemptAuditor } from "@autonomia/core/providerAttempts";
+import { createAutonomiaProviderAttemptStore } from "@autonomia/core/providerAttempts";
+import type { AutonomiaRuntimeEnv } from "../types.ts";
 import { ensureAiSchema } from "./aiSchema.ts";
-import { createAkentrosQuery } from "./db.ts";
+import { createAutonomiaQuery } from "./db.ts";
 
-const stores = new Map<string, ReturnType<typeof createAkentrosProviderAttemptStore>>();
+const stores = new Map<string, ReturnType<typeof createAutonomiaProviderAttemptStore>>();
 
-type AkentrosAttemptFinish = NonNullable<AkentrosAttemptAuditor["finish"]>;
+type AutonomiaAttemptFinish = NonNullable<AutonomiaAttemptAuditor["finish"]>;
 
-function storeFor(env: AkentrosRuntimeEnv) {
+function storeFor(env: AutonomiaRuntimeEnv) {
   // SN-13 fix:與 rateLimit 的 limiterStoreKey 對齊,額外涵蓋
-  // AKENTROS_DB_PATH —— 單行程多 SQLite 路徑(測試情境)時,
+  // AUTONOMIA_DB_PATH —— 單行程多 SQLite 路徑(測試情境)時,
   // 只認 DATABASE_URL 會讓不同路徑共用同一個 store(錯的 query 閉包)。
-  const key = env?.DATABASE_URL?.trim() || env?.AKENTROS_DB_PATH?.trim() || "unconfigured-main";
+  const key = env?.DATABASE_URL?.trim() || env?.AUTONOMIA_DB_PATH?.trim() || "unconfigured-main";
   if (!stores.has(key)) {
-    stores.set(key, createAkentrosProviderAttemptStore(createAkentrosQuery(env)));
+    stores.set(key, createAutonomiaProviderAttemptStore(createAutonomiaQuery(env)));
   }
   return stores.get(key)!;
 }
 
-export async function startAkentrosProviderAttempt(
-  env: AkentrosRuntimeEnv,
-  input: Parameters<AkentrosAttemptAuditor["start"]>[0],
+export async function startAutonomiaProviderAttempt(
+  env: AutonomiaRuntimeEnv,
+  input: Parameters<AutonomiaAttemptAuditor["start"]>[0],
 ) {
   await ensureAiSchema(env);
   return storeFor(env).start(input);
 }
 
-export async function finishAkentrosProviderAttempt(
-  env: AkentrosRuntimeEnv,
+export async function finishAutonomiaProviderAttempt(
+  env: AutonomiaRuntimeEnv,
   attempt: unknown,
-  outcome: Parameters<AkentrosAttemptFinish>[1],
+  outcome: Parameters<AutonomiaAttemptFinish>[1],
 ) {
   await ensureAiSchema(env);
   return storeFor(env).finish(attempt, outcome);

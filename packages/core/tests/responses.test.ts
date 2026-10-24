@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
-  createAkentrosInferenceRuntime,
-  createAkentrosResponsesStreamBridge,
+  createAutonomiaInferenceRuntime,
+  createAutonomiaResponsesStreamBridge,
   normalizeStreamChunk,
-  prepareAkentrosResponsesRequest,
+  prepareAutonomiaResponsesRequest,
   publicResponsesObject,
 } from "../src/inference.ts";
-import { AkentrosProviderError, requireProviderPool } from "../src/providers.ts";
+import { AutonomiaProviderError, requireProviderPool } from "../src/providers.ts";
 
 function aiKey(overrides: any = {}) {
   return {
@@ -20,7 +20,7 @@ function aiKey(overrides: any = {}) {
 }
 
 function responsesBody(overrides: any = {}) {
-  return { model: "akentros/gpt-6-astra", input: "Hello Akentros", ...overrides };
+  return { model: "autonomia/gpt-6-astra", input: "Hello Autonomia", ...overrides };
 }
 
 function fakeBilling(overrides: any = {}) {
@@ -69,7 +69,7 @@ function jsonProviderResponse(content = "Hello back", finishReason = "stop") {
 }
 
 test("responses preparation translates the bridged subset onto the chat pipeline", async () => {
-  const prepared = await prepareAkentrosResponsesRequest({
+  const prepared = await prepareAutonomiaResponsesRequest({
     body: responsesBody({
       instructions: "Answer concisely.",
       max_output_tokens: 128,
@@ -83,10 +83,10 @@ test("responses preparation translates the bridged subset onto the chat pipeline
   assert.equal(prepared.reservation.endpoint, "responses");
   // 轉換後的內部體是 chat 形狀:instructions → system、input → user、
   // max_output_tokens → max_completion_tokens。
-  assert.equal(prepared.body.model, "akentros/gpt-6-astra");
+  assert.equal(prepared.body.model, "autonomia/gpt-6-astra");
   assert.deepEqual(prepared.body.messages, [
     { role: "system", content: "Answer concisely." },
-    { role: "user", content: "Hello Akentros" },
+    { role: "user", content: "Hello Autonomia" },
   ]);
   assert.equal(prepared.body.max_completion_tokens, 128);
   assert.equal(prepared.body.temperature, 0.5);
@@ -97,7 +97,7 @@ test("responses preparation translates the bridged subset onto the chat pipeline
 
   // input 陣列形狀:多輪歷史 + vision 模型的 input_text/input_image parts
   // (Responses 面命名)轉為 chat parts 後通過同一套驗證。
-  const visionPrepared = await prepareAkentrosResponsesRequest({
+  const visionPrepared = await prepareAutonomiaResponsesRequest({
     body: responsesBody({
       input: [
         { role: "user", content: "這張圖是?" },
@@ -125,9 +125,9 @@ test("responses preparation translates the bridged subset onto the chat pipeline
 
   // 非 vision 模型的 input_image parts 維持 400。
   await assert.rejects(
-    prepareAkentrosResponsesRequest({
+    prepareAutonomiaResponsesRequest({
       body: responsesBody({
-        model: "akentros/gpt-5.2-codex",
+        model: "autonomia/gpt-5.2-codex",
         input: [{ role: "user", content: [{ type: "input_image", image_url: "https://example.com/a.png" }] }],
       }),
       aiKey: aiKey(),
@@ -153,7 +153,7 @@ test("responses preparation gates advanced features and tolerates neutral parame
     "prompt_template",
   ]) {
     await assert.rejects(
-      prepareAkentrosResponsesRequest({
+      prepareAutonomiaResponsesRequest({
         body: responsesBody({ [field]: true }),
         aiKey: aiKey(),
       }),
@@ -163,7 +163,7 @@ test("responses preparation gates advanced features and tolerates neutral parame
 
   // 對閘道中立的參數(responses API 的 store 預設開啟,SDK 常態攜帶):
   // 接受後丟棄,上游體不含這些欄位。
-  const tolerated = await prepareAkentrosResponsesRequest({
+  const tolerated = await prepareAutonomiaResponsesRequest({
     body: responsesBody({ user: "user-123", store: true, metadata: { origin: "sdk" }, service_tier: "auto" }),
     aiKey: aiKey(),
   });
@@ -171,7 +171,7 @@ test("responses preparation gates advanced features and tolerates neutral parame
 
   // 其餘未知欄位:unsupported_parameter 指名。
   await assert.rejects(
-    prepareAkentrosResponsesRequest({
+    prepareAutonomiaResponsesRequest({
       body: responsesBody({ vendor_hint: "no" }),
       aiKey: aiKey(),
     }),
@@ -181,24 +181,24 @@ test("responses preparation gates advanced features and tolerates neutral parame
 
   // 純 system/developer input(無 user/assistant)回 400;非法 input 形狀 400。
   await assert.rejects(
-    prepareAkentrosResponsesRequest({
+    prepareAutonomiaResponsesRequest({
       body: responsesBody({ input: [{ role: "system", content: "only system" }] }),
       aiKey: aiKey(),
     }),
     (error: any) => error.status === 400 && error.param === "input",
   );
   await assert.rejects(
-    prepareAkentrosResponsesRequest({ body: responsesBody({ input: 42 }), aiKey: aiKey() }),
+    prepareAutonomiaResponsesRequest({ body: responsesBody({ input: 42 }), aiKey: aiKey() }),
     (error: any) => error.status === 400 && error.param === "input",
   );
 
   // 指紋與 chat 分開:同內容的 chat 與 responses 請求指紋不同(endpoint 進入指紋)。
-  const chatLikeFingerprint = await prepareAkentrosResponsesRequest({
+  const chatLikeFingerprint = await prepareAutonomiaResponsesRequest({
     body: responsesBody(),
     aiKey: aiKey(),
     idempotencyKey: "bridge-key",
   });
-  const secondBridge = await prepareAkentrosResponsesRequest({
+  const secondBridge = await prepareAutonomiaResponsesRequest({
     body: responsesBody(),
     aiKey: aiKey(),
     idempotencyKey: "bridge-key",
@@ -211,14 +211,14 @@ test("responses preparation gates advanced features and tolerates neutral parame
 
 test("bridged responses execute on the chat pipeline and settle with endpoint responses", async () => {
   const billing = fakeBilling();
-  const runtime = createAkentrosInferenceRuntime({
+  const runtime = createAutonomiaInferenceRuntime({
     billing,
     attempts: null,
     claimCredential: async () => openAiClaim(),
     releaseCredential: async () => {},
     fetchImpl: async () => jsonProviderResponse("Bridged answer"),
   });
-  const prepared = await prepareAkentrosResponsesRequest({
+  const prepared = await prepareAutonomiaResponsesRequest({
     body: responsesBody(),
     aiKey: aiKey(),
   });
@@ -244,7 +244,7 @@ test("bridged responses execute on the chat pipeline and settle with endpoint re
 
 test("bridged responses settle refunds on provider failure like chat", async () => {
   const billing = fakeBilling();
-  const runtime = createAkentrosInferenceRuntime({
+  const runtime = createAutonomiaInferenceRuntime({
     billing,
     attempts: null,
     claimCredential: async () => openAiClaim(),
@@ -255,7 +255,7 @@ test("bridged responses settle refunds on provider failure like chat", async () 
         headers: { "content-type": "application/json" },
       }),
   });
-  const prepared = await prepareAkentrosResponsesRequest({
+  const prepared = await prepareAutonomiaResponsesRequest({
     body: responsesBody(),
     aiKey: aiKey(),
   });
@@ -268,7 +268,7 @@ test("responses object marks length finish as incomplete", () => {
   const prepared = {
     requestId: "req_abc123",
     created: 1_700_000_000,
-    modelId: "akentros/gpt-6-astra",
+    modelId: "autonomia/gpt-6-astra",
     instructions: "Be brief.",
     maxCompletionTokens: 16,
     body: { temperature: 0.2 },
@@ -298,12 +298,12 @@ test("responses stream bridge translates chat chunks into the response event seq
   const prepared = {
     requestId: "req_streambridge",
     created: 1_700_000_000,
-    modelId: "akentros/gpt-6-astra",
+    modelId: "autonomia/gpt-6-astra",
     instructions: null,
     maxCompletionTokens: 64,
     body: {},
   };
-  const bridge = createAkentrosResponsesStreamBridge(prepared);
+  const bridge = createAutonomiaResponsesStreamBridge(prepared);
   const firstChunk = normalizeStreamChunk(
     { choices: [{ index: 0, delta: { role: "assistant", content: "Hel" }, finish_reason: null }] },
     prepared,
@@ -356,7 +356,7 @@ test("responses stream bridge translates chat chunks into the response event seq
   assert.deepEqual(completed.usage, { input_tokens: 6, output_tokens: 2, total_tokens: 8 });
 
   // finish_reason=length 的串流改以 response.incomplete 收尾。
-  const lengthBridge = createAkentrosResponsesStreamBridge(prepared);
+  const lengthBridge = createAutonomiaResponsesStreamBridge(prepared);
   lengthBridge.translate(
     normalizeStreamChunk(
       { choices: [{ index: 0, delta: { content: "cut" }, finish_reason: "length" }] },
@@ -368,7 +368,7 @@ test("responses stream bridge translates chat chunks into the response event seq
   assert.equal(lengthClosing[3].data.response.status, "incomplete");
 
   // 空串流(從未收到內容 chunk)仍補齊完整開場與收尾序列。
-  const emptyBridge = createAkentrosResponsesStreamBridge(prepared);
+  const emptyBridge = createAutonomiaResponsesStreamBridge(prepared);
   const emptyClosing = emptyBridge.finalize();
   assert.deepEqual(
     emptyClosing.map((frame: any) => frame.event),
@@ -388,8 +388,8 @@ test("responses stream bridge translates chat chunks into the response event seq
 test("responses stream failures stay in-band and never leak provider details", async () => {
   // 橋接狀態機不吞錯誤:上游錯誤仍由端點層的 failStream 處理;此處僅驗證
   // 翻譯層對 tool_calls delta(不支援的輸出形狀)不產生文字事件。
-  const prepared = { requestId: "req_toolout", created: 1, modelId: "akentros/gpt-6-astra", body: {} };
-  const bridge = createAkentrosResponsesStreamBridge(prepared);
+  const prepared = { requestId: "req_toolout", created: 1, modelId: "autonomia/gpt-6-astra", body: {} };
+  const bridge = createAutonomiaResponsesStreamBridge(prepared);
   const toolChunk = normalizeStreamChunk(
     {
       choices: [
@@ -411,7 +411,7 @@ test("responses stream failures stay in-band and never leak provider details", a
   assert.ok(events.every((frame: any) => frame.event !== "response.output_text.delta"));
 
   // 端點層的錯誤包裝維持公開錯誤語意(不洩漏 provider 細節)。
-  const providerError = new AkentrosProviderError("upstream secret detail", {
+  const providerError = new AutonomiaProviderError("upstream secret detail", {
     provider: "openai",
     status: 502,
     category: "provider_unavailable",

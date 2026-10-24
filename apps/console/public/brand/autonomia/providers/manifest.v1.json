@@ -1,0 +1,204 @@
+{
+  "schema_version": 1,
+  "updated_at": "2026-09-14",
+  "assets": [
+    {
+      "id": "autonomia",
+      "kind": "model-owner",
+      "name": "Autonomia",
+      "display_asset_url": "/brand/autonomia/models/autonomia.svg?v=3",
+      "official_asset_url": "/images/logo-icon.png",
+      "source_page_url": "/",
+      "status": "official-download",
+      "fallback_label": "S",
+      "attribution": "Autonomia 官方品牌資產。"
+    },
+    {
+      "id": "openai",
+      "kind": "model-owner",
+      "name": "OpenAI",
+      "display_asset_url": "/brand/autonomia/providers/openai.svg",
+      "official_asset_url": "https://commons.wikimedia.org/wiki/File:OpenAI_logo_2025_(symbol).svg",
+      "source_page_url": "https://openai.com/brand/",
+      "status": "official-download",
+      "fallback_label": "O",
+      "attribution": "OpenAI 官方標誌（2025 symbol），已下載至本地供介面顯示。OpenAI 商標屬 OpenAI 所有。"
+    },
+    {
+      "id": "anthropic",
+      "kind": "model-owner",
+      "name": "Anthropic",
+      "display_asset_url": "/brand/autonomia/providers/anthropic.svg",
+      "official_asset_url": "https://commons.wikimedia.org/wiki/File:Claude_AI_symbol.svg",
+      "source_page_url": "https://www.anthropic.com/brand",
+      "status": "official-download",
+      "fallback_label": "A",
+      "attribution": "Claude / Anthropic 官方星芒標誌，已下載至本地供介面顯示。Claude 與 Anthropic 商標屬 Anthropic, PBC 所有。"
+    },
+    {
+      "id": "google",
+      "kind": "model-owner",
+      "name": "Google",
+      "display_asset_url": "/brand/autonomia/providers/google.svg",
+      "official_asset_url": "https://commons.wikimedia.org/wiki/File:Google_Gemini_icon_2025.svg",
+      "source_page_url": "https://deepmind.google/models/gemini/",
+      "status": "official-download",
+      "fallback_label": "G",
+      "attribution": "Google Gemini 官方 Sparkle 圖示（2025），已下載至本地供介面顯示。Gemini 與 Google 商標屬 Google LLC 所有。"
+    },
+    {
+      "id": "xai",
+      "kind": "model-owner",
+      "name": "xAI",
+      "display_asset_url": "/brand/autonomia/providers/xai.svg",
+      "official_asset_url": "https://commons.wikimedia.org/wiki/File:XAI_Logo.svg",
+      "source_page_url": "https://x.ai/brand",
+      "status": "official-download",
+      "fallback_label": "X",
+      "attribution": "xAI 官方標誌，已下載至本地供介面顯示。xAI 商標屬 xAI Corp. 所有。"
+    },
+    {
+      "id": "deepseek",
+      "kind": "model-owner",
+      "name": "DeepSeek",
+      "display_asset_url": "/brand/autonomia/providers/deepseek.svg",
+      "official_asset_url": "https://commons.wikimedia.org/wiki/File:DeepSeek-icon.svg",
+      "source_page_url": "https://www.deepseek.com/",
+      "status": "official-download",
+      "fallback_label": "D",
+      "attribution": "DeepSeek 官方鯨魚圖示，已下載至本地供介面顯示。DeepSeek 商標屬 DeepSeek 所有。"
+    },
+    {
+      "id": "moonshot",
+      "kind": "model-owner",
+      "name": "Moonshot AI",
+      "display_asset_url": "/brand/autonomia/providers/moonshot.png",
+      "official_asset_url": "https://www.kimi.com/pwa-192.png",
+      "source_page_url": "https://www.kimi.com/",
+      "status": "official-download",
+      "fallback_label": "K",
+      "attribution": "Kimi (Moonshot AI) 官方 K 字圖示，取自 kimi.com 官方 PWA 圖示並下載至本地。Kimi 商標屬 Moonshot AI 所有。"
+    },
+    {
+      "id": "z-ai",
+      "kind": "model-owner",
+      "name": "Z.ai",
+      "display_asset_url": "/brand/autonomia/providers/z-ai.svg",
+      "official_asset_url": "https://z-cdn.chatglm.cn/z-ai/static/logo.svg",
+      "source_page_url": "https://z.ai",
+      "status": "official-download",
+      "fallback_label": "Z",
+      "attribution": "Z.ai（智譜）官方標誌，取自 Z.ai 官方 CDN 並下載至本地。Z.ai 商標屬 Z.ai（智譜）所有。"
+    },
+    {
+      "id": "qwen",
+      "kind": "model-owner",
+      "name": "Qwen",
+      "display_asset_url": "/brand/autonomia/providers/qwen.svg",
+      "official_asset_url": "https://commons.wikimedia.org/wiki/File:Qwen_logo.svg",
+      "source_page_url": "https://qwen.ai/home",
+      "status": "official-download",
+      "fallback_label": "Q",
+      "attribution": "Qwen 官方標誌，已下載至本地供介面顯示。Qwen 商標屬 Alibaba Cloud 所有。"
+    },
+    {
+      "id": "cloudflare",
+      "kind": "provider",
+      "name": "Cloudflare Workers AI",
+      "display_asset_url": "/brand/autonomia/providers/cloudflare.png",
+      "official_asset_url": "https://www.cloudflare.com/favicon.ico",
+      "source_page_url": "https://www.cloudflare.com/press/press-kit/",
+      "status": "official-download",
+      "fallback_label": "CF",
+      "attribution": "Cloudflare 官方圖示，已下載至本地供介面顯示。Cloudflare 商標屬 Cloudflare, Inc. 所有。"
+    },
+    {
+      "id": "openai-provider",
+      "kind": "provider",
+      "name": "OpenAI",
+      "display_asset_url": "/brand/autonomia/providers/openai.svg",
+      "official_asset_url": "https://commons.wikimedia.org/wiki/File:OpenAI_logo_2025_(symbol).svg",
+      "source_page_url": "https://openai.com/brand/",
+      "status": "official-download",
+      "fallback_label": "O",
+      "attribution": "沿用專案中的 OpenAI 官方標誌（本地檔）。"
+    },
+    {
+      "id": "anthropic-provider",
+      "kind": "provider",
+      "name": "Anthropic",
+      "display_asset_url": "/brand/autonomia/providers/anthropic.svg",
+      "official_asset_url": "https://commons.wikimedia.org/wiki/File:Claude_AI_symbol.svg",
+      "source_page_url": "https://www.anthropic.com/brand",
+      "status": "official-download",
+      "fallback_label": "A",
+      "attribution": "沿用專案中的 Claude / Anthropic 官方星芒標誌（本地檔）。"
+    },
+    {
+      "id": "google-provider",
+      "kind": "provider",
+      "name": "Google Gemini API",
+      "display_asset_url": "/brand/autonomia/providers/google.svg",
+      "official_asset_url": "https://commons.wikimedia.org/wiki/File:Google_Gemini_icon_2025.svg",
+      "source_page_url": "https://deepmind.google/models/gemini/",
+      "status": "official-download",
+      "fallback_label": "G",
+      "attribution": "沿用專案中的 Google Gemini 官方 Sparkle 圖示（本地檔）。"
+    },
+    {
+      "id": "xai-provider",
+      "kind": "provider",
+      "name": "xAI API",
+      "display_asset_url": "/brand/autonomia/providers/xai.svg",
+      "official_asset_url": "https://commons.wikimedia.org/wiki/File:XAI_Logo.svg",
+      "source_page_url": "https://x.ai/brand",
+      "status": "official-download",
+      "fallback_label": "X",
+      "attribution": "沿用專案中的 xAI 官方標誌（本地檔）。"
+    },
+    {
+      "id": "deepseek-provider",
+      "kind": "provider",
+      "name": "DeepSeek API",
+      "display_asset_url": "/brand/autonomia/providers/deepseek.svg",
+      "official_asset_url": "https://commons.wikimedia.org/wiki/File:DeepSeek-icon.svg",
+      "source_page_url": "https://www.deepseek.com/",
+      "status": "official-download",
+      "fallback_label": "D",
+      "attribution": "沿用專案中的 DeepSeek 官方鯨魚圖示（本地檔）。"
+    },
+    {
+      "id": "moonshot-provider",
+      "kind": "provider",
+      "name": "Moonshot AI",
+      "display_asset_url": "/brand/autonomia/providers/moonshot.png",
+      "official_asset_url": "https://www.kimi.com/pwa-192.png",
+      "source_page_url": "https://www.kimi.com/",
+      "status": "official-download",
+      "fallback_label": "K",
+      "attribution": "沿用專案中的 Kimi (Moonshot AI) 官方 K 字圖示（本地檔）。"
+    },
+    {
+      "id": "qwencloud",
+      "kind": "provider",
+      "name": "QwenCloud",
+      "display_asset_url": "/brand/autonomia/providers/qwen.svg",
+      "official_asset_url": "https://commons.wikimedia.org/wiki/File:Qwen_logo.svg",
+      "source_page_url": "https://qwen.ai/home",
+      "status": "official-download",
+      "fallback_label": "Q",
+      "attribution": "沿用專案中的 Qwen 官方標誌（本地檔）；QwenCloud 由 Alibaba Cloud Model Studio 提供推理服務。"
+    },
+    {
+      "id": "zhipu",
+      "kind": "provider",
+      "name": "Z.ai (Zhipu BigModel)",
+      "display_asset_url": "/brand/autonomia/providers/z-ai.svg",
+      "official_asset_url": "https://z-cdn.chatglm.cn/z-ai/static/logo.svg",
+      "source_page_url": "https://z.ai",
+      "status": "official-download",
+      "fallback_label": "Z",
+      "attribution": "沿用專案中的 Z.ai（智譜）官方標誌（本地檔）。"
+    }
+  ]
+}

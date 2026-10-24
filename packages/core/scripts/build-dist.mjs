@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-// ECO-SUPPLY-1 — dist build for npm publishing (@akentros/core).
+// ECO-SUPPLY-1 — dist build for npm publishing (@autonomia/core).
 //
 // The repo runs TypeScript directly on Node >= 22.18 (type stripping), so
 // core sources import siblings with explicit `.ts` specifiers — a style tsc

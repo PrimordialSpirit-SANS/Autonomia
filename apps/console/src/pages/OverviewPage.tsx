@@ -1,17 +1,20 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { Alert, PageHeader, StateBlock } from "../components/ui";
-import { getAkentrosPublicApiRoot, getAkentrosUsageSummary } from "../lib/akentros/api/akentrosDeveloperApi";
-import type { AkentrosUsageSummary } from "../lib/akentros/types";
-import { formatTokens, formatUsd } from "../lib/akentros/utils/formatAkentros";
+import {
+  getAutonomiaPublicApiRoot,
+  getAutonomiaUsageSummary,
+} from "../lib/autonomia/api/autonomiaDeveloperApi";
+import type { AutonomiaUsageSummary } from "../lib/autonomia/types";
+import { formatTokens, formatUsd } from "../lib/autonomia/utils/formatAutonomia";
 
 export function OverviewPage() {
-  const [usage, setUsage] = React.useState<AkentrosUsageSummary | null>(null);
+  const [usage, setUsage] = React.useState<AutonomiaUsageSummary | null>(null);
   const [error, setError] = React.useState("");
 
   React.useEffect(() => {
     const controller = new AbortController();
-    getAkentrosUsageSummary(controller.signal)
+    getAutonomiaUsageSummary(controller.signal)
       .then(setUsage)
       .catch((cause) => {
         if (cause.name !== "AbortError") setError(cause.message);
@@ -65,7 +68,7 @@ export function OverviewPage() {
             <input
               className="input input-mono"
               readOnly
-              value={getAkentrosPublicApiRoot()}
+              value={getAutonomiaPublicApiRoot()}
               onFocus={(event) => event.currentTarget.select()}
             />
           </label>
@@ -80,7 +83,7 @@ export function OverviewPage() {
             </div>
           </div>
           <small style={{ color: "var(--text-faint)", fontSize: "0.72rem" }}>
-            Authorization: Bearer sk-akentros-live_…
+            Authorization: Bearer sk-autonomia-live_…
           </small>
         </article>
         <article className="card card-pad">

@@ -1,4 +1,4 @@
-import { AkentrosError } from "./openaiErrors.ts";
+import { AutonomiaError } from "./openaiErrors.ts";
 import { sqlDialect } from "./sqlDialect.ts";
 
 function rows(result: any): any[] {
@@ -59,7 +59,7 @@ function apiLimitSql(query: { dialect?: "postgres" | "sqlite" } = {}) {
   `,
   });
 }
-export const AKENTROS_API_LIMIT_SQL = apiLimitSql();
+export const AUTONOMIA_API_LIMIT_SQL = apiLimitSql();
 
 // 執行交易:query 介面可選提供 transaction(fn)。
 async function withTransaction(query: any, fn: () => Promise<any>) {
@@ -74,7 +74,7 @@ function minuteWindowStart(now: number): string {
   return new Date(Math.floor(now / ms) * ms).toISOString();
 }
 
-export function createAkentrosApiLimitStore(query: any) {
+export function createAutonomiaApiLimitStore(query: any) {
   const sql = apiLimitSql(query);
   const dialect = sqlDialect(query);
   if (typeof query !== "function") throw new TypeError("A database query function is required.");
@@ -94,7 +94,7 @@ export function createAkentrosApiLimitStore(query: any) {
         const keyRows = await query(sql.acquireKey, [String(apiKeyId)]);
         const key: any = rows(keyRows)[0];
         if (!key) {
-          throw new AkentrosError("This API key has exceeded its request rate limit.", {
+          throw new AutonomiaError("This API key has exceeded its request rate limit.", {
             status: 429,
             type: "rate_limit_error",
             code: "rate_limit_exceeded",
@@ -105,7 +105,7 @@ export function createAkentrosApiLimitStore(query: any) {
         const counts = await query(sql.activeLeaseCount, [String(apiKeyId), new Date().toISOString()]);
         const activeCount = Number(rows(counts)[0]?.active_count || 0);
         if (activeCount >= Number(key.max_in_flight)) {
-          throw new AkentrosError("This API key has too many requests in flight.", {
+          throw new AutonomiaError("This API key has too many requests in flight.", {
             status: 429,
             type: "rate_limit_error",
             code: "max_in_flight_exceeded",
@@ -120,7 +120,7 @@ export function createAkentrosApiLimitStore(query: any) {
         ]);
         const bucketRow: any = rows(bucket)[0];
         if (!bucketRow) {
-          throw new AkentrosError("This API key has exceeded its request rate limit.", {
+          throw new AutonomiaError("This API key has exceeded its request rate limit.", {
             status: 429,
             type: "rate_limit_error",
             code: "rate_limit_exceeded",
@@ -132,7 +132,7 @@ export function createAkentrosApiLimitStore(query: any) {
         const leaseRow: any = rows(lease)[0];
         if (!leaseRow) {
           await query(sql.decrementBucket, [String(apiKeyId), windowStart]);
-          throw new AkentrosError("This API key has exceeded its request rate limit.", {
+          throw new AutonomiaError("This API key has exceeded its request rate limit.", {
             status: 429,
             type: "rate_limit_error",
             code: "request_already_in_flight",

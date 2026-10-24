@@ -1,51 +1,51 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { digestAkentrosApiKey, generateAkentrosApiKey } from "../../../apps/gateway/src/utils/aiApiKeys.ts";
+import { digestAutonomiaApiKey, generateAutonomiaApiKey } from "../../../apps/gateway/src/utils/aiApiKeys.ts";
 import {
-  isAkentrosApiKey,
-  isAkentrosServiceRestricted,
-  maskAkentrosApiKey,
-  normalizeAkentrosKeyOptions,
-  parseAkentrosKeyId,
-  serializeAkentrosApiKey,
+  isAutonomiaApiKey,
+  isAutonomiaServiceRestricted,
+  maskAutonomiaApiKey,
+  normalizeAutonomiaKeyOptions,
+  parseAutonomiaKeyId,
+  serializeAutonomiaApiKey,
 } from "../src/apiKeys.ts";
 
-const TEST_PEPPER = "test-only-akentros-pepper-with-at-least-32-bytes";
+const TEST_PEPPER = "test-only-autonomia-pepper-with-at-least-32-bytes";
 
-test("Hono backend generates opaque Akentros keys", () => {
-  for (const key of [generateAkentrosApiKey("live"), generateAkentrosApiKey("test")]) {
-    assert.equal(isAkentrosApiKey(key), true);
+test("Hono backend generates opaque Autonomia keys", () => {
+  for (const key of [generateAutonomiaApiKey("live"), generateAutonomiaApiKey("test")]) {
+    assert.equal(isAutonomiaApiKey(key), true);
     assert.equal(key.includes("="), false);
   }
 });
 
 test("Hono backend derives deterministic HMAC digests", async () => {
-  const secret = "sk-akentros-live_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnop";
-  const digest = await digestAkentrosApiKey({}, secret, TEST_PEPPER);
+  const secret = "sk-autonomia-live_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnop";
+  const digest = await digestAutonomiaApiKey({}, secret, TEST_PEPPER);
   assert.match(digest, /^[a-f0-9]{64}$/);
-  assert.equal(digest, await digestAkentrosApiKey({}, secret, TEST_PEPPER));
-  assert.notEqual(digest, await digestAkentrosApiKey({}, secret, `${TEST_PEPPER}-other`));
+  assert.equal(digest, await digestAutonomiaApiKey({}, secret, TEST_PEPPER));
+  assert.notEqual(digest, await digestAutonomiaApiKey({}, secret, `${TEST_PEPPER}-other`));
 });
 
 test("key options are strict, bounded, and model-aware", () => {
   const expiresAt = new Date(Date.now() + 2 * 60 * 60_000).toISOString();
-  const clean = normalizeAkentrosKeyOptions(
+  const clean = normalizeAutonomiaKeyOptions(
     {
       name: " Production ",
       environment: "live",
-      model_allowlist: ["akentros/model-a", "akentros/model-a"],
+      model_allowlist: ["autonomia/model-a", "autonomia/model-a"],
       rpm_limit: 120,
       max_in_flight: 8,
       spend_limit_usd: "500.00",
       expires_at: expiresAt,
     },
-    ["akentros/model-a"],
+    ["autonomia/model-a"],
   );
 
   assert.deepEqual(clean, {
     name: "Production",
     environment: "live",
-    modelAllowlist: ["akentros/model-a"],
+    modelAllowlist: ["autonomia/model-a"],
     rpmLimit: 120,
     maxInFlight: 8,
     spendLimitUsdMicros: 500000000,
@@ -54,35 +54,35 @@ test("key options are strict, bounded, and model-aware", () => {
   });
   // 冪等重放 TTL:0-604800 秒(7 天),非整數或超界一律拒絕。
   assert.equal(
-    normalizeAkentrosKeyOptions({ name: "Replay", idempotency_replay_ttl_seconds: 3600 })
+    normalizeAutonomiaKeyOptions({ name: "Replay", idempotency_replay_ttl_seconds: 3600 })
       .idempotencyReplayTtlSeconds,
     3600,
   );
   assert.throws(
-    () => normalizeAkentrosKeyOptions({ name: "Replay", idempotency_replay_ttl_seconds: 604801 }),
+    () => normalizeAutonomiaKeyOptions({ name: "Replay", idempotency_replay_ttl_seconds: 604801 }),
     /idempotency_replay_ttl_seconds/,
   );
   assert.throws(
-    () => normalizeAkentrosKeyOptions({ name: "Replay", idempotency_replay_ttl_seconds: 1.5 }),
+    () => normalizeAutonomiaKeyOptions({ name: "Replay", idempotency_replay_ttl_seconds: 1.5 }),
     /idempotency_replay_ttl_seconds/,
   );
-  assert.throws(() => normalizeAkentrosKeyOptions({ name: "" }), /1 to 80/);
-  assert.throws(() => normalizeAkentrosKeyOptions({ name: "bad", rpm_limit: 1.5 }), /rpm_limit/);
+  assert.throws(() => normalizeAutonomiaKeyOptions({ name: "" }), /1 to 80/);
+  assert.throws(() => normalizeAutonomiaKeyOptions({ name: "bad", rpm_limit: 1.5 }), /rpm_limit/);
   assert.throws(
     () =>
-      normalizeAkentrosKeyOptions({ name: "bad", model_allowlist: ["akentros/unknown"] }, [
-        "akentros/model-a",
+      normalizeAutonomiaKeyOptions({ name: "bad", model_allowlist: ["autonomia/unknown"] }, [
+        "autonomia/model-a",
       ]),
     /Unknown or disabled/,
   );
-  assert.throws(() => normalizeAkentrosKeyOptions({ name: "bad", extra: true }), /Unsupported/);
+  assert.throws(() => normalizeAutonomiaKeyOptions({ name: "bad", extra: true }), /Unsupported/);
   assert.equal(
-    normalizeAkentrosKeyOptions({ name: "Zero budget", spend_limit_usd: "0.00" }).spendLimitUsdMicros,
+    normalizeAutonomiaKeyOptions({ name: "Zero budget", spend_limit_usd: "0.00" }).spendLimitUsdMicros,
     0,
   );
   assert.throws(
     () =>
-      normalizeAkentrosKeyOptions({
+      normalizeAutonomiaKeyOptions({
         name: "Too soon",
         expires_at: new Date(Date.now() + 30 * 60_000).toISOString(),
       }),
@@ -91,17 +91,17 @@ test("key options are strict, bounded, and model-aware", () => {
 });
 
 test("key IDs preserve PostgreSQL BIGINT precision", () => {
-  assert.equal(parseAkentrosKeyId("1"), "1");
-  assert.equal(parseAkentrosKeyId("9223372036854775807"), "9223372036854775807");
-  assert.equal(parseAkentrosKeyId("9223372036854775808"), null);
-  assert.equal(parseAkentrosKeyId("01"), null);
-  assert.equal(parseAkentrosKeyId("1.5"), null);
+  assert.equal(parseAutonomiaKeyId("1"), "1");
+  assert.equal(parseAutonomiaKeyId("9223372036854775807"), "9223372036854775807");
+  assert.equal(parseAutonomiaKeyId("9223372036854775808"), null);
+  assert.equal(parseAutonomiaKeyId("01"), null);
+  assert.equal(parseAutonomiaKeyId("1.5"), null);
 });
 
 test("developer metadata never serializes a full secret", () => {
-  const secret = generateAkentrosApiKey();
-  const mask = maskAkentrosApiKey(secret);
-  const metadata: any = serializeAkentrosApiKey({
+  const secret = generateAutonomiaApiKey();
+  const mask = maskAutonomiaApiKey(secret);
+  const metadata: any = serializeAutonomiaApiKey({
     id: "9007199254740993",
     name: "CI",
     environment: "test",
@@ -129,23 +129,23 @@ test("developer metadata never serializes a full secret", () => {
   assert.equal("secret" in metadata, false);
 });
 
-test("service restriction aliases cover parent and canonical Akentros links", () => {
+test("service restriction aliases cover parent and canonical Autonomia links", () => {
   assert.equal(
-    isAkentrosServiceRestricted({
+    isAutonomiaServiceRestricted({
       is_flagged: true,
       restricted_services: '["/Developer"]',
     }),
     true,
   );
   assert.equal(
-    isAkentrosServiceRestricted({
+    isAutonomiaServiceRestricted({
       is_flagged: true,
       restricted_services: ["/Developer/ai-api"],
     }),
     true,
   );
   assert.equal(
-    isAkentrosServiceRestricted({
+    isAutonomiaServiceRestricted({
       is_flagged: false,
       restricted_services: ["/Developer/ai-api"],
     }),

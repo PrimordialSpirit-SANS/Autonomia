@@ -1,23 +1,23 @@
 import {
-  AKENTROS_DEFAULT_SCOPES,
-  AKENTROS_MAX_ACTIVE_KEYS,
-  isAkentrosApiKey,
-  maskAkentrosApiKey,
-  normalizeAkentrosKeyOptions,
-  parseAkentrosJsonArray,
-  parseAkentrosModelAllowlistStrict,
-  requireAkentrosApiKeyPepper,
-  serializeAkentrosApiKey,
-} from "@akentros/core/apiKeys";
-import { listEnabledModels } from "@akentros/core/pricing";
-import type { AkentrosAuthenticatedKey, AkentrosRuntimeEnv } from "../types.ts";
+  AUTONOMIA_DEFAULT_SCOPES,
+  AUTONOMIA_MAX_ACTIVE_KEYS,
+  isAutonomiaApiKey,
+  maskAutonomiaApiKey,
+  normalizeAutonomiaKeyOptions,
+  parseAutonomiaJsonArray,
+  parseAutonomiaModelAllowlistStrict,
+  requireAutonomiaApiKeyPepper,
+  serializeAutonomiaApiKey,
+} from "@autonomia/core/apiKeys";
+import { listEnabledModels } from "@autonomia/core/pricing";
+import type { AutonomiaAuthenticatedKey, AutonomiaRuntimeEnv } from "../types.ts";
 import { ensureAiSchema } from "./aiSchema.ts";
 import { hmacSha256Hex, randomToken, sha256Hex } from "./crypto.ts";
-import { createAkentrosQuery, dbGet, dbQuery, withAkentrosTransaction } from "./db.ts";
+import { createAutonomiaQuery, dbGet, dbQuery, withAutonomiaTransaction } from "./db.ts";
 
-// authenticateAkentrosApiKey 的 SELECT 欄位契約:資料列欄位以此為準,
+// authenticateAutonomiaApiKey 的 SELECT 欄位契約:資料列欄位以此為準,
 // 讀取 SELECT 以外的欄位會在編譯期報錯(防 row.points 這類幽靈欄位)。
-interface AkentrosApiKeyAuthRow {
+interface AutonomiaApiKeyAuthRow {
   id: number | string;
   user_id: number | string;
   name: string;
@@ -39,20 +39,20 @@ interface AkentrosApiKeyAuthRow {
   balance_usd_micros: number | string;
 }
 
-function getPepper(env: AkentrosRuntimeEnv, explicitPepper: unknown) {
-  return requireAkentrosApiKeyPepper(explicitPepper || env?.AKENTROS_API_KEY_PEPPER);
+function getPepper(env: AutonomiaRuntimeEnv, explicitPepper: unknown) {
+  return requireAutonomiaApiKeyPepper(explicitPepper || env?.AUTONOMIA_API_KEY_PEPPER);
 }
 
-export function generateAkentrosApiKey(environment = "live") {
+export function generateAutonomiaApiKey(environment = "live") {
   const safeEnvironment = environment === "test" ? "test" : "live";
-  return randomToken(`sk-akentros-${safeEnvironment}`, 32);
+  return randomToken(`sk-autonomia-${safeEnvironment}`, 32);
 }
 
-export function digestAkentrosApiKey(env: AkentrosRuntimeEnv, secret: unknown, explicitPepper?: unknown) {
+export function digestAutonomiaApiKey(env: AutonomiaRuntimeEnv, secret: unknown, explicitPepper?: unknown) {
   return hmacSha256Hex(getPepper(env, explicitPepper), String(secret));
 }
 
-export async function listAkentrosApiKeys(env: AkentrosRuntimeEnv, userId: string | number) {
+export async function listAutonomiaApiKeys(env: AutonomiaRuntimeEnv, userId: string | number) {
   await ensureAiSchema(env);
   const result = await dbQuery(
     env,
@@ -70,7 +70,7 @@ export async function listAkentrosApiKeys(env: AkentrosRuntimeEnv, userId: strin
   `,
     [userId],
   );
-  return (result.rows || []).map(serializeAkentrosApiKey);
+  return (result.rows || []).map(serializeAutonomiaApiKey);
 }
 
 function rows(result: any): any[] {
@@ -85,8 +85,8 @@ function fiveMinutesAgoIso() {
   return new Date(Date.now() - 5 * 60_000).toISOString();
 }
 
-export async function ensureAkentrosSessionCredential(
-  env: AkentrosRuntimeEnv,
+export async function ensureAutonomiaSessionCredential(
+  env: AutonomiaRuntimeEnv,
   user: {
     id: string | number;
     username: string;
@@ -94,17 +94,17 @@ export async function ensureAkentrosSessionCredential(
     is_flagged: boolean;
     restricted_services: unknown;
   },
-): Promise<AkentrosAuthenticatedKey> {
+): Promise<AutonomiaAuthenticatedKey> {
   await ensureAiSchema(env);
   const userId = String(user?.id || "");
   if (!/^[1-9][0-9]*$/.test(userId)) {
-    throw new TypeError("A valid user is required for Akentros account inference.");
+    throw new TypeError("A valid user is required for Autonomia account inference.");
   }
 
   // This deterministic digest is only a private row identity. It is never
   // returned as a bearer secret, and public-key authentication excludes
   // session credentials explicitly.
-  const digest = await sha256Hex(`akentros-account-session:${userId}`);
+  const digest = await sha256Hex(`autonomia-account-session:${userId}`);
   const row = await dbGet(
     env,
     `
@@ -113,7 +113,7 @@ export async function ensureAkentrosSessionCredential(
       scopes, model_allowlist, rpm_limit, max_in_flight, spend_limit_usd_micros,
       is_active, expires_at, last_used_at
     )
-    VALUES (?, 'Akentros account session', 'session', 'akentros-account', 'session', ?,
+    VALUES (?, 'Autonomia account session', 'session', 'autonomia-account', 'session', ?,
             ?, '[]', 60, 4, NULL, 1, NULL, ?)
     ON CONFLICT (key_digest) DO UPDATE
     SET is_active = 1,
@@ -133,7 +133,7 @@ export async function ensureAkentrosSessionCredential(
     [
       userId,
       digest,
-      JSON.stringify(AKENTROS_DEFAULT_SCOPES),
+      JSON.stringify(AUTONOMIA_DEFAULT_SCOPES),
       nowIso(),
       fiveMinutesAgoIso(),
       nowIso(),
@@ -142,15 +142,15 @@ export async function ensureAkentrosSessionCredential(
   );
 
   if (!row) {
-    throw new Error("Akentros account session credential is unavailable.");
+    throw new Error("Autonomia account session credential is unavailable.");
   }
 
   return {
     id: String(row.id),
     user_id: row.user_id,
     name: row.name,
-    scopes: parseAkentrosJsonArray(row.scopes),
-    model_allowlist: parseAkentrosJsonArray(row.model_allowlist),
+    scopes: parseAutonomiaJsonArray(row.scopes),
+    model_allowlist: parseAutonomiaJsonArray(row.model_allowlist),
     rpm_limit: Number(row.rpm_limit),
     max_in_flight: Number(row.max_in_flight),
     spend_limit_usd_micros: row.spend_limit_usd_micros == null ? null : Number(row.spend_limit_usd_micros),
@@ -167,21 +167,21 @@ export async function ensureAkentrosSessionCredential(
   };
 }
 
-export async function createAkentrosApiKey(
-  env: AkentrosRuntimeEnv,
+export async function createAutonomiaApiKey(
+  env: AutonomiaRuntimeEnv,
   userId: string | number,
   options: Record<string, unknown>,
 ) {
   await ensureAiSchema(env);
-  const clean = normalizeAkentrosKeyOptions(
+  const clean = normalizeAutonomiaKeyOptions(
     options,
     listEnabledModels().map((model) => model.id),
   );
-  const secret = generateAkentrosApiKey(clean.environment);
-  const digest = await digestAkentrosApiKey(env, secret);
-  const mask = maskAkentrosApiKey(secret);
-  const query = createAkentrosQuery(env);
-  const result = await withAkentrosTransaction(env, async () => {
+  const secret = generateAutonomiaApiKey(clean.environment);
+  const digest = await digestAutonomiaApiKey(env, secret);
+  const mask = maskAutonomiaApiKey(secret);
+  const query = createAutonomiaQuery(env);
+  const result = await withAutonomiaTransaction(env, async () => {
     const now = nowIso();
     const activeCountRows = await query(
       `
@@ -196,7 +196,7 @@ export async function createAkentrosApiKey(
       [userId, now],
     );
     const activeCount = Number(rows(activeCountRows)[0]?.active_count || 0);
-    if (activeCount >= AKENTROS_MAX_ACTIVE_KEYS) return { rows: [] };
+    if (activeCount >= AUTONOMIA_MAX_ACTIVE_KEYS) return { rows: [] };
 
     return query(
       `
@@ -218,7 +218,7 @@ export async function createAkentrosApiKey(
         mask.key_prefix,
         mask.key_suffix,
         digest,
-        JSON.stringify(AKENTROS_DEFAULT_SCOPES),
+        JSON.stringify(AUTONOMIA_DEFAULT_SCOPES),
         JSON.stringify(clean.modelAllowlist),
         clean.rpmLimit,
         clean.maxInFlight,
@@ -230,16 +230,16 @@ export async function createAkentrosApiKey(
   });
   if (!result.rows?.[0]) {
     const error: Error & { code?: string } = new Error(
-      `A maximum of ${AKENTROS_MAX_ACTIVE_KEYS} active Akentros keys is allowed.`,
+      `A maximum of ${AUTONOMIA_MAX_ACTIVE_KEYS} active Autonomia keys is allowed.`,
     );
     error.code = "AI_KEY_LIMIT";
     throw error;
   }
-  return { ...serializeAkentrosApiKey(result.rows[0]), secret };
+  return { ...serializeAutonomiaApiKey(result.rows[0]), secret };
 }
 
-export async function rotateAkentrosApiKey(
-  env: AkentrosRuntimeEnv,
+export async function rotateAutonomiaApiKey(
+  env: AutonomiaRuntimeEnv,
   userId: string | number,
   keyId: string | number,
 ) {
@@ -253,9 +253,9 @@ export async function rotateAkentrosApiKey(
   );
   if (!existing) return null;
 
-  const secret = generateAkentrosApiKey(existing.environment);
-  const digest = await digestAkentrosApiKey(env, secret);
-  const mask = maskAkentrosApiKey(secret);
+  const secret = generateAutonomiaApiKey(existing.environment);
+  const digest = await digestAutonomiaApiKey(env, secret);
+  const mask = maskAutonomiaApiKey(secret);
   const result = await dbQuery(
     env,
     `
@@ -270,11 +270,11 @@ export async function rotateAkentrosApiKey(
   `,
     [mask.key_prefix, mask.key_suffix, digest, nowIso(), nowIso(), keyId, userId],
   );
-  return result.rows?.[0] ? { ...serializeAkentrosApiKey(result.rows[0]), secret } : null;
+  return result.rows?.[0] ? { ...serializeAutonomiaApiKey(result.rows[0]), secret } : null;
 }
 
-export async function revokeAkentrosApiKey(
-  env: AkentrosRuntimeEnv,
+export async function revokeAutonomiaApiKey(
+  env: AutonomiaRuntimeEnv,
   userId: string | number,
   keyId: string | number,
 ) {
@@ -292,13 +292,13 @@ export async function revokeAkentrosApiKey(
   return Boolean(result.rows?.length);
 }
 
-export async function authenticateAkentrosApiKey(
-  env: AkentrosRuntimeEnv,
+export async function authenticateAutonomiaApiKey(
+  env: AutonomiaRuntimeEnv,
   secret: unknown,
-): Promise<AkentrosAuthenticatedKey | null> {
-  if (!isAkentrosApiKey(secret)) return null;
+): Promise<AutonomiaAuthenticatedKey | null> {
+  if (!isAutonomiaApiKey(secret)) return null;
   await ensureAiSchema(env);
-  const digest = await digestAkentrosApiKey(env, secret);
+  const digest = await digestAutonomiaApiKey(env, secret);
   const row = (await dbGet(
     env,
     `
@@ -320,11 +320,11 @@ export async function authenticateAkentrosApiKey(
     // expires_at 存的是 ISO-8601 字串;CURRENT_TIMESTAMP 是空格分隔格式,
     // 字典序比較會讓「當天到期」整日視為未過期,必須用同格式的 now 綁定比較。
     [digest, nowIso()],
-  )) as AkentrosApiKeyAuthRow | null;
+  )) as AutonomiaApiKeyAuthRow | null;
   if (!row) return null;
   // model_allowlist 損毀時 fail-closed:回 null(視同無效金鑰),而不是把
   // 損毀值當成空陣列 = 解除所有模型限制。
-  const modelAllowlist = parseAkentrosModelAllowlistStrict(row.model_allowlist);
+  const modelAllowlist = parseAutonomiaModelAllowlistStrict(row.model_allowlist);
   if (!modelAllowlist) return null;
   await dbQuery(
     env,
@@ -342,7 +342,7 @@ export async function authenticateAkentrosApiKey(
     name: row.name,
     prefix: row.key_prefix,
     suffix: row.key_suffix,
-    scopes: parseAkentrosJsonArray(row.scopes),
+    scopes: parseAutonomiaJsonArray(row.scopes),
     model_allowlist: modelAllowlist,
     rpm_limit: Number(row.rpm_limit),
     max_in_flight: Number(row.max_in_flight),

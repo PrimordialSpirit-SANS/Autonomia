@@ -1,21 +1,21 @@
-import { assertAkentrosSchemaReady } from "@akentros/core/schemaReadiness";
-import type { AkentrosRuntimeEnv } from "../types.ts";
-import { createAkentrosQuery } from "./db.ts";
+import { assertAutonomiaSchemaReady } from "@autonomia/core/schemaReadiness";
+import type { AutonomiaRuntimeEnv } from "../types.ts";
+import { createAutonomiaQuery } from "./db.ts";
 
 const schemaPromises = new Map();
 
-function databaseKey(env: AkentrosRuntimeEnv) {
+function databaseKey(env: AutonomiaRuntimeEnv) {
   return env?.DATABASE_URL?.trim() || "unconfigured-main";
 }
 
-export function ensureAiSchema(env: AkentrosRuntimeEnv) {
+export function ensureAiSchema(env: AutonomiaRuntimeEnv) {
   const key = databaseKey(env);
   if (schemaPromises.has(key)) return schemaPromises.get(key);
 
   const promise = (async () => {
-    // createAkentrosQuery 提供 dialect 標註:就緒檢查依此選擇 SQLite/PostgreSQL
+    // createAutonomiaQuery 提供 dialect 標註:就緒檢查依此選擇 SQLite/PostgreSQL
     // 的 catalog 語法(裸函式包裝會被誤判為 SQLite)。
-    await assertAkentrosSchemaReady(createAkentrosQuery(env));
+    await assertAutonomiaSchemaReady(createAutonomiaQuery(env));
   })().catch((error: any) => {
     schemaPromises.delete(key);
     throw error;

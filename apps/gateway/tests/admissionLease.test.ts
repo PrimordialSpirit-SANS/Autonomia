@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { Hono } from "hono";
 import { createApp } from "../src/app.ts";
-import { createAkentrosApiKey } from "../src/utils/aiApiKeys.ts";
-import { ensureAkentrosSchemaReady } from "../src/utils/bootstrap.ts";
-import { dbQuery, installNodeAkentrosDbAdapter } from "../src/utils/db.ts";
+import { createAutonomiaApiKey } from "../src/utils/aiApiKeys.ts";
+import { ensureAutonomiaSchemaReady } from "../src/utils/bootstrap.ts";
+import { dbQuery, installNodeAutonomiaDbAdapter } from "../src/utils/db.ts";
 
 // ECO-ADJ-1 回歸測試:驗證失敗(400)必須釋放 admission 租約。原實作
 // 僅在 prepared?.requestId 存在時釋放,導致每個被拒的無效請求都洩漏一個
@@ -12,15 +12,15 @@ import { dbQuery, installNodeAkentrosDbAdapter } from "../src/utils/db.ts";
 // 直到 5 分鐘租約 TTL。遷移者 SDK 常態攜帶被拒參數(logprobs、response_format
 // 舊形狀等),此洩漏把「可分辨的 400」劣化成「鎖死 5 分鐘」。
 
-await installNodeAkentrosDbAdapter();
+await installNodeAutonomiaDbAdapter();
 
 const env: any = {
-  AKENTROS_DB_PATH: ":memory:",
-  AKENTROS_API_KEY_PEPPER: "pepper-".repeat(8),
-  AKENTROS_ENABLED: "true",
+  AUTONOMIA_DB_PATH: ":memory:",
+  AUTONOMIA_API_KEY_PEPPER: "pepper-".repeat(8),
+  AUTONOMIA_ENABLED: "true",
   OPENAI_API_KEY_1: "test-openai-key",
 };
-await ensureAkentrosSchemaReady(env);
+await ensureAutonomiaSchemaReady(env);
 
 async function seedUser(email: string) {
   const inserted = await dbQuery(
@@ -56,7 +56,7 @@ async function unreleasedLeaseCount() {
 test("validation failures release the admission lease instead of leaking it", async (t) => {
   const userId = await seedUser("admission-leak@example.com");
   // max_in_flight=2:只要洩漏 2 個租約,後續請求就會被 429 鎖死。
-  const { secret } = await createAkentrosApiKey(env, userId, {
+  const { secret } = await createAutonomiaApiKey(env, userId, {
     name: "leak-probe-key",
     max_in_flight: 2,
     rpm_limit: 100,
@@ -73,7 +73,7 @@ test("validation failures release the admission lease instead of leaking it", as
         method: "POST",
         headers,
         body: JSON.stringify({
-          model: "akentros/gpt-5.2",
+          model: "autonomia/gpt-5.2",
           messages: [{ role: "user", content: "hi" }],
           logprobs: true,
         }),
@@ -91,7 +91,7 @@ test("validation failures release the admission lease instead of leaking it", as
         method: "POST",
         headers,
         body: JSON.stringify({
-          model: "akentros/gpt-5.2",
+          model: "autonomia/gpt-5.2",
           input: "hi",
           background: true,
         }),
@@ -109,7 +109,7 @@ test("validation failures release the admission lease instead of leaking it", as
         method: "POST",
         headers,
         body: JSON.stringify({
-          model: "akentros/text-embedding-3-small",
+          model: "autonomia/text-embedding-3-small",
           input: "hello",
           vendor_hint: "rejected",
         }),
@@ -138,7 +138,7 @@ test("validation failures release the admission lease instead of leaking it", as
         method: "POST",
         headers,
         body: JSON.stringify({
-          model: "akentros/gpt-5.2",
+          model: "autonomia/gpt-5.2",
           messages: [{ role: "user", content: "still admitted?" }],
         }),
       });

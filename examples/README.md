@@ -1,10 +1,10 @@
-# Akentros 範例
+# Autonomia 範例
 
 可直接執行的接入範例,涵蓋最常見的三種呼叫方式。全部範例共用同一組環境約定:
 
 ```bash
-export AKENTROS_BASE_URL=http://localhost:8787/api/ai/v1   # gateway 位址(含 /api/ai/v1)
-export AKENTROS_API_KEY=sk-akentros-live_...               # 在控制台「金鑰」頁建立
+export AUTONOMIA_BASE_URL=http://localhost:8787/api/ai/v1   # gateway 位址(含 /api/ai/v1)
+export AUTONOMIA_API_KEY=sk-autonomia-live_...               # 在控制台「金鑰」頁建立
 ```
 
 | 目錄 | 內容 |
@@ -17,7 +17,7 @@ export AKENTROS_API_KEY=sk-akentros-live_...               # 在控制台「金�
 
 1. 讀 [README 快速開始](../README.md#快速開始)把 gateway 跑起來(`npm run migrate` 種子管理員 → 控制台建金鑰)。
 2. 沒有供應商金鑰也能走完整流程:控制台 `?demo=1` 示範模式可建金鑰,但真實推理需要 `OPENROUTER_API_KEY_1` 等上游金鑰。
-3. 模型名稱帶 `akentros/` 前綴(如 `akentros/gpt-5.2`),可用目錄清單確認:`curl -H "Authorization: Bearer $AKENTROS_API_KEY" $AKENTROS_BASE_URL/models`。
+3. 模型名稱帶 `autonomia/` 前綴(如 `autonomia/gpt-5.2`),可用目錄清單確認:`curl -H "Authorization: Bearer $AUTONOMIA_API_KEY" $AUTONOMIA_BASE_URL/models`。
 
 ## 行為差異速覽
 

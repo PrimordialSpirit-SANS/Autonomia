@@ -4,16 +4,16 @@
 # 環境變數同 chat.sh。
 set -eu
 
-BASE_URL="${AKENTROS_BASE_URL:-http://localhost:8787/api/ai/v1}"
-MODEL="${AKENTROS_MODEL:-akentros/gpt-5.2}"
+BASE_URL="${AUTONOMIA_BASE_URL:-http://localhost:8787/api/ai/v1}"
+MODEL="${AUTONOMIA_MODEL:-autonomia/gpt-5.2}"
 
-if [ -z "${AKENTROS_API_KEY:-}" ]; then
-  echo "請先設定 AKENTROS_API_KEY(在控制台「金鑰」頁建立)" >&2
+if [ -z "${AUTONOMIA_API_KEY:-}" ]; then
+  echo "請先設定 AUTONOMIA_API_KEY(在控制台「金鑰」頁建立)" >&2
   exit 1
 fi
 
 curl -sS -N "$BASE_URL/chat/completions" \
-  -H "Authorization: Bearer $AKENTROS_API_KEY" \
+  -H "Authorization: Bearer $AUTONOMIA_API_KEY" \
   -H "Content-Type: application/json" \
   -H "Accept: text/event-stream" \
   -d "$(printf '{

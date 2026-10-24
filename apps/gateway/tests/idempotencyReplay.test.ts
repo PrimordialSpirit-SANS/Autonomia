@@ -2,24 +2,24 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { Hono } from "hono";
 import { createApp } from "../src/app.ts";
-import { createAkentrosApiKey } from "../src/utils/aiApiKeys.ts";
+import { createAutonomiaApiKey } from "../src/utils/aiApiKeys.ts";
 import {
-  cleanupAkentrosIdempotentReplays,
-  readAkentrosIdempotentReplay,
-  saveAkentrosIdempotentReplay,
+  cleanupAutonomiaIdempotentReplays,
+  readAutonomiaIdempotentReplay,
+  saveAutonomiaIdempotentReplay,
 } from "../src/utils/aiIdempotency.ts";
-import { ensureAkentrosSchemaReady } from "../src/utils/bootstrap.ts";
-import { dbQuery, installNodeAkentrosDbAdapter } from "../src/utils/db.ts";
+import { ensureAutonomiaSchemaReady } from "../src/utils/bootstrap.ts";
+import { dbQuery, installNodeAutonomiaDbAdapter } from "../src/utils/db.ts";
 
-await installNodeAkentrosDbAdapter();
+await installNodeAutonomiaDbAdapter();
 
 const env: any = {
-  AKENTROS_DB_PATH: ":memory:",
-  AKENTROS_API_KEY_PEPPER: "pepper-".repeat(8),
-  AKENTROS_ENABLED: "true",
+  AUTONOMIA_DB_PATH: ":memory:",
+  AUTONOMIA_API_KEY_PEPPER: "pepper-".repeat(8),
+  AUTONOMIA_ENABLED: "true",
   OPENAI_API_KEY_1: "test-openai-key",
 };
-await ensureAkentrosSchemaReady(env);
+await ensureAutonomiaSchemaReady(env);
 
 async function seedUser(email: string) {
   const inserted = await dbQuery(
@@ -51,7 +51,7 @@ function fingerprint(value: string) {
 
 test("replay store round-trips, expires, refuses mismatched fingerprints, and ignores duplicates", async () => {
   const fingerprintValue = fingerprint("a");
-  const saved = await saveAkentrosIdempotentReplay(env, {
+  const saved = await saveAutonomiaIdempotentReplay(env, {
     requestId: "req_replay_store_1",
     apiKeyId: 1,
     idempotencyKey: "idem-a",
@@ -63,7 +63,7 @@ test("replay store round-trips, expires, refuses mismatched fingerprints, and ig
   });
   assert.equal(saved, true);
 
-  const hit = await readAkentrosIdempotentReplay(env, {
+  const hit = await readAutonomiaIdempotentReplay(env, {
     apiKeyId: 1,
     idempotencyKey: "idem-a",
     requestFingerprint: fingerprintValue,
@@ -74,7 +74,7 @@ test("replay store round-trips, expires, refuses mismatched fingerprints, and ig
 
   // 指紋不一致 = 同一冪等鍵綁不同請求體 → 與 billing.reserve 相同的 409。
   await assert.rejects(
-    readAkentrosIdempotentReplay(env, {
+    readAutonomiaIdempotentReplay(env, {
       apiKeyId: 1,
       idempotencyKey: "idem-a",
       requestFingerprint: fingerprint("b"),
@@ -83,7 +83,7 @@ test("replay store round-trips, expires, refuses mismatched fingerprints, and ig
   );
 
   // 同 (api_key_id, idempotency_key) 的第二次落地必須被唯一索引擋下。
-  const duplicate = await saveAkentrosIdempotentReplay(env, {
+  const duplicate = await saveAutonomiaIdempotentReplay(env, {
     requestId: "req_replay_store_2",
     apiKeyId: 1,
     idempotencyKey: "idem-a",
@@ -108,17 +108,17 @@ test("replay store round-trips, expires, refuses mismatched fingerprints, and ig
   `,
     [fingerprint("c")],
   );
-  const expired = await readAkentrosIdempotentReplay(env, {
+  const expired = await readAutonomiaIdempotentReplay(env, {
     apiKeyId: 1,
     idempotencyKey: "idem-b",
     requestFingerprint: fingerprint("c"),
   });
   assert.equal(expired, null);
-  const removed = await cleanupAkentrosIdempotentReplays(env);
+  const removed = await cleanupAutonomiaIdempotentReplays(env);
   assert.equal(removed, 1);
 
   // TTL 關閉(0)不落地。
-  const disabled = await saveAkentrosIdempotentReplay(env, {
+  const disabled = await saveAutonomiaIdempotentReplay(env, {
     requestId: "req_replay_store_4",
     apiKeyId: 1,
     idempotencyKey: "idem-c",
@@ -133,17 +133,17 @@ test("replay store round-trips, expires, refuses mismatched fingerprints, and ig
 
 test("opt-in key replays the stored response; non-opt-in key keeps 409 semantics", async () => {
   const userId = await seedUser("replay-e2e@example.com");
-  const { secret } = await createAkentrosApiKey(env, userId, {
+  const { secret } = await createAutonomiaApiKey(env, userId, {
     name: "replay-key",
     idempotency_replay_ttl_seconds: 3600,
   });
-  const { secret: plainSecret } = await createAkentrosApiKey(env, userId, {
+  const { secret: plainSecret } = await createAutonomiaApiKey(env, userId, {
     name: "no-replay-key",
   });
 
   const app = createTestApp(env);
   const requestBody = {
-    model: "akentros/gpt-5.2",
+    model: "autonomia/gpt-5.2",
     messages: [{ role: "user", content: "Hello replay" }],
   };
   let providerCalls = 0;
@@ -191,7 +191,7 @@ test("opt-in key replays the stored response; non-opt-in key keeps 409 semantics
       body: JSON.stringify(requestBody),
     });
     assert.equal(second.status, 200);
-    assert.equal(second.headers.get("x-akentros-idempotent-replay"), "true");
+    assert.equal(second.headers.get("x-autonomia-idempotent-replay"), "true");
     assert.deepEqual(await second.json(), firstBody);
     assert.equal(providerCalls, 1);
 
@@ -224,7 +224,7 @@ test("opt-in key replays the stored response; non-opt-in key keeps 409 semantics
         "idempotency-key": "e2e-1",
       },
       body: JSON.stringify({
-        model: "akentros/gpt-5.2",
+        model: "autonomia/gpt-5.2",
         messages: [{ role: "user", content: "Different body" }],
       }),
     });
@@ -269,13 +269,13 @@ test("opt-in key replays the stored response; non-opt-in key keeps 409 semantics
 // 落地(OpenAI 語意),而不是永久 409。
 test("opt-in key: after replay TTL expiry the same key re-executes and re-stores the new response", async () => {
   const userId = await seedUser("replay-expiry@example.com");
-  const { secret } = await createAkentrosApiKey(env, userId, {
+  const { secret } = await createAutonomiaApiKey(env, userId, {
     name: "replay-expiry-key",
     idempotency_replay_ttl_seconds: 3600,
   });
   const app = createTestApp(env);
   const requestBody = {
-    model: "akentros/gpt-5.2",
+    model: "autonomia/gpt-5.2",
     messages: [{ role: "user", content: "Hello expiry" }],
   };
   let providerCalls = 0;
@@ -315,7 +315,7 @@ test("opt-in key: after replay TTL expiry the same key re-executes and re-stores
     // TTL 內重送:重放,不執行。
     const inWindow = await send();
     assert.equal(inWindow.status, 200);
-    assert.equal(inWindow.headers.get("x-akentros-idempotent-replay"), "true");
+    assert.equal(inWindow.headers.get("x-autonomia-idempotent-replay"), "true");
     const inWindowBody: any = await inWindow.json();
     assert.equal(inWindowBody.choices[0].message.content, "first answer");
     assert.equal(providerCalls, 1);
@@ -327,7 +327,7 @@ test("opt-in key: after replay TTL expiry the same key re-executes and re-stores
     );
     const afterExpiry = await send();
     assert.equal(afterExpiry.status, 200);
-    assert.equal(afterExpiry.headers.get("x-akentros-idempotent-replay"), null);
+    assert.equal(afterExpiry.headers.get("x-autonomia-idempotent-replay"), null);
     const afterExpiryBody: any = await afterExpiry.json();
     assert.equal(afterExpiryBody.choices[0].message.content, "second answer");
     assert.equal(providerCalls, 2);
@@ -335,7 +335,7 @@ test("opt-in key: after replay TTL expiry the same key re-executes and re-stores
     // 新回應已覆寫過期列:再次重送重放「第二次」的回應,而非舊回應。
     const replayNew = await send();
     assert.equal(replayNew.status, 200);
-    assert.equal(replayNew.headers.get("x-akentros-idempotent-replay"), "true");
+    assert.equal(replayNew.headers.get("x-autonomia-idempotent-replay"), "true");
     const replayNewBody: any = await replayNew.json();
     assert.equal(replayNewBody.choices[0].message.content, "second answer");
     assert.equal(providerCalls, 2);
@@ -357,13 +357,13 @@ test("opt-in key: after replay TTL expiry the same key re-executes and re-stores
 // 扣費);TTL 過期後綁定釋放,同鍵可重新執行。
 test("opt-in key: oversized response stores a tombstone; retries are rejected distinctly until the window expires", async () => {
   const userId = await seedUser("replay-oversized@example.com");
-  const { secret } = await createAkentrosApiKey(env, userId, {
+  const { secret } = await createAutonomiaApiKey(env, userId, {
     name: "replay-oversized-key",
     idempotency_replay_ttl_seconds: 3600,
   });
   const app = createTestApp(env);
   const requestBody = {
-    model: "akentros/gpt-5.2",
+    model: "autonomia/gpt-5.2",
     messages: [{ role: "user", content: "Hello oversized" }],
   };
   let providerCalls = 0;
@@ -411,7 +411,7 @@ test("opt-in key: oversized response stores a tombstone; retries are rejected di
       `SELECT content_type, response_payload, payload_bytes, expires_at FROM ai_idempotency_replays WHERE idempotency_key = 'e2e-oversized'`,
     );
     assert.equal(tombstone.rows.length, 1);
-    assert.equal(tombstone.rows[0].content_type, "application/x-akentros-replay-tombstone");
+    assert.equal(tombstone.rows[0].content_type, "application/x-autonomia-replay-tombstone");
     assert.equal(tombstone.rows[0].response_payload, "");
 
     // TTL 內同鍵重送:可分辨的 409,不重放、不重新執行、不雙重扣費。
@@ -428,7 +428,7 @@ test("opt-in key: oversized response stores a tombstone; retries are rejected di
     );
     const afterExpiry = await send();
     assert.equal(afterExpiry.status, 200);
-    assert.equal(afterExpiry.headers.get("x-akentros-idempotent-replay"), null);
+    assert.equal(afterExpiry.headers.get("x-autonomia-idempotent-replay"), null);
     await afterExpiry.text();
     assert.equal(providerCalls, 2);
   } finally {
@@ -441,7 +441,7 @@ test("opt-in key: oversized response stores a tombstone; retries are rejected di
 // 請求(即使是重放)收到 429。
 test("idempotent replays count toward the key's RPM admission (SN-9)", async () => {
   const userId = await seedUser("replay-rpm@example.com");
-  const { secret } = await createAkentrosApiKey(env, userId, {
+  const { secret } = await createAutonomiaApiKey(env, userId, {
     name: "rpm-capped-replay-key",
     idempotency_replay_ttl_seconds: 3600,
     rpm_limit: 2,
@@ -449,7 +449,7 @@ test("idempotent replays count toward the key's RPM admission (SN-9)", async () 
   });
   const app = createTestApp(env);
   const requestBody = {
-    model: "akentros/gpt-5.2",
+    model: "autonomia/gpt-5.2",
     messages: [{ role: "user", content: "RPM replay" }],
   };
   const originalFetch = globalThis.fetch;
@@ -481,7 +481,7 @@ test("idempotent replays count toward the key's RPM admission (SN-9)", async () 
     // 請求 2:重放命中,也消耗 1 個 RPM 名額。
     const second = await send("rpm-1");
     assert.equal(second.status, 200);
-    assert.equal(second.headers.get("x-akentros-idempotent-replay"), "true");
+    assert.equal(second.headers.get("x-autonomia-idempotent-replay"), "true");
     await second.json();
     // 請求 3:RPM 名額已滿 —— 即使是重放也 429,不再無界放行。
     const third = await send("rpm-1");
@@ -498,7 +498,7 @@ test("idempotent replays count toward the key's RPM admission (SN-9)", async () 
 // 1 次 chat + 3 次 models 的第 3 次 models 收到 429。
 test("models listing counts toward the key's RPM admission (SN-8)", async () => {
   const userId = await seedUser("models-rpm@example.com");
-  const { secret } = await createAkentrosApiKey(env, userId, {
+  const { secret } = await createAutonomiaApiKey(env, userId, {
     name: "rpm-capped-models-key",
     rpm_limit: 2,
     max_in_flight: 4,
@@ -523,7 +523,7 @@ test("models listing counts toward the key's RPM admission (SN-8)", async () => 
         "content-type": "application/json",
       },
       body: JSON.stringify({
-        model: "akentros/gpt-5.2",
+        model: "autonomia/gpt-5.2",
         messages: [{ role: "user", content: "Models RPM" }],
       }),
     });

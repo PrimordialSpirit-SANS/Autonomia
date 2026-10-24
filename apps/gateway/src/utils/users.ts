@@ -1,4 +1,4 @@
-import type { AkentrosRuntimeEnv } from "../types.ts";
+import type { AutonomiaRuntimeEnv } from "../types.ts";
 import { randomBytesHex } from "./crypto.ts";
 import { dbGet, dbQuery, runtimeDialect } from "./db.ts";
 
@@ -8,9 +8,9 @@ import { dbGet, dbQuery, runtimeDialect } from "./db.ts";
 
 // OWASP Password Storage Cheat Sheet 對 PBKDF2-HMAC-SHA256 的建議值
 // (600,000)。舊格式雜湊仍可驗證:迭代數記錄在雜湊字串本身。
-export const AKENTROS_PASSWORD_ITERATIONS = 600_000;
+export const AUTONOMIA_PASSWORD_ITERATIONS = 600_000;
 
-export interface AkentrosAccount {
+export interface AutonomiaAccount {
   id: string;
   username: string;
   email: string;
@@ -25,10 +25,10 @@ export interface AkentrosAccount {
 }
 
 // PBKDF2-SHA256。格式:pbkdf2$<iterations>$<salt_hex>$<hash_hex>
-export async function hashPassword(password: string, env: AkentrosRuntimeEnv): Promise<string> {
-  const configured = Number(env?.AKENTROS_PBKDF2_ITERATIONS);
+export async function hashPassword(password: string, env: AutonomiaRuntimeEnv): Promise<string> {
+  const configured = Number(env?.AUTONOMIA_PBKDF2_ITERATIONS);
   const iterations =
-    Number.isSafeInteger(configured) && configured >= 10_000 ? configured : AKENTROS_PASSWORD_ITERATIONS;
+    Number.isSafeInteger(configured) && configured >= 10_000 ? configured : AUTONOMIA_PASSWORD_ITERATIONS;
   const salt = randomBytesHex(16);
   const derived = await derivePasswordBits(password, salt, iterations);
   return `pbkdf2$${iterations}$${salt}$${derived}`;
@@ -39,7 +39,7 @@ export async function verifyPassword(password: string, stored: string | null | u
   const [scheme, iterationsText, salt, hash] = String(stored).split("$");
   if (scheme !== "pbkdf2" || !iterationsText || !salt || !hash) return false;
   const iterations = Number(iterationsText);
-  // 本系統產生的雜湊迭代數一律 ≥ AKENTROS_PASSWORD_ITERATIONS(歷史版本)或
+  // 本系統產生的雜湊迭代數一律 ≥ AUTONOMIA_PASSWORD_ITERATIONS(歷史版本)或
   // 設定下限 10,000;低於下限的「雜湊」不是本系統寫入的,拒絕以免弱雜湊被
   // 塞進資料庫後通過驗證。
   if (!Number.isSafeInteger(iterations) || iterations < 10_000) return false;
@@ -75,7 +75,7 @@ async function derivePasswordBits(password: string, saltHex: string, iterations:
   return [...new Uint8Array(bits)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
-function serializeAccount(row: any): AkentrosAccount {
+function serializeAccount(row: any): AutonomiaAccount {
   return {
     id: String(row.id),
     username: String(row.username || ""),
@@ -122,28 +122,28 @@ function usersTableDdl(dialect: "postgres" | "sqlite"): string {
   `;
 }
 
-export async function ensureUsersSchema(env: AkentrosRuntimeEnv): Promise<void> {
+export async function ensureUsersSchema(env: AutonomiaRuntimeEnv): Promise<void> {
   await dbQuery(env, usersTableDdl(runtimeDialect(env)));
 }
 
 export async function findUserByEmail(
-  env: AkentrosRuntimeEnv,
+  env: AutonomiaRuntimeEnv,
   email: string,
-): Promise<AkentrosAccount | null> {
+): Promise<AutonomiaAccount | null> {
   const row = await dbGet(env, `SELECT * FROM users WHERE email = ? LIMIT 1`, [email.trim().toLowerCase()]);
   return row ? serializeAccount(row) : null;
 }
 
 export async function findUserById(
-  env: AkentrosRuntimeEnv,
+  env: AutonomiaRuntimeEnv,
   id: string | number,
-): Promise<AkentrosAccount | null> {
+): Promise<AutonomiaAccount | null> {
   if (!/^[1-9][0-9]*$/.test(String(id))) return null;
   const row = await dbGet(env, `SELECT * FROM users WHERE id = ? LIMIT 1`, [String(id)]);
   return row ? serializeAccount(row) : null;
 }
 
-export async function findUserPasswordHash(env: AkentrosRuntimeEnv, email: string): Promise<string | null> {
+export async function findUserPasswordHash(env: AutonomiaRuntimeEnv, email: string): Promise<string | null> {
   const row = await dbGet(env, `SELECT password_hash FROM users WHERE email = ? LIMIT 1`, [
     email.trim().toLowerCase(),
   ]);
@@ -151,7 +151,7 @@ export async function findUserPasswordHash(env: AkentrosRuntimeEnv, email: strin
 }
 
 export async function createUser(
-  env: AkentrosRuntimeEnv,
+  env: AutonomiaRuntimeEnv,
   options: {
     email: string;
     username: string;
@@ -159,7 +159,7 @@ export async function createUser(
     role?: string;
     balanceUsdMicros?: string;
   },
-): Promise<AkentrosAccount> {
+): Promise<AutonomiaAccount> {
   const row = await dbGet(
     env,
     `
@@ -185,7 +185,7 @@ export async function createUser(
 // 把這個帳號升成 admin,攻擊者即以「自設密碼」取得完整管理權,而 operator
 // 設定的 ADMIN_PASSWORD 永遠無法登入(帳號預先註冊接管,已以 PoC 驗證)。
 export async function upsertAdminUser(
-  env: AkentrosRuntimeEnv,
+  env: AutonomiaRuntimeEnv,
   options: {
     email: string;
     password: string;
@@ -206,7 +206,7 @@ export async function upsertAdminUser(
           "If this account is yours, set ADMIN_PASSWORD to that account's current password; " +
           "otherwise investigate who registered it before re-running the migration.",
       ) as Error & { code?: string };
-      error.code = "AKENTROS_ADMIN_SEED_EMAIL_TAKEN";
+      error.code = "AUTONOMIA_ADMIN_SEED_EMAIL_TAKEN";
       throw error;
     }
     // 時間戳由呼叫端綁定(與其餘寫入路徑的慣例一致,不依賴方言的 now() 語法)。
@@ -227,17 +227,17 @@ export async function upsertAdminUser(
 }
 
 // ── 伺服端會話撤銷(SEC-01 fix)────────────────────────────────────────
-// akentros_token 是 7 天無狀態 JWT,登出只刪 cookie、token 本身到期前持續
+// autonomia_token 是 7 天無狀態 JWT,登出只刪 cookie、token 本身到期前持續
 // 有效。session_epoch(v4 遷移)是唯一伺服端作廢手段:epoch + 1 後,該帳號
 // 所有已簽發 JWT 的 epv 比對不一致 → authenticateToken 401,無需輪替
 // JWT_SECRET(代價是全員登出)。目前以管理指令的形式提供(scripts/
-// revokeAkentrosSessions.ts);未來改密碼、管理員封鎖帳號時直接複用此
+// revokeAutonomiaSessions.ts);未來改密碼、管理員封鎖帳號時直接複用此
 // 函式。
-export type AkentrosSessionRevocationTarget = { all: true } | { userId: string } | { email: string };
+export type AutonomiaSessionRevocationTarget = { all: true } | { userId: string } | { email: string };
 
-export async function revokeAkentrosSessions(
-  env: AkentrosRuntimeEnv,
-  target: AkentrosSessionRevocationTarget,
+export async function revokeAutonomiaSessions(
+  env: AutonomiaRuntimeEnv,
+  target: AutonomiaSessionRevocationTarget,
 ): Promise<{ revoked: number }> {
   const updatedAt = new Date().toISOString();
   let sql: string;
@@ -256,7 +256,7 @@ export async function revokeAkentrosSessions(
     params = [updatedAt];
   } else {
     // 非法輸入 fail-fast:寧可拒絕也不誤傷(空物件不得被當成 --all)。
-    throw new TypeError("revokeAkentrosSessions requires one of: { all: true }, { userId }, { email }.");
+    throw new TypeError("revokeAutonomiaSessions requires one of: { all: true }, { userId }, { email }.");
   }
   const result = await dbQuery(env, sql, params);
   return { revoked: Array.isArray(result?.rows) ? result.rows.length : 0 };

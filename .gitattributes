@@ -1,0 +1,24 @@
+# 跨平台一致的行尾:文字檔一律以 LF 入庫與 checkout,避免 Windows 的
+# core.autocrlf 把工作區換成 CRLF 而 biome(CI 的 lint/format 關卡)要求
+# LF——否則 Windows 貢獻者本地 lint 開箱即全紅。
+* text=auto eol=lf
+
+# 二進位檔不做事業處理(git diff --textconv / 換行轉換皆略過)。
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.otf binary
+*.wasm binary
+*.db binary
+*.sqlite binary
+
+# Windows 專屬腳本保留 CRLF(目前 repo 尚無此類檔案,先行宣告)。
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf

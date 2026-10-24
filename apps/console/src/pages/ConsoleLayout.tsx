@@ -1,10 +1,11 @@
 import React from "react";
-import { Navigate, NavLink, Outlet, useNavigate } from "react-router-dom";
-import { AkentrosIcon } from "../components/AkentrosIcon";
+import { Link, Navigate, NavLink, Outlet, useNavigate } from "react-router-dom";
+import { AutonomiaIcon } from "../components/AutonomiaIcon";
 import { useSession } from "../components/session";
 import { StateBlock } from "../components/ui";
-import { logoutAkentrosAccount } from "../lib/akentros/api/akentrosAuthApi";
-import { formatUsd } from "../lib/akentros/utils/formatAkentros";
+import { logoutAutonomiaAccount } from "../lib/autonomia/api/autonomiaAuthApi";
+import type { AutonomiaConsoleUser } from "../lib/autonomia/types";
+import { formatUsd } from "../lib/autonomia/utils/formatAutonomia";
 
 // 控制台外框:側邊欄 + Outlet。未登入時導向 /login。
 
@@ -73,7 +74,7 @@ const NAV_GROUPS: Array<{
   {
     label: "使用",
     items: [
-      { to: "/", label: "總覽", icon: "overview" },
+      { to: "/overview", label: "總覽", icon: "overview" },
       { to: "/playground", label: "串流測試", icon: "play" },
     ],
   },
@@ -91,24 +92,15 @@ const NAV_GROUPS: Array<{
   },
 ];
 
-export function ConsoleLayout() {
-  const { user, loading, setUser } = useSession();
+// 控制台外殼(側欄 + 主內容)。ConsoleLayout 與 SharedLayout 共用。
+// user 由呼叫端在通過登入檢查後傳入,避免登出清空 context 時的 null 競態。
+function ConsoleShell({ user }: { user: AutonomiaConsoleUser }) {
+  const { setUser } = useSession();
   const navigate = useNavigate();
-
-  if (loading) {
-    return (
-      <div className="auth-wrap">
-        <StateBlock spinner>正在確認登入狀態…</StateBlock>
-      </div>
-    );
-  }
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
 
   const logout = async () => {
     try {
-      await logoutAkentrosAccount();
+      await logoutAutonomiaAccount();
     } finally {
       // 先清空 context,否則 /login 會因為殘留的 session 被彈回控制台。
       setUser(null);
@@ -119,9 +111,9 @@ export function ConsoleLayout() {
   return (
     <div className="shell">
       <aside className="sidebar">
-        <NavLink className="sidebar-brand" to="/">
-          <AkentrosIcon size={24} />
-          <strong>Akentros</strong>
+        <NavLink className="sidebar-brand" to="/overview">
+          <AutonomiaIcon size={24} />
+          <strong>Autonomia</strong>
           <small>CONSOLE</small>
         </NavLink>
         <nav className="sidebar-nav" aria-label="控制台導覽">
@@ -132,7 +124,6 @@ export function ConsoleLayout() {
                 <NavLink
                   key={item.to}
                   to={item.to}
-                  end={item.to === "/"}
                   className={({ isActive }: { isActive: boolean }) => `nav-item${isActive ? " active" : ""}`}
                 >
                   <NavIcon name={item.icon} />
@@ -162,4 +153,63 @@ export function ConsoleLayout() {
       </main>
     </div>
   );
+}
+
+function SessionLoading() {
+  return (
+    <div className="auth-wrap">
+      <StateBlock spinner>正在確認登入狀態…</StateBlock>
+    </div>
+  );
+}
+
+// 嚴格登入牆:總覽/金鑰/串流測試/請求紀錄需要帳號。
+export function ConsoleLayout() {
+  const { user, loading } = useSession();
+  if (loading) return <SessionLoading />;
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+  return <ConsoleShell user={user} />;
+}
+
+// 公開頁外框:未登入時以極簡頂欄呈現(模型/文件不需要帳號即可瀏覽)。
+function PublicShell() {
+  return (
+    <div className="home">
+      <header className="home-topbar">
+        <Link className="home-brand" to="/home">
+          <AutonomiaIcon size={22} />
+          <strong>Autonomia</strong>
+        </Link>
+        <nav className="home-topnav" aria-label="公開頁導覽">
+          <Link to="/home">首頁</Link>
+          <Link to="/models">模型</Link>
+          <Link to="/docs">快速開始</Link>
+          <Link className="btn btn-primary btn-sm" to="/login">
+            登入 / 建立帳號
+          </Link>
+        </nav>
+      </header>
+      <main className="home-main">
+        <Outlet />
+      </main>
+      <footer className="home-footer">
+        <span>
+          <AutonomiaIcon size={14} /> Autonomia — Self-hosted AI Gateway
+        </span>
+        <nav aria-label="頁尾導覽">
+          <Link to="/home">首頁</Link>
+          <Link to="/login">登入</Link>
+        </nav>
+      </footer>
+    </div>
+  );
+}
+
+// 共用外框:模型/文件是公開頁——已登入帶控制台側欄,未登入帶公開外框。
+export function SharedLayout() {
+  const { user, loading } = useSession();
+  if (loading) return <SessionLoading />;
+  return user ? <ConsoleShell user={user} /> : <PublicShell />;
 }

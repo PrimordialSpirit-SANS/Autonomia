@@ -1,4 +1,4 @@
-export interface AkentrosErrorOptions {
+export interface AutonomiaErrorOptions {
   status?: number;
   type?: string;
   code?: string;
@@ -7,7 +7,7 @@ export interface AkentrosErrorOptions {
   expose?: boolean;
 }
 
-export class AkentrosError extends Error {
+export class AutonomiaError extends Error {
   status: number;
   type: string;
   code: string;
@@ -25,10 +25,10 @@ export class AkentrosError extends Error {
       param = null,
       retryAfter = null,
       expose = true,
-    }: AkentrosErrorOptions = {},
+    }: AutonomiaErrorOptions = {},
   ) {
     super(message);
-    this.name = "AkentrosError";
+    this.name = "AutonomiaError";
     this.status = status;
     this.type = type;
     this.code = code;
@@ -40,12 +40,12 @@ export class AkentrosError extends Error {
 
 export function openAiErrorBody(error: unknown) {
   const safe =
-    error instanceof AkentrosError
+    error instanceof AutonomiaError
       ? error
-      : new AkentrosError("Akentros could not complete the request.", { expose: false });
+      : new AutonomiaError("Autonomia could not complete the request.", { expose: false });
   return {
     error: {
-      message: safe.expose ? safe.message : "Akentros could not complete the request.",
+      message: safe.expose ? safe.message : "Autonomia could not complete the request.",
       type: safe.type,
       param: safe.param ?? null,
       code: safe.code,
@@ -54,7 +54,7 @@ export function openAiErrorBody(error: unknown) {
 }
 
 export function invalidRequest(message: string, param: string | null = null, code = "invalid_request") {
-  return new AkentrosError(message, {
+  return new AutonomiaError(message, {
     status: 400,
     type: "invalid_request_error",
     code,

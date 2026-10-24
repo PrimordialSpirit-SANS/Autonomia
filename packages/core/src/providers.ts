@@ -74,7 +74,7 @@ function categoryForStatus(status: number) {
   return "provider_error";
 }
 
-export interface AkentrosProviderErrorOptions {
+export interface AutonomiaProviderErrorOptions {
   provider?: string;
   status?: number;
   category?: string;
@@ -87,7 +87,7 @@ export interface AkentrosProviderErrorOptions {
   cause?: unknown;
 }
 
-export class AkentrosProviderError extends Error {
+export class AutonomiaProviderError extends Error {
   provider: string;
   status: number;
   code: string;
@@ -112,10 +112,10 @@ export class AkentrosProviderError extends Error {
       responseStarted = false,
       upstreamRequestId = null,
       cause,
-    }: AkentrosProviderErrorOptions = {},
+    }: AutonomiaProviderErrorOptions = {},
   ) {
     super(message, cause ? { cause } : undefined);
-    this.name = "AkentrosProviderError";
+    this.name = "AutonomiaProviderError";
     this.provider = provider || "unknown";
     this.status = status;
     this.code = category;
@@ -138,7 +138,7 @@ export function getProviderPool(poolId: string, config: any = PROVIDER_POOLS) {
 
 export function requireProviderPool(poolId: string, config: any = PROVIDER_POOLS) {
   const pool = getProviderPool(poolId, config);
-  if (!pool) throw new RangeError(`Unknown or disabled Akentros provider pool: ${String(poolId)}`);
+  if (!pool) throw new RangeError(`Unknown or disabled Autonomia provider pool: ${String(poolId)}`);
   return pool;
 }
 
@@ -157,7 +157,9 @@ export function resolveProviderCredential(
   for (const [field, reference] of Object.entries(credential.secret_refs || {}) as Array<[string, string]>) {
     const value = env[reference];
     if (typeof value !== "string" || !value.trim()) {
-      const error = new Error(`Akentros provider secret binding ${reference} is not configured.`) as Error & {
+      const error = new Error(
+        `Autonomia provider secret binding ${reference} is not configured.`,
+      ) as Error & {
         code?: string;
         credentialId?: string;
       };
@@ -175,7 +177,7 @@ export function resolveProviderCredential(
 }
 
 // Upstream parameter quirks for OpenAI-compatible providers. Most upstreams
-// only guarantee the legacy `max_tokens` output-limit field, so Akentros translates
+// only guarantee the legacy `max_tokens` output-limit field, so Autonomia translates
 // by default; `max_completion_tokens` is kept for upstreams whose current
 // models reject `max_tokens`. Upstreams in NO_STREAM_OPTIONS_PROVIDERS reject
 // `stream_options` outright and report usage in their final stream chunk
@@ -413,7 +415,7 @@ function anthropicFinishReason(stopReason: unknown) {
 
 function normalizeAnthropicCompletion(payload: any, route: any, response: Response) {
   if (payload?.type !== "message" || payload.role !== "assistant" || !Array.isArray(payload.content)) {
-    throw new AkentrosProviderError("The upstream provider returned an invalid response.", {
+    throw new AutonomiaProviderError("The upstream provider returned an invalid response.", {
       provider: "anthropic",
       category: "invalid_provider_response",
       fallbackAllowed: false,
@@ -493,7 +495,7 @@ async function* anthropicOpenAiChunks(source: ReadableStream<Uint8Array>, provid
       continue;
     }
     if (payload?.type === "error" || event.event === "error") {
-      throw new AkentrosProviderError("The provider failed after streaming started.", {
+      throw new AutonomiaProviderError("The provider failed after streaming started.", {
         provider,
         status: Number(payload?.error?.code) || 502,
         category: "midstream_provider_error",
@@ -659,7 +661,7 @@ export function buildProviderRequest({ route, pool, credential, body, endpoint =
     url = `${baseUrl.replace("{account_id}", encodeURIComponent(accountId))}/${route.upstream_model}`;
     requestBody = cloudflareRequestBody(body);
   } else {
-    throw new RangeError(`Unsupported Akentros provider: ${provider}`);
+    throw new RangeError(`Unsupported Autonomia provider: ${provider}`);
   }
 
   return {
@@ -716,7 +718,7 @@ function awaitWithSignal(value: unknown, signal?: AbortSignal | null): Promise<a
 function transportError(route: any, timeout: any, signal: AbortSignal | null | undefined, cause: unknown) {
   const didTimeout = timeout.didTimeout();
   const externallyAborted = Boolean(signal?.aborted);
-  return new AkentrosProviderError(
+  return new AutonomiaProviderError(
     didTimeout
       ? "The upstream provider timed out."
       : externallyAborted
@@ -757,7 +759,7 @@ async function throwResponseError(provider: string, response: Response) {
   } catch {
     // The response status and headers remain sufficient for normalization.
   }
-  throw new AkentrosProviderError("The upstream provider rejected the request.", {
+  throw new AutonomiaProviderError("The upstream provider rejected the request.", {
     provider,
     status: response.status,
     retryAfter: retryAfterSeconds(response),
@@ -805,7 +807,7 @@ async function readJsonBody(response: Response): Promise<any> {
 // 本體為數字陣列或 base64 字串(encoding_format=base64),原樣轉發。
 function normalizeOpenAiEmbeddings(provider: string, payload: any, response: Response) {
   if (payload?.error) {
-    throw new AkentrosProviderError("The upstream provider failed after accepting the request.", {
+    throw new AutonomiaProviderError("The upstream provider failed after accepting the request.", {
       provider,
       status: Number(payload.error.code) || 502,
       category: "embedded_provider_error",
@@ -817,7 +819,7 @@ function normalizeOpenAiEmbeddings(provider: string, payload: any, response: Res
     });
   }
   if (!payload || !Array.isArray(payload.data)) {
-    throw new AkentrosProviderError("The upstream provider returned an invalid response.", {
+    throw new AutonomiaProviderError("The upstream provider returned an invalid response.", {
       provider,
       category: "invalid_provider_response",
       fallbackAllowed: false,
@@ -860,7 +862,7 @@ function normalizeOpenAiCompletion(provider: string, payload: any, response: Res
       ? payload.choices.find((choice: any) => choice?.finish_reason === "error" || choice?.error)?.error
       : null);
   if (embeddedError) {
-    throw new AkentrosProviderError("The upstream provider failed after accepting the request.", {
+    throw new AutonomiaProviderError("The upstream provider failed after accepting the request.", {
       provider,
       status: Number(embeddedError.code) || 502,
       category: "embedded_provider_error",
@@ -872,7 +874,7 @@ function normalizeOpenAiCompletion(provider: string, payload: any, response: Res
     });
   }
   if (!payload || !Array.isArray(payload.choices)) {
-    throw new AkentrosProviderError("The upstream provider returned an invalid response.", {
+    throw new AutonomiaProviderError("The upstream provider returned an invalid response.", {
       provider,
       category: "invalid_provider_response",
       fallbackAllowed: false,
@@ -896,7 +898,7 @@ function normalizeOpenAiCompletion(provider: string, payload: any, response: Res
 
 function normalizeCloudflareCompletion(payload: any, route: any, response: Response) {
   if (!payload?.success || !payload.result) {
-    throw new AkentrosProviderError("Cloudflare Workers AI returned an invalid response.", {
+    throw new AutonomiaProviderError("Cloudflare Workers AI returned an invalid response.", {
       provider: "cloudflare-workers-ai",
       category: "invalid_provider_response",
       fallbackAllowed: false,
@@ -909,7 +911,7 @@ function normalizeCloudflareCompletion(payload: any, route: any, response: Respo
     return normalizeOpenAiCompletion("cloudflare-workers-ai", payload.result, response);
   }
   if (typeof payload.result.response !== "string") {
-    throw new AkentrosProviderError("Cloudflare Workers AI returned an invalid response.", {
+    throw new AutonomiaProviderError("Cloudflare Workers AI returned an invalid response.", {
       provider: "cloudflare-workers-ai",
       category: "invalid_provider_response",
       fallbackAllowed: false,
@@ -968,7 +970,7 @@ async function invokeCloudflareBinding({ route, binding, body, signal }: any): P
   if (stream) {
     if (!result || typeof result.getReader !== "function") {
       timeout.dispose();
-      throw new AkentrosProviderError("Cloudflare Workers AI did not return an SSE stream.", {
+      throw new AutonomiaProviderError("Cloudflare Workers AI did not return an SSE stream.", {
         provider: route.provider,
         category: "invalid_provider_response",
         fallbackAllowed: false,
@@ -981,7 +983,7 @@ async function invokeCloudflareBinding({ route, binding, body, signal }: any): P
       responseBody = result.pipeThrough(new TransformStream(), { signal: timeout.signal });
     } catch (cause) {
       timeout.dispose();
-      throw new AkentrosProviderError("Cloudflare Workers AI returned an invalid stream.", {
+      throw new AutonomiaProviderError("Cloudflare Workers AI returned an invalid stream.", {
         provider: route.provider,
         category: "invalid_provider_response",
         fallbackAllowed: false,
@@ -1071,7 +1073,7 @@ export async function invokeProviderRoute({
         // Response metadata is enough to classify the protocol failure.
       }
       timeout.dispose();
-      throw new AkentrosProviderError("The upstream provider did not return an SSE stream.", {
+      throw new AutonomiaProviderError("The upstream provider did not return an SSE stream.", {
         provider: route.provider,
         category: "invalid_provider_response",
         fallbackAllowed: false,
@@ -1108,7 +1110,7 @@ export async function invokeProviderRoute({
   } catch (cause) {
     const didTimeout = timeout.didTimeout();
     const externallyAborted = Boolean(signal?.aborted);
-    throw new AkentrosProviderError("The upstream provider returned an invalid response.", {
+    throw new AutonomiaProviderError("The upstream provider returned an invalid response.", {
       provider: route.provider,
       status: didTimeout ? 504 : externallyAborted ? 499 : 502,
       category: didTimeout
@@ -1147,7 +1149,7 @@ export async function invokeWithProviderFallback({
   onAttempt,
 }: any) {
   if (!Array.isArray(routes) || routes.length === 0) {
-    throw new AkentrosProviderError("No Akentros provider route is available.", {
+    throw new AutonomiaProviderError("No Autonomia provider route is available.", {
       provider: "none",
       status: 503,
       category: "no_provider_available",
@@ -1155,7 +1157,7 @@ export async function invokeWithProviderFallback({
       fallbackAllowed: false,
     });
   }
-  let lastError: AkentrosProviderError | undefined;
+  let lastError: AutonomiaProviderError | undefined;
   for (const route of routes) {
     const pool = requireProviderPool(route.credential_pool);
     const configured =
@@ -1171,9 +1173,9 @@ export async function invokeWithProviderFallback({
       return { ...result, route, credentialId: credential.credentialId };
     } catch (error) {
       lastError =
-        error instanceof AkentrosProviderError
+        error instanceof AutonomiaProviderError
           ? error
-          : new AkentrosProviderError("The provider credential is unavailable.", {
+          : new AutonomiaProviderError("The provider credential is unavailable.", {
               provider: route.provider,
               status: 503,
               category: (error as any)?.code || "provider_configuration_error",
@@ -1191,7 +1193,7 @@ export async function invokeWithProviderFallback({
   }
   throw (
     lastError ||
-    new AkentrosProviderError("No configured provider credential is available.", {
+    new AutonomiaProviderError("No configured provider credential is available.", {
       provider: "none",
       status: 503,
       category: "no_provider_available",

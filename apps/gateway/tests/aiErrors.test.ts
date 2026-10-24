@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { AkentrosError } from "@akentros/core/openaiErrors";
+import { AutonomiaError } from "@autonomia/core/openaiErrors";
 import { sendOpenAiError } from "../src/utils/aiErrors.ts";
 
 // SN-12 fix (M1):sendOpenAiError 原本不記錄底層錯誤 —— AI 路由的未處理
@@ -21,7 +21,7 @@ function captureConsoleError<T>(run: () => T): { lines: string[]; result: T } {
   }
 }
 
-test("sendOpenAiError logs unexpected non-Akentros errors (SN-12)", async () => {
+test("sendOpenAiError logs unexpected non-Autonomia errors (SN-12)", async () => {
   const context = {
     header: () => {},
     req: { path: "/api/ai/v1/chat/completions", method: "POST" },
@@ -40,8 +40,8 @@ test("sendOpenAiError logs unexpected non-Akentros errors (SN-12)", async () => 
   assert.equal(parsed.errorName, "RangeError");
   assert.match(parsed.errorMessage, /Maximum call stack/);
 
-  // expose=false 的 5xx AkentrosError(內部訊息未透出)也要記錄。
-  const hidden = new AkentrosError("internal detail", { expose: false } as never);
+  // expose=false 的 5xx AutonomiaError(內部訊息未透出)也要記錄。
+  const hidden = new AutonomiaError("internal detail", { expose: false } as never);
   const second = captureConsoleError(() => sendOpenAiError(context, hidden, "req_sn12b"));
   assert.ok(
     second.lines.some((line) => line.includes("ai_route_unhandled_error")),
@@ -49,7 +49,7 @@ test("sendOpenAiError logs unexpected non-Akentros errors (SN-12)", async () => 
   );
 
   // 已透出的 4xx(驗證錯誤)不需要日誌,維持高訊號雜訊比。
-  const exposed = new AkentrosError("bad input", { expose: true } as never);
+  const exposed = new AutonomiaError("bad input", { expose: true } as never);
   const third = captureConsoleError(() => sendOpenAiError(context, exposed, "req_sn12c"));
   assert.equal(
     third.lines.some((line) => line.includes("ai_route_unhandled_error")),

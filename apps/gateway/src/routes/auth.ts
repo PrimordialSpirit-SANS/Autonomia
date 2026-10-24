@@ -1,17 +1,17 @@
-import { AkentrosError } from "@akentros/core/openaiErrors";
-import { parseUsdToMicros, usdMicrosToDecimalString } from "@akentros/core/pricing";
+import { AutonomiaError } from "@autonomia/core/openaiErrors";
+import { parseUsdToMicros, usdMicrosToDecimalString } from "@autonomia/core/pricing";
 import { Hono } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { isCredentialedOriginAllowed } from "../middleware/cors.ts";
 import { createRateLimit } from "../middleware/rateLimit.ts";
-import type { AkentrosContext, AkentrosEnv, AkentrosNext, AkentrosRuntimeEnv } from "../types.ts";
-import { AKENTROS_SMALL_BODY_MAX_BYTES, readCappedText } from "../utils/bodyLimit.ts";
+import type { AutonomiaContext, AutonomiaEnv, AutonomiaNext, AutonomiaRuntimeEnv } from "../types.ts";
+import { AUTONOMIA_SMALL_BODY_MAX_BYTES, readCappedText } from "../utils/bodyLimit.ts";
 import { randomBytesHex } from "../utils/crypto.ts";
-import { signAkentrosJwt, verifyAkentrosJwt } from "../utils/jwt.ts";
-import { logAkentrosEvent } from "../utils/logger.ts";
-import type { AkentrosAccount } from "../utils/users.ts";
+import { signAutonomiaJwt, verifyAutonomiaJwt } from "../utils/jwt.ts";
+import { logAutonomiaEvent } from "../utils/logger.ts";
+import type { AutonomiaAccount } from "../utils/users.ts";
 import {
-  AKENTROS_PASSWORD_ITERATIONS,
+  AUTONOMIA_PASSWORD_ITERATIONS,
   createUser,
   findUserByEmail,
   findUserById,
@@ -22,19 +22,19 @@ import {
 
 // 內建帳號系統:會話端點 + authenticateToken/requireCsrfToken 中介層。
 // 與前端的約定:
-// - akentros_token:httpOnly 會話 cookie(authenticateToken 驗證)
+// - autonomia_token:httpOnly 會話 cookie(authenticateToken 驗證)
 // - csrf_token:可讀 cookie,apiFetch 會放進 X-CSRF-Token(雙提交)
 
-export const authRoutes = new Hono<AkentrosEnv>();
+export const authRoutes = new Hono<AutonomiaEnv>();
 
-export const AKENTROS_SESSION_COOKIE = "akentros_token";
-export const AKENTROS_CSRF_COOKIE = "csrf_token";
-export const AKENTROS_SESSION_TTL_SECONDS = 7 * 24 * 60 * 60;
+export const AUTONOMIA_SESSION_COOKIE = "autonomia_token";
+export const AUTONOMIA_CSRF_COOKIE = "csrf_token";
+export const AUTONOMIA_SESSION_TTL_SECONDS = 30 * 24 * 60 * 60;
 
-// 開發者管理面的會話認證:驗 akentros_token cookie(HS256 JWT)→ 載入使用者 →
+// 開發者管理面的會話認證:驗 autonomia_token cookie(HS256 JWT)→ 載入使用者 →
 // c.set('user', …)。aiDeveloper.ts 依賴 user.id / role / is_banned /
-// restricted_services 等欄位,形狀需與 utils/users.ts 的 AkentrosAccount 一致。
-export async function authenticateToken(c: AkentrosContext, next: AkentrosNext) {
+// restricted_services 等欄位,形狀需與 utils/users.ts 的 AutonomiaAccount 一致。
+export async function authenticateToken(c: AutonomiaContext, next: AutonomiaNext) {
   const secret = String(c.env?.JWT_SECRET || "");
   if (secret.length < 32) {
     return c.json(
@@ -46,8 +46,8 @@ export async function authenticateToken(c: AkentrosContext, next: AkentrosNext) 
     );
   }
 
-  const token = getCookie(c, AKENTROS_SESSION_COOKIE) || "";
-  const payload = token ? await verifyAkentrosJwt(token, secret) : null;
+  const token = getCookie(c, AUTONOMIA_SESSION_COOKIE) || "";
+  const payload = token ? await verifyAutonomiaJwt(token, secret) : null;
   if (!payload) {
     return c.json(
       {
@@ -90,13 +90,13 @@ export async function authenticateToken(c: AkentrosContext, next: AkentrosNext) 
 // CSRF:雙提交 cookie。前端 apiFetch 會讀 csrf_token cookie 並帶 X-CSRF-Token。
 // 沒有 csrf_token cookie 的請求(尚未取得 session 的 login/register)直接放行,
 // 因為此時沒有可被冒用的憑證;取得 session 後所有 mutating 請求都會被要求比對。
-export async function requireCsrfToken(c: AkentrosContext, next: AkentrosNext) {
+export async function requireCsrfToken(c: AutonomiaContext, next: AutonomiaNext) {
   const method = c.req.method.toUpperCase();
   if (method === "GET" || method === "HEAD" || method === "OPTIONS") {
     await next();
     return;
   }
-  const cookieToken = getCookie(c, AKENTROS_CSRF_COOKIE) || "";
+  const cookieToken = getCookie(c, AUTONOMIA_CSRF_COOKIE) || "";
   if (!cookieToken) {
     await next();
     return;
@@ -150,23 +150,23 @@ function lastForwardedValue(value: unknown): string {
 
 // 明確宣告信任反向代理:運維承諾 gateway 前方有會「覆寫」cf-connecting-ip
 // 與 x-forwarded-* 的受信賴代理(Cloudflare、nginx 等),因此客戶端帶入的
-// 同名標頭不會存活到 gateway。與 akentrosAuthRateLimitIdentity 共用同一個
+// 同名標頭不會存活到 gateway。與 autonomiaAuthRateLimitIdentity 共用同一個
 // 定義,讓信任邊界只有一處語意。
-function akentrosTrustProxyEnabled(c: AkentrosContext): boolean {
+function autonomiaTrustProxyEnabled(c: AutonomiaContext): boolean {
   return (
-    String(c.env?.AKENTROS_TRUST_PROXY || "")
+    String(c.env?.AUTONOMIA_TRUST_PROXY || "")
       .trim()
       .toLowerCase() === "true"
   );
 }
 
-function requestOwnOrigin(c: AkentrosContext): string {
+function requestOwnOrigin(c: AutonomiaContext): string {
   // TLS 終止的反向代理後方,c.req.url 的 scheme 仍是 socket 的 http:
   // (@hono/node-server 只在 socket 加密時才解析出 https),瀏覽器的
   // Origin 卻是 https://…,逐字串比對會把「同源」誤判成跨源。宣告信任
   // 代理時改以 x-forwarded-proto/x-forwarded-host 重建自身來源;未宣告時
   // 這些標頭可偽造、一律不信,維持 socket URL。
-  if (akentrosTrustProxyEnabled(c)) {
+  if (autonomiaTrustProxyEnabled(c)) {
     const proto = lastForwardedValue(c.req.header("x-forwarded-proto"));
     const host = lastForwardedValue(c.req.header("x-forwarded-host"));
     if (proto && host) {
@@ -187,7 +187,7 @@ function requestOwnOrigin(c: AkentrosContext): string {
 // Origin 優先;缺少時退回 Referer 的 origin(scheme://host:port)。
 // 無法解析的 Referer 視同未提供 —— 跨站 POST 在現代瀏覽器必定帶 Origin,
 // 走不到這條退路。
-function readDeclaredOrigin(c: AkentrosContext): string {
+function readDeclaredOrigin(c: AutonomiaContext): string {
   const origin = String(c.req.header("origin") || "").trim();
   if (origin) return origin;
   const referer = String(c.req.header("referer") || "").trim();
@@ -199,7 +199,7 @@ function readDeclaredOrigin(c: AkentrosContext): string {
   }
 }
 
-export async function requireTrustedOrigin(c: AkentrosContext, next: AkentrosNext) {
+export async function requireTrustedOrigin(c: AutonomiaContext, next: AutonomiaNext) {
   const method = c.req.method.toUpperCase();
   if (method === "GET" || method === "HEAD" || method === "OPTIONS") {
     await next();
@@ -213,7 +213,7 @@ export async function requireTrustedOrigin(c: AkentrosContext, next: AkentrosNex
   // 「null」origin(沙箱 iframe)無法與任何部署同源,白名單檢查自然拒絕。
   const trusted = declared === requestOwnOrigin(c) || isCredentialedOriginAllowed(c, declared);
   if (!trusted) {
-    logAkentrosEvent("warn", "akentros_auth_origin_rejected", {
+    logAutonomiaEvent("warn", "autonomia_auth_origin_rejected", {
       method,
       path: c.req.path,
     });
@@ -229,19 +229,19 @@ export async function requireTrustedOrigin(c: AkentrosContext, next: AkentrosNex
 }
 
 const authLimiter = createRateLimit({
-  keyPrefix: "akentros-auth",
+  keyPrefix: "autonomia-auth",
   windowMs: 15 * 60 * 1000,
   max: 60,
-  keyGenerator: akentrosAuthRateLimitIdentity,
+  keyGenerator: autonomiaAuthRateLimitIdentity,
 });
 
 // auth 限流(登入/註冊/登出)的身份決定順序:
-// 1. AKENTROS_TRUST_PROXY=true:明確宣告信任反向代理,以 cf-connecting-ip 標頭
+// 1. AUTONOMIA_TRUST_PROXY=true:明確宣告信任反向代理,以 cf-connecting-ip 標頭
 //    為準,其次 x-forwarded-for 最後一值(append 模式代理最接近受信方的
 //    觀察;SN-2 fix:不設 cf-connecting-ip 的 nginx 類代理不再讓全站退化
 //    為單一 "local" 共享桶 —— 60 次/15 分鐘就能鎖死所有真實用戶的登入)。
 // 2. 連線來源位址:Node 自架部署由 nodeServer 從 socket 注入
-//    AKENTROS_REMOTE_ADDR,不可偽造,是未開啟信任代理時的預設身份。若直接
+//    AUTONOMIA_REMOTE_ADDR,不可偽造,是未開啟信任代理時的預設身份。若直接
 //    讀請求標頭,Node/http 不會過濾 cf-connecting-ip,攻擊者每個請求帶一個
 //    不同的假 IP 即可完全繞過限流(無限暴力嘗試密碼、洗註冊附贈點數)。
 // 3. Workers/DO 部署:流量一律經 Cloudflare 代理,標頭由其附加、用戶端
@@ -250,15 +250,15 @@ const authLimiter = createRateLimit({
 //    只有自行嵌入 createApp() 的部署(測試殼、邊車、未來新進入點)會走到
 //    這條路。保留「以標頭為身份」的現行行為(改落 "local" 共享桶會重演
 //    SN-2 修復前的全站鎖死問題),但補一次性告警
-//    akentros_auth_rate_limit_identity_untrusted_header,讓運維對此拓撲
+//    autonomia_auth_rate_limit_identity_untrusted_header,讓運維對此拓撲
 //    不再完全不可見。
 // 5. 都拿不到(本地 IPC、Unix socket)併入 "local" 共享桶,並對運維發出
 //    一次性告警(每種退化成因只記一次,避免刷屏)。
 let authRateLimitDegradedNotified = false;
-export function akentrosAuthRateLimitIdentity(c: AkentrosContext): string {
+export function autonomiaAuthRateLimitIdentity(c: AutonomiaContext): string {
   const cfIp = String(c.req.header("cf-connecting-ip") || "").trim();
-  const remote = String((c.env as Record<string, unknown>)?.AKENTROS_REMOTE_ADDR || "").trim();
-  if (akentrosTrustProxyEnabled(c)) {
+  const remote = String((c.env as Record<string, unknown>)?.AUTONOMIA_REMOTE_ADDR || "").trim();
+  if (autonomiaTrustProxyEnabled(c)) {
     if (cfIp) return cfIp;
     const forwardedFor = lastForwardedValue(c.req.header("x-forwarded-for"));
     if (forwardedFor) return `xff:${forwardedFor}`;
@@ -266,48 +266,48 @@ export function akentrosAuthRateLimitIdentity(c: AkentrosContext): string {
   } else if (remote) {
     return remote;
   }
-  if (cfIp && !akentrosTrustProxyEnabled(c)) {
+  if (cfIp && !autonomiaTrustProxyEnabled(c)) {
     // SEC-02 fix:此分支過去靜默採用可偽造的 cf-connecting-ip,且繞過
-    // akentros_auth_rate_limit_identity_degraded 一次性告警(告警只在落回
+    // autonomia_auth_rate_limit_identity_degraded 一次性告警(告警只在落回
     // "local" 共享桶時觸發),自行嵌入 createApp() 的部署對運維完全不可見。
     // 保留現行行為,補上同樣的一次性告警語意。
     if (!authRateLimitDegradedNotified) {
       authRateLimitDegradedNotified = true;
-      logAkentrosEvent("warn", "akentros_auth_rate_limit_identity_untrusted_header", {
-        hint: "rate limiting is using the spoofable cf-connecting-ip header because no socket address was injected and AKENTROS_TRUST_PROXY is unset; integrate via nodeServer.ts/worker.ts or set AKENTROS_TRUST_PROXY=true behind a trusted proxy.",
+      logAutonomiaEvent("warn", "autonomia_auth_rate_limit_identity_untrusted_header", {
+        hint: "rate limiting is using the spoofable cf-connecting-ip header because no socket address was injected and AUTONOMIA_TRUST_PROXY is unset; integrate via nodeServer.ts/worker.ts or set AUTONOMIA_TRUST_PROXY=true behind a trusted proxy.",
       });
     }
     return cfIp;
   }
   if (!authRateLimitDegradedNotified) {
     authRateLimitDegradedNotified = true;
-    logAkentrosEvent("warn", "akentros_auth_rate_limit_identity_degraded", {
-      trustProxy: akentrosTrustProxyEnabled(c),
-      hint: "auth rate limiting fell back to a shared bucket; set AKENTROS_TRUST_PROXY=true behind a trusted reverse proxy that overwrites identity headers, or expose the socket address.",
+    logAutonomiaEvent("warn", "autonomia_auth_rate_limit_identity_degraded", {
+      trustProxy: autonomiaTrustProxyEnabled(c),
+      hint: "auth rate limiting fell back to a shared bucket; set AUTONOMIA_TRUST_PROXY=true behind a trusted reverse proxy that overwrites identity headers, or expose the socket address.",
     });
   }
   return "local";
 }
 
-function isSecureRequest(c: AkentrosContext): boolean {
+function isSecureRequest(c: AutonomiaContext): boolean {
   try {
     if (new URL(c.req.url).protocol === "https:") return true;
     // SN-5 fix:僅在明確宣告信任代理時採信 x-forwarded-proto,與
     // requestOwnOrigin 的信任邊界一致;未宣告時該標頭可偽造(純 HTTP
     // 下偽造 https 可翻轉 cookie 的 Secure 屬性),一律不信。
-    if (!akentrosTrustProxyEnabled(c)) return false;
+    if (!autonomiaTrustProxyEnabled(c)) return false;
     return lastForwardedValue(c.req.header("x-forwarded-proto")) === "https";
   } catch {
     return false;
   }
 }
 
-function requireJwtSecret(env: AkentrosRuntimeEnv): string | null {
+function requireJwtSecret(env: AutonomiaRuntimeEnv): string | null {
   const secret = String(env?.JWT_SECRET || "");
   return secret.length >= 32 ? secret : null;
 }
 
-function issueSession(c: AkentrosContext, env: AkentrosRuntimeEnv, user: AkentrosAccount) {
+function issueSession(c: AutonomiaContext, env: AutonomiaRuntimeEnv, user: AutonomiaAccount) {
   const secret = requireJwtSecret(env);
   if (!secret) {
     return c.json(
@@ -320,37 +320,42 @@ function issueSession(c: AkentrosContext, env: AkentrosRuntimeEnv, user: Akentro
   }
   // epv 簽入簽發當下的帳號會話 epoch(SEC-01):authenticateToken 每請求
   // 與 users.session_epoch 比對,撤銷後舊 token 立即失效。
-  return signAkentrosJwt({ sub: user.id, epv: user.sessionEpoch }, secret, AKENTROS_SESSION_TTL_SECONDS).then(
-    (jwt) => {
-      setCookie(c, AKENTROS_SESSION_COOKIE, jwt, {
-        httpOnly: true,
-        sameSite: "Lax",
-        secure: isSecureRequest(c),
-        path: "/",
-        maxAge: AKENTROS_SESSION_TTL_SECONDS,
-      });
-      setCookie(c, AKENTROS_CSRF_COOKIE, randomBytesHex(32), {
-        httpOnly: false,
-        sameSite: "Lax",
-        secure: isSecureRequest(c),
-        path: "/",
-        maxAge: AKENTROS_SESSION_TTL_SECONDS,
-      });
-    },
-  );
+  return signAutonomiaJwt(
+    { sub: user.id, epv: user.sessionEpoch },
+    secret,
+    AUTONOMIA_SESSION_TTL_SECONDS,
+  ).then((jwt) => {
+    setCookie(c, AUTONOMIA_SESSION_COOKIE, jwt, {
+      httpOnly: true,
+      sameSite: "Lax",
+      secure: isSecureRequest(c),
+      path: "/",
+      maxAge: AUTONOMIA_SESSION_TTL_SECONDS,
+    });
+    setCookie(c, AUTONOMIA_CSRF_COOKIE, randomBytesHex(32), {
+      httpOnly: false,
+      sameSite: "Lax",
+      secure: isSecureRequest(c),
+      path: "/",
+      maxAge: AUTONOMIA_SESSION_TTL_SECONDS,
+    });
+  });
 }
 
-function registrationDisabled(env: AkentrosRuntimeEnv): boolean {
+function registrationDisabled(env: AutonomiaRuntimeEnv): boolean {
   return (
-    String(env?.AKENTROS_DISABLE_REGISTRATION || "")
+    String(env?.AUTONOMIA_DISABLE_REGISTRATION || "")
       .trim()
       .toLowerCase() === "true"
   );
 }
 
-function signupBonusUsdMicros(env: AkentrosRuntimeEnv): string {
+function signupBonusUsdMicros(env: AutonomiaRuntimeEnv): string {
   try {
-    return parseUsdToMicros(env?.AKENTROS_SIGNUP_BONUS_USD ?? "5.00", "AKENTROS_SIGNUP_BONUS_USD").toString();
+    return parseUsdToMicros(
+      env?.AUTONOMIA_SIGNUP_BONUS_USD ?? "5.00",
+      "AUTONOMIA_SIGNUP_BONUS_USD",
+    ).toString();
   } catch {
     return "5000000";
   }
@@ -358,10 +363,10 @@ function signupBonusUsdMicros(env: AkentrosRuntimeEnv): string {
 
 // 防帳號枚舉(預設開啟):重複信箱註冊不再回 409 email_taken,改為「已受理」
 // 語意,回應本身不洩漏信箱是否已註冊。私有、僅內部可達的部署若需要明確的
-// 409 UX,可設 AKENTROS_SIGNUP_ANTI_ENUMERATION=false 還原。
-function signupAntiEnumeration(env: AkentrosRuntimeEnv): boolean {
+// 409 UX,可設 AUTONOMIA_SIGNUP_ANTI_ENUMERATION=false 還原。
+function signupAntiEnumeration(env: AutonomiaRuntimeEnv): boolean {
   return (
-    String(env?.AKENTROS_SIGNUP_ANTI_ENUMERATION || "")
+    String(env?.AUTONOMIA_SIGNUP_ANTI_ENUMERATION || "")
       .trim()
       .toLowerCase() !== "false"
   );
@@ -374,13 +379,13 @@ function signupAntiEnumeration(env: AkentrosRuntimeEnv): boolean {
 const SIGNUP_ACCEPTED_MESSAGE =
   "Registration accepted. If the email is available, the account has been created — please sign in.";
 
-function acceptedSignupResponse(c: AkentrosContext) {
+function acceptedSignupResponse(c: AutonomiaContext) {
   return c.json({ ok: true, message: SIGNUP_ACCEPTED_MESSAGE }, 202);
 }
 
-function concealedSignupResponse(c: AkentrosContext) {
+function concealedSignupResponse(c: AutonomiaContext) {
   // 營運可觀測性:回應不揭露,但伺服器日誌保留隱匿的重複註冊事件。
-  logAkentrosEvent("warn", "akentros_signup_duplicate_concealed");
+  logAutonomiaEvent("warn", "autonomia_signup_duplicate_concealed");
   return acceptedSignupResponse(c);
 }
 
@@ -411,12 +416,12 @@ type AuthJsonResult =
   | { ok: true; body: Record<string, unknown> }
   | { ok: false; status: 400 | 413; code: string; message: string };
 
-async function readAuthJsonObject(c: AkentrosContext): Promise<AuthJsonResult> {
+async function readAuthJsonObject(c: AutonomiaContext): Promise<AuthJsonResult> {
   let text: string;
   try {
-    text = await readCappedText(c, AKENTROS_SMALL_BODY_MAX_BYTES);
+    text = await readCappedText(c, AUTONOMIA_SMALL_BODY_MAX_BYTES);
   } catch (error) {
-    if (error instanceof AkentrosError && error.status === 413) {
+    if (error instanceof AutonomiaError && error.status === 413) {
       return { ok: false, status: 413, code: "request_too_large", message: "The request body is too large." };
     }
     return {
@@ -450,7 +455,7 @@ async function readAuthJsonObject(c: AkentrosContext): Promise<AuthJsonResult> {
 authRoutes.use("*", authLimiter);
 authRoutes.use("*", requireTrustedOrigin);
 
-authRoutes.post("/register", async (c: AkentrosContext) => {
+authRoutes.post("/register", async (c: AutonomiaContext) => {
   if (registrationDisabled(c.env)) {
     return c.json(
       { error: "Registration is disabled on this deployment.", code: "registration_disabled" },
@@ -493,7 +498,7 @@ authRoutes.post("/register", async (c: AkentrosContext) => {
     return c.json({ error: "This email is already registered.", code: "email_taken" }, 409);
   }
 
-  let user: AkentrosAccount;
+  let user: AutonomiaAccount;
   try {
     user = await createUser(c.env, {
       email,
@@ -523,7 +528,7 @@ authRoutes.post("/register", async (c: AkentrosContext) => {
   return c.json({ user: publicUser(user) }, 201);
 });
 
-authRoutes.post("/login", async (c: AkentrosContext) => {
+authRoutes.post("/login", async (c: AutonomiaContext) => {
   const parsedBody = await readAuthJsonObject(c);
   if (!parsedBody.ok) {
     return c.json({ error: parsedBody.message, code: parsedBody.code }, parsedBody.status);
@@ -539,7 +544,7 @@ authRoutes.post("/login", async (c: AkentrosContext) => {
   const storedHash = await findUserPasswordHash(c.env, email);
   const passwordOk = await verifyPassword(
     password,
-    storedHash || `pbkdf2$${AKENTROS_PASSWORD_ITERATIONS}$00$00`,
+    storedHash || `pbkdf2$${AUTONOMIA_PASSWORD_ITERATIONS}$00$00`,
   );
   const user = passwordOk ? await findUserByEmail(c.env, email) : null;
   if (!user || user.is_banned || !passwordOk) {
@@ -550,20 +555,20 @@ authRoutes.post("/login", async (c: AkentrosContext) => {
   return c.json({ user: publicUser(user) });
 });
 
-authRoutes.post("/logout", async (c: AkentrosContext) => {
-  deleteCookie(c, AKENTROS_SESSION_COOKIE, { path: "/" });
-  deleteCookie(c, AKENTROS_CSRF_COOKIE, { path: "/" });
+authRoutes.post("/logout", async (c: AutonomiaContext) => {
+  deleteCookie(c, AUTONOMIA_SESSION_COOKIE, { path: "/" });
+  deleteCookie(c, AUTONOMIA_CSRF_COOKIE, { path: "/" });
   return c.json({ ok: true });
 });
 
-authRoutes.get("/me", authenticateToken, async (c: AkentrosContext) => {
+authRoutes.get("/me", authenticateToken, async (c: AutonomiaContext) => {
   // authenticateToken 已設 c.set('user', …);重新讀取以取得最新點數。
   const user = await findUserById(c.env, c.get("user")?.id || "");
   if (!user) return c.json({ error: "Account not found.", code: "user_not_found" }, 404);
   return c.json({ user: publicUser(user) });
 });
 
-function publicUser(user: AkentrosAccount) {
+function publicUser(user: AutonomiaAccount) {
   return {
     id: user.id,
     username: user.username,

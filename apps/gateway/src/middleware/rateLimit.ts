@@ -1,6 +1,6 @@
-import type { AkentrosContext, AkentrosNext, AkentrosRuntimeEnv } from "../types.ts";
+import type { AutonomiaContext, AutonomiaNext, AutonomiaRuntimeEnv } from "../types.ts";
 import { dbQuery } from "../utils/db.ts";
-import { logAkentrosEvent } from "../utils/logger.ts";
+import { logAutonomiaEvent } from "../utils/logger.ts";
 
 // 限流分兩層:
 // 1. 資料庫路徑:SQLite 固定窗口計數(經安裝的 DB adapter;Workers 部署即
@@ -29,27 +29,27 @@ const MAX_TRACKED_KEYS = 10_000;
 
 const memoryBuckets = new Map<string, WindowBucket>();
 
-// 資料表 `akentros_ip_rate_limit_windows` 由 schema migration v2 建立(schema
+// 資料表 `autonomia_ip_rate_limit_windows` 由 schema migration v2 建立(schema
 // 只進不退的治理規則),limiter 本身不做 DDL。
 
-export const AKENTROS_IP_RATE_LIMIT_SQL = Object.freeze({
+export const AUTONOMIA_IP_RATE_LIMIT_SQL = Object.freeze({
   // 同一窗口內累加;窗口滾動後歸零重計。RETURNING 的 hit_count 即本窗口
   // 已含本次請求的總數,由呼叫端與 max 比較。
   increment: `
-    INSERT INTO akentros_ip_rate_limit_windows (identity, window_start, hit_count)
+    INSERT INTO autonomia_ip_rate_limit_windows (identity, window_start, hit_count)
     VALUES (?, ?, 1)
     ON CONFLICT (identity) DO UPDATE
     SET window_start = EXCLUDED.window_start,
         hit_count = CASE
-          WHEN akentros_ip_rate_limit_windows.window_start = EXCLUDED.window_start
-          THEN akentros_ip_rate_limit_windows.hit_count + 1
+          WHEN autonomia_ip_rate_limit_windows.window_start = EXCLUDED.window_start
+          THEN autonomia_ip_rate_limit_windows.hit_count + 1
           ELSE 1
         END
     RETURNING hit_count
   `,
   // 淘汰已滾出窗口的舊身份;在計數恰好歸零重計時觸發,頻率隨流量自適應。
   sweep: `
-    DELETE FROM akentros_ip_rate_limit_windows
+    DELETE FROM autonomia_ip_rate_limit_windows
     WHERE window_start < ?
   `,
 });
@@ -58,11 +58,11 @@ export const AKENTROS_IP_RATE_LIMIT_SQL = Object.freeze({
 export function createDbWindowStore(query: (sql: string, params: any[]) => Promise<{ rows: any[] }>) {
   return {
     async increment(identity: string, windowStartIso: string, sweepBeforeIso: string): Promise<number> {
-      const result = await query(AKENTROS_IP_RATE_LIMIT_SQL.increment, [identity, windowStartIso]);
+      const result = await query(AUTONOMIA_IP_RATE_LIMIT_SQL.increment, [identity, windowStartIso]);
       const hitCount = Number(result?.rows?.[0]?.hit_count || 0);
       if (hitCount === 1) {
         try {
-          await query(AKENTROS_IP_RATE_LIMIT_SQL.sweep, [sweepBeforeIso]);
+          await query(AUTONOMIA_IP_RATE_LIMIT_SQL.sweep, [sweepBeforeIso]);
         } catch {
           // 掃描失敗不影響本次計數判斷。
         }
@@ -80,10 +80,10 @@ function windowStartIso(now: number, windowMs: number): string {
 // 自架可選的 PostgreSQL adapter 皆然):資料庫才是跨請求全域的計數權威。
 // 資料庫無法使用(adapter 未安裝、連線失敗)時降級為 in-isolate 記憶體視窗,
 // 並記錄 warn——過去以「有無設定 DATABASE_URL」決定走哪條路,導致預設
-// AKENTROS_DB_PATH 部署與 Workers 部署靜默落在記憶體模式(每 isolate 各自
+// AUTONOMIA_DB_PATH 部署與 Workers 部署靜默落在記憶體模式(每 isolate 各自
 // 計數、隨驅逐重置),與文件宣稱的「SQLite 固定窗口計數(全域)」不符。
-function limiterStoreKey(env: AkentrosRuntimeEnv): string {
-  return String(env?.DATABASE_URL || env?.AKENTROS_DB_PATH || "default").trim() || "default";
+function limiterStoreKey(env: AutonomiaRuntimeEnv): string {
+  return String(env?.DATABASE_URL || env?.AUTONOMIA_DB_PATH || "default").trim() || "default";
 }
 
 function identityKey(prefix: string, identity: string): string {
@@ -104,12 +104,12 @@ export function createRateLimit(options: {
   keyPrefix: string;
   windowMs: number;
   max: number;
-  keyGenerator?: (c: AkentrosContext) => string;
+  keyGenerator?: (c: AutonomiaContext) => string;
 }) {
   const windowMs = Math.max(1000, options.windowMs);
   const max = Math.max(1, options.max);
 
-  return async (c: AkentrosContext, next: AkentrosNext) => {
+  return async (c: AutonomiaContext, next: AutonomiaNext) => {
     const identity = options.keyGenerator ? String(options.keyGenerator(c) || "anonymous") : "global";
     const key = identityKey(options.keyPrefix, identity);
     const now = Date.now();
@@ -140,7 +140,7 @@ export function createRateLimit(options: {
       await next();
       return;
     } catch (error: any) {
-      logAkentrosEvent("warn", "rate_limit_db_unavailable_fallback_memory", {
+      logAutonomiaEvent("warn", "rate_limit_db_unavailable_fallback_memory", {
         errorCode: error?.code || error?.name || "unknown",
       });
       // 落到下面的記憶體降級路徑。

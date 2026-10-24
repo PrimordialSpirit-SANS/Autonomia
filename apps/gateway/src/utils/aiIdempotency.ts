@@ -1,6 +1,6 @@
-import { AKENTROS_REPLAY_TOMBSTONE_CONTENT_TYPE } from "@akentros/core/billing";
-import type { AkentrosRuntimeEnv } from "../types.ts";
-import { AkentrosError } from "./aiErrors.ts";
+import { AUTONOMIA_REPLAY_TOMBSTONE_CONTENT_TYPE } from "@autonomia/core/billing";
+import type { AutonomiaRuntimeEnv } from "../types.ts";
+import { AutonomiaError } from "./aiErrors.ts";
 import { ensureAiSchema } from "./aiSchema.ts";
 import { dbQuery } from "./db.ts";
 
@@ -28,7 +28,7 @@ function nowIso() {
   return new Date().toISOString();
 }
 
-export interface AkentrosIdempotentReplayResponse {
+export interface AutonomiaIdempotentReplayResponse {
   status: number;
   contentType: string;
   payload: string;
@@ -36,14 +36,14 @@ export interface AkentrosIdempotentReplayResponse {
   requestId: string;
 }
 
-export async function readAkentrosIdempotentReplay(
-  env: AkentrosRuntimeEnv,
+export async function readAutonomiaIdempotentReplay(
+  env: AutonomiaRuntimeEnv,
   input: {
     apiKeyId: string | number;
     idempotencyKey: string;
     requestFingerprint: string;
   },
-): Promise<AkentrosIdempotentReplayResponse | null> {
+): Promise<AutonomiaIdempotentReplayResponse | null> {
   await ensureAiSchema(env);
   const result = await dbQuery(
     env,
@@ -62,7 +62,7 @@ export async function readAkentrosIdempotentReplay(
   if (String(row.expires_at) <= nowIso()) return null;
   // 指紋不一致 = 同一冪等鍵綁不同的請求體,與 billing.reserve 的立場一致。
   if (String(row.request_fingerprint) !== String(input.requestFingerprint)) {
-    throw new AkentrosError("The Idempotency-Key was already used with a different request.", {
+    throw new AutonomiaError("The Idempotency-Key was already used with a different request.", {
       status: 409,
       type: "invalid_request_error",
       code: "idempotency_conflict",
@@ -72,8 +72,8 @@ export async function readAkentrosIdempotentReplay(
   // tombstone(回應超過落地上限):綁定在 TTL 內,但回應不可重放。回可
   // 分辨的 409,讓客戶端知道「換新鍵可重新執行」,而非被誤導性的
   // idempotent_request_replayed 永久卡死。
-  if (String(row.content_type) === AKENTROS_REPLAY_TOMBSTONE_CONTENT_TYPE) {
-    throw new AkentrosError(
+  if (String(row.content_type) === AUTONOMIA_REPLAY_TOMBSTONE_CONTENT_TYPE) {
+    throw new AutonomiaError(
       "The original response for this Idempotency-Key exceeded the replay storage limit and cannot be replayed; send a new Idempotency-Key to execute the request again.",
       {
         status: 409,
@@ -94,8 +94,8 @@ export async function readAkentrosIdempotentReplay(
 // 重放命中落一列輕量請求紀錄(status='replayed',計費欄位全 0):重放不執行
 // 推論、不走 reserve,但不記錄就會在管理面的請求紀錄中完全隱形。寫入失敗
 // 不影響重放回應本身。
-export async function recordAkentrosIdempotentReplay(
-  env: AkentrosRuntimeEnv,
+export async function recordAutonomiaIdempotentReplay(
+  env: AutonomiaRuntimeEnv,
   input: {
     requestId: string;
     replayedRequestId: string;
@@ -137,8 +137,8 @@ export async function recordAkentrosIdempotentReplay(
   );
 }
 
-export async function saveAkentrosIdempotentReplay(
-  env: AkentrosRuntimeEnv,
+export async function saveAutonomiaIdempotentReplay(
+  env: AutonomiaRuntimeEnv,
   input: {
     requestId: string;
     apiKeyId: string | number;
@@ -193,7 +193,7 @@ export async function saveAkentrosIdempotentReplay(
       input.requestFingerprint,
       input.endpoint,
       oversized ? 200 : (input.status ?? 200),
-      oversized ? AKENTROS_REPLAY_TOMBSTONE_CONTENT_TYPE : input.contentType,
+      oversized ? AUTONOMIA_REPLAY_TOMBSTONE_CONTENT_TYPE : input.contentType,
       oversized ? "" : input.payload,
       oversized ? 0 : payloadBytes,
       new Date(Date.now() + ttlSeconds * 1000).toISOString(),
@@ -204,7 +204,7 @@ export async function saveAkentrosIdempotentReplay(
   return rows(result).length > 0;
 }
 
-export async function cleanupAkentrosIdempotentReplays(env: AkentrosRuntimeEnv) {
+export async function cleanupAutonomiaIdempotentReplays(env: AutonomiaRuntimeEnv) {
   await ensureAiSchema(env);
   const result = await dbQuery(
     env,

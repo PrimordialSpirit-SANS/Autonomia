@@ -4,7 +4,7 @@ import { stripTypeScriptTypes } from "node:module";
 import test from "node:test";
 
 const source = await readFile(
-  new URL("../../../apps/console/src/lib/akentros/api/akentrosPublicContract.ts", import.meta.url),
+  new URL("../../../apps/console/src/lib/autonomia/api/autonomiaPublicContract.ts", import.meta.url),
   "utf8",
 );
 // 以 Node 內建的型別擦除取代 ts.transpileModule(TS7 移除了該 JS API);
@@ -12,16 +12,16 @@ const source = await readFile(
 const outputText = stripTypeScriptTypes(source);
 const contractModuleUrl = `data:text/javascript;base64,${Buffer.from(outputText).toString("base64")}`;
 const {
-  hasAkentrosErrorEnvelope,
-  normalizeAkentrosError,
-  normalizeAkentrosLogsPage,
-  normalizeAkentrosRequestDetail,
-  normalizeAkentrosStreamChunk,
-  normalizeAkentrosUsageSummary,
+  hasAutonomiaErrorEnvelope,
+  normalizeAutonomiaError,
+  normalizeAutonomiaLogsPage,
+  normalizeAutonomiaRequestDetail,
+  normalizeAutonomiaStreamChunk,
+  normalizeAutonomiaUsageSummary,
 } = await import(contractModuleUrl);
 
-test("frontend replaces vendor HTTP errors with stable Akentros errors", () => {
-  const error = normalizeAkentrosError(
+test("frontend replaces vendor HTTP errors with stable Autonomia errors", () => {
+  const error = normalizeAutonomiaError(
     {
       error: {
         message: "OpenRouter rejected the upstream request with 403",
@@ -34,11 +34,11 @@ test("frontend replaces vendor HTTP errors with stable Akentros errors", () => {
 
   assert.deepEqual(error, {
     code: "service_unavailable",
-    message: "Akentros 暫時無法完成此請求，請稍後再試。",
+    message: "Autonomia 暫時無法完成此請求，請稍後再試。",
   });
   assert.doesNotMatch(JSON.stringify(error), /openrouter|upstream|provider|403/i);
 
-  const forbidden = normalizeAkentrosError(
+  const forbidden = normalizeAutonomiaError(
     { message: "Forbidden" },
     {
       status: 403,
@@ -49,8 +49,8 @@ test("frontend replaces vendor HTTP errors with stable Akentros errors", () => {
   assert.doesNotMatch(forbidden.message, /forbidden|403/i);
 });
 
-test("frontend preserves native Akentros error codes without trusting response messages", () => {
-  const error = normalizeAkentrosError(
+test("frontend preserves native Autonomia error codes without trusting response messages", () => {
+  const error = normalizeAutonomiaError(
     {
       error: {
         message: "untrusted response text",
@@ -61,8 +61,8 @@ test("frontend preserves native Akentros error codes without trusting response m
   );
 
   assert.equal(error.code, "model_not_allowed");
-  assert.equal(error.message, "此 API 金鑰未開放指定的 Akentros 模型。");
-  assert.equal(hasAkentrosErrorEnvelope({ error: { code: "model_not_allowed" } }), true);
+  assert.equal(error.message, "此 API 金鑰未開放指定的 Autonomia 模型。");
+  assert.equal(hasAutonomiaErrorEnvelope({ error: { code: "model_not_allowed" } }), true);
 });
 
 test("frontend usage normalization discards stale routing metadata", () => {
@@ -71,7 +71,7 @@ test("frontend usage normalization discards stale routing metadata", () => {
     created_at: "2026-07-15T00:00:00.000Z",
     api_key_id: "9",
     key_name: "Production",
-    requested_model: "akentros/qwen-3.8-27b",
+    requested_model: "autonomia/qwen-3.8-27b",
     actual_model: "owner/vendor-model",
     provider: "openrouter",
     status: "succeeded",
@@ -86,18 +86,18 @@ test("frontend usage normalization discards stale routing metadata", () => {
     route_id: "vendor-route",
     upstream_request_id: "opaque-upstream-id",
   };
-  const page = normalizeAkentrosLogsPage({
+  const page = normalizeAutonomiaLogsPage({
     logs: [staleLog],
     pagination: { next_cursor: null, has_more: false },
   });
   const log = page.logs[0];
 
   assert.equal(log.actual_model, log.requested_model);
-  assert.equal(log.provider, "akentros");
+  assert.equal(log.provider, "autonomia");
   assert.equal(log.error_code, "request_failed");
   assert.doesNotMatch(JSON.stringify(log), /openrouter|owner\/vendor-model|vendor-route|opaque-upstream-id/i);
 
-  const detail = normalizeAkentrosRequestDetail({
+  const detail = normalizeAutonomiaRequestDetail({
     ...staleLog,
     fallback_count: 4,
     upstream_request_id: "opaque-upstream-id",
@@ -108,22 +108,22 @@ test("frontend usage normalization discards stale routing metadata", () => {
 });
 
 test("frontend usage summary normalizes monthly free-model quotas", () => {
-  const summary = normalizeAkentrosUsageSummary({
+  const summary = normalizeAutonomiaUsageSummary({
     free_model_quotas: {
-      "akentros/akentros-flash": { used: "16", limit: "5000" },
-      "akentros/akentros-lite": { used: 2, limit: 500 },
+      "autonomia/autonomia-flash": { used: "16", limit: "5000" },
+      "autonomia/autonomia-lite": { used: 2, limit: 500 },
       invalid: "discard me",
     },
   });
 
   assert.deepEqual(summary.free_model_quotas, {
-    "akentros/akentros-flash": { used: 16, limit: 5000 },
-    "akentros/akentros-lite": { used: 2, limit: 500 },
+    "autonomia/autonomia-flash": { used: 16, limit: 5000 },
+    "autonomia/autonomia-lite": { used: 2, limit: 500 },
   });
 });
 
 test("frontend stream normalization keeps reasoning but drops vendor fields", () => {
-  const chunk = normalizeAkentrosStreamChunk({
+  const chunk = normalizeAutonomiaStreamChunk({
     id: "upstream-id",
     model: "owner/vendor-model",
     provider: "vendor-name",

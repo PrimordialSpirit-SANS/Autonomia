@@ -3,10 +3,10 @@
 // 欄位僅限事件中繼資料(code、path、error name 等);prompt、completion、
 // 完整金鑰與供應商 token 仍不得出現在日誌(見 README 安全模型)。
 
-export type AkentrosLogLevel = "info" | "warn" | "error";
+export type AutonomiaLogLevel = "info" | "warn" | "error";
 
-export function logAkentrosEvent(
-  level: AkentrosLogLevel,
+export function logAutonomiaEvent(
+  level: AutonomiaLogLevel,
   event: string,
   fields: Record<string, unknown> = {},
 ): void {

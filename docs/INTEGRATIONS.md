@@ -1,14 +1,14 @@
 # 框架與工具整合指南
 
-Akentros 對外暴露 OpenAI 相容 API,所以「對接」的原則只有一條:**凡是能設定
-OpenAI baseURL 的工具,就能指向 Akentros**。本文列出已驗證的主流對接方式
+Autonomia 對外暴露 OpenAI 相容 API,所以「對接」的原則只有一條:**凡是能設定
+OpenAI baseURL 的工具,就能指向 Autonomia**。本文列出已驗證的主流對接方式
 與各自的注意事項;通用契約如下:
 
 | 項目 | 值 |
 | --- | --- |
 | Base URL | `https://<你的網域>/api/ai/v1`(本地開發 `http://localhost:8787/api/ai/v1`) |
-| API Key | `sk-akentros-live_*` / `sk-akentros-test_*`(控制台建立,只顯示一次) |
-| 模型名稱 | `akentros/<model>`(如 `akentros/gpt-5.2`;清單見 `GET /models`) |
+| API Key | `sk-autonomia-live_*` / `sk-autonomia-test_*`(控制台建立,只顯示一次) |
+| 模型名稱 | `autonomia/<model>`(如 `autonomia/gpt-5.2`;清單見 `GET /models`) |
 | 串流 | OpenAI SSE 形態,`data: [DONE]` 終止 |
 | 冪等 | `Idempotency-Key` 標頭;語義見下文與 `docs/openapi.yaml` |
 
@@ -22,8 +22,8 @@ OpenAI baseURL 的工具,就能指向 Akentros**。本文列出已驗證的主�
 import { ChatOpenAI } from "@langchain/openai";
 
 const model = new ChatOpenAI({
-  model: "akentros/gpt-5.2",
-  apiKey: process.env.AKENTROS_API_KEY,
+  model: "autonomia/gpt-5.2",
+  apiKey: process.env.AUTONOMIA_API_KEY,
   configuration: {
     baseURL: "https://gw.example.com/api/ai/v1",
     defaultHeaders: {
@@ -51,8 +51,8 @@ for await (const chunk of stream) console.log(chunk.content);
 from langchain_openai import ChatOpenAI
 
 model = ChatOpenAI(
-    model="akentros/gpt-5.2",
-    api_key=os.environ["AKENTROS_API_KEY"],
+    model="autonomia/gpt-5.2",
+    api_key=os.environ["AUTONOMIA_API_KEY"],
     base_url="https://gw.example.com/api/ai/v1",
 )
 ```
@@ -68,13 +68,13 @@ model = ChatOpenAI(
 import { createOpenAI } from "@ai-sdk/openai";
 import { streamText } from "ai";
 
-const akentros = createOpenAI({
+const autonomia = createOpenAI({
   baseURL: "https://gw.example.com/api/ai/v1",
-  apiKey: process.env.AKENTROS_API_KEY,
+  apiKey: process.env.AUTONOMIA_API_KEY,
 });
 
 const result = streamText({
-  model: akentros("akentros/gpt-5.2"),
+  model: autonomia("autonomia/gpt-5.2"),
   prompt: "從 1 數到 10,每個數字一行。",
 });
 
@@ -93,9 +93,9 @@ for await (const chunk of result.textStream) console.log(chunk);
 | 欄位 | 值 |
 | --- | --- |
 | URL | `https://gw.example.com/api/ai/v1` |
-| Key | `sk-akentros-live_…` |
+| Key | `sk-autonomia-live_…` |
 
-之後在 **Admin Settings → Models** 按同步,`akentros/*` 模型會出現在選單。
+之後在 **Admin Settings → Models** 按同步,`autonomia/*` 模型會出現在選單。
 建議為 OpenWebUI 單獨建一把金鑰,並在控制台設定 RPM / 併發上限——Web UI 的
 併發行為不 受你控制,金鑰級上限是閘道端強制的硬限制。
 
@@ -106,11 +106,11 @@ for await (const chunk of result.textStream) console.log(chunk);
 | 欄位 | 值 |
 | --- | --- |
 | API Proxy Endpoint | `https://gw.example.com/api/ai/v1` |
-| API Key | `sk-akentros-live_…` |
+| API Key | `sk-autonomia-live_…` |
 | Client Fetch Mode | 視部署拓撲;伺服器端轉發即可關閉 |
 
-再到模型清單手動加入 `akentros/<model>`。LobeChat 的伺服器端部署
-(Docker)與 Akentros 的 Topology D 天然互補:同一台機器、兩個容器,
+再到模型清單手動加入 `autonomia/<model>`。LobeChat 的伺服器端部署
+(Docker)與 Autonomia 的 Topology D 天然互補:同一台機器、兩個容器,
 console/nginx 與 LobeChat 各自持有獨立金鑰,用量與限流完全分帳。
 
 ## cURL / 任何 HTTP 客戶端
@@ -123,7 +123,7 @@ console/nginx 與 LobeChat 各自持有獨立金鑰,用量與限流完全分帳�
 
 ## 跨框架的三個語義差異(必讀)
 
-1. **冪等重放**:OpenAI 對已完成的冪等鍵會重播原始回應;Akentros **預設**
+1. **冪等重放**:OpenAI 對已完成的冪等鍵會重播原始回應;Autonomia **預設**
    回 `409 idempotent_request_replayed`(附原始 `X-Request-Id`)。重度依賴
    重放語義的框架,請在金鑰上 opt-in `idempotency_replay_ttl_seconds`
    (最長 7 天)——成功回應落地該時限,同鍵同體重送直接重播,不再執行、

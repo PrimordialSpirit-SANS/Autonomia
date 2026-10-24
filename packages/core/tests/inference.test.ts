@@ -1,15 +1,15 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
-  createAkentrosInferenceRuntime,
-  listPublicAkentrosModels,
+  createAutonomiaInferenceRuntime,
+  listPublicAutonomiaModels,
   measureStreamChunkOutputChars,
   normalizeStreamChunk,
-  prepareAkentrosChatRequest,
+  prepareAutonomiaChatRequest,
   publicProviderError,
 } from "../src/inference.ts";
 import { BACKEND_PRICING } from "../src/pricing.ts";
-import { AkentrosProviderError, requireProviderPool } from "../src/providers.ts";
+import { AutonomiaProviderError, requireProviderPool } from "../src/providers.ts";
 
 function aiKey(overrides: any = {}) {
   return {
@@ -23,8 +23,8 @@ function aiKey(overrides: any = {}) {
 
 function body(overrides: any = {}) {
   return {
-    model: "akentros/gpt-6-astra",
-    messages: [{ role: "user", content: "Hello Akentros" }],
+    model: "autonomia/gpt-6-astra",
+    messages: [{ role: "user", content: "Hello Autonomia" }],
     ...overrides,
   };
 }
@@ -93,14 +93,14 @@ function fakeBilling(overrides: any = {}) {
   return billing;
 }
 
-test("public model list exposes only stable Akentros model metadata", () => {
-  const list = listPublicAkentrosModels();
+test("public model list exposes only stable Autonomia model metadata", () => {
+  const list = listPublicAutonomiaModels();
   assert.equal(list.object, "list");
   assert.equal(list.data.length, 21);
   for (const model of list.data) {
-    assert.match(model.id, /^akentros\//);
+    assert.match(model.id, /^autonomia\//);
     assert.equal(model.object, "model");
-    assert.equal(model.owned_by, "akentros");
+    assert.equal(model.owned_by, "autonomia");
     assert.equal(typeof model.created, "number");
     assert.deepEqual(Object.keys(model).sort(), ["created", "id", "object", "owned_by"]);
   }
@@ -108,13 +108,13 @@ test("public model list exposes only stable Akentros model metadata", () => {
 
 test("chat preparation validates allowlists, features, limits, and nested fingerprints", async () => {
   await assert.rejects(
-    prepareAkentrosChatRequest({
+    prepareAutonomiaChatRequest({
       body: body(),
-      aiKey: aiKey({ model_allowlist: ["akentros/gpt-5.2"] }),
+      aiKey: aiKey({ model_allowlist: ["autonomia/gpt-5.2"] }),
     }),
     (error: any) => error.status === 403 && error.code === "model_not_allowed",
   );
-  const toolRequest = await prepareAkentrosChatRequest({
+  const toolRequest = await prepareAutonomiaChatRequest({
     body: body({
       tools: [
         {
@@ -130,12 +130,12 @@ test("chat preparation validates allowlists, features, limits, and nested finger
     }),
     aiKey: aiKey(),
   });
-  const plainRequest = await prepareAkentrosChatRequest({ body: body(), aiKey: aiKey() });
+  const plainRequest = await prepareAutonomiaChatRequest({ body: body(), aiKey: aiKey() });
   assert.ok(toolRequest.estimatedInputTokens > plainRequest.estimatedInputTokens);
   await assert.rejects(
-    prepareAkentrosChatRequest({
+    prepareAutonomiaChatRequest({
       body: body({
-        model: "akentros/qwen-3.8-27b",
+        model: "autonomia/qwen-3.8-27b",
         tools: [
           {
             type: "function",
@@ -152,9 +152,9 @@ test("chat preparation validates allowlists, features, limits, and nested finger
   );
   assert.equal(toolRequest.body.tools![0].function.name, "read_file");
   await assert.rejects(
-    prepareAkentrosChatRequest({
+    prepareAutonomiaChatRequest({
       body: body({
-        model: "akentros/qwen-3.8-27b",
+        model: "autonomia/qwen-3.8-27b",
         messages: [
           {
             role: "assistant",
@@ -169,21 +169,21 @@ test("chat preparation validates allowlists, features, limits, and nested finger
 
   assert.equal(toolRequest.body.tool_choice, "auto");
   await assert.rejects(
-    prepareAkentrosChatRequest({ body: body({ tools: [] }), aiKey: aiKey() }),
+    prepareAutonomiaChatRequest({ body: body({ tools: [] }), aiKey: aiKey() }),
     (error: any) => error.status === 400 && error.param === "tools",
   );
   await assert.rejects(
-    prepareAkentrosChatRequest({ body: body({ max_completion_tokens: 999999 }), aiKey: aiKey() }),
+    prepareAutonomiaChatRequest({ body: body({ max_completion_tokens: 999999 }), aiKey: aiKey() }),
     (error: any) => error.status === 400 && error.param === "max_completion_tokens",
   );
   await assert.rejects(
-    prepareAkentrosChatRequest({ body: body({ provider: "openrouter" }), aiKey: aiKey() }),
+    prepareAutonomiaChatRequest({ body: body({ provider: "openrouter" }), aiKey: aiKey() }),
     (error: any) => error.status === 400 && error.code === "unsupported_parameter",
   );
   await assert.rejects(
-    prepareAkentrosChatRequest({
+    prepareAutonomiaChatRequest({
       body: body({
-        model: "akentros/claude-haiku-4-5",
+        model: "autonomia/claude-haiku-4-5",
         messages: [
           { role: "user", content: "x".repeat(100_000) },
           { role: "user", content: "x".repeat(100_000) },
@@ -194,12 +194,12 @@ test("chat preparation validates allowlists, features, limits, and nested finger
     (error: any) => error.status === 400 && error.code === "context_length_exceeded",
   );
 
-  const first = await prepareAkentrosChatRequest({
+  const first = await prepareAutonomiaChatRequest({
     body: body({ messages: [{ role: "user", content: "first" }] }),
     aiKey: aiKey(),
     idempotencyKey: "same-key",
   });
-  const second = await prepareAkentrosChatRequest({
+  const second = await prepareAutonomiaChatRequest({
     body: body({ messages: [{ role: "user", content: "second" }] }),
     aiKey: aiKey(),
     idempotencyKey: "same-key",
@@ -210,14 +210,14 @@ test("chat preparation validates allowlists, features, limits, and nested finger
   assert.equal(first.reservation.pricingRevision, BACKEND_PRICING.revision);
 
   await assert.rejects(
-    prepareAkentrosChatRequest({
+    prepareAutonomiaChatRequest({
       body: body({ stream: true, stream_options: { include_usage: false } }),
       aiKey: aiKey(),
     }),
     (error: any) => error.status === 400 && error.code === "unsupported_parameter",
   );
 
-  const canonical = await prepareAkentrosChatRequest({
+  const canonical = await prepareAutonomiaChatRequest({
     body: body({
       stream: true,
       stream_options: { include_usage: true },
@@ -231,20 +231,20 @@ test("chat preparation validates allowlists, features, limits, and nested finger
 
   // FN-4 fix: chat_template_kwargs genuinely supports a single boolean thinking
   // field and is forwarded verbatim upstream; anything else stays a 400.
-  const thinkingRequest = await prepareAkentrosChatRequest({
+  const thinkingRequest = await prepareAutonomiaChatRequest({
     body: body({ chat_template_kwargs: { thinking: true } }),
     aiKey: aiKey(),
   });
   assert.deepEqual(thinkingRequest.body.chat_template_kwargs, { thinking: true });
   await assert.rejects(
-    prepareAkentrosChatRequest({
+    prepareAutonomiaChatRequest({
       body: body({ chat_template_kwargs: { thinking: "yes" } }),
       aiKey: aiKey(),
     }),
     (error: any) => error.status === 400 && error.code === "unsupported_parameter",
   );
   await assert.rejects(
-    prepareAkentrosChatRequest({
+    prepareAutonomiaChatRequest({
       body: body({ chat_template_kwargs: { temperature: 0.7 } }),
       aiKey: aiKey(),
     }),
@@ -263,7 +263,7 @@ test("chat preparation rejects pathologically nested tool parameters as 400 requ
     node = node.properties.nested;
   }
   await assert.rejects(
-    prepareAkentrosChatRequest({
+    prepareAutonomiaChatRequest({
       body: body({
         tools: [{ type: "function", function: { name: "deep", parameters: deepParameters } }],
       }),
@@ -279,7 +279,7 @@ test("chat preparation rejects pathologically nested tool parameters as 400 requ
 // 非法形狀回一般 400。
 test("response_format accepts text, gates structured outputs by model capability", async () => {
   // {type:"text"} 成功且不轉發上游(靜默等同未指定,即使預設 SDK 帶入也不踩雷)。
-  const textRequest = await prepareAkentrosChatRequest({
+  const textRequest = await prepareAutonomiaChatRequest({
     body: body({ response_format: { type: "text" } }),
     aiKey: aiKey(),
   });
@@ -288,9 +288,9 @@ test("response_format accepts text, gates structured outputs by model capability
   // 能力未開啟的模型(claude 系,json_mode/structured_outputs 皆 false):
   // json_object 與 json_schema 都是可分辨的 400 unsupported_feature。
   await assert.rejects(
-    prepareAkentrosChatRequest({
+    prepareAutonomiaChatRequest({
       body: body({
-        model: "akentros/claude-haiku-4-5",
+        model: "autonomia/claude-haiku-4-5",
         response_format: { type: "json_object" },
       }),
       aiKey: aiKey(),
@@ -299,9 +299,9 @@ test("response_format accepts text, gates structured outputs by model capability
       error.status === 400 && error.code === "unsupported_feature" && error.param === "response_format",
   );
   await assert.rejects(
-    prepareAkentrosChatRequest({
+    prepareAutonomiaChatRequest({
       body: body({
-        model: "akentros/claude-haiku-4-5",
+        model: "autonomia/claude-haiku-4-5",
         response_format: { type: "json_schema", json_schema: { name: "out", schema: { type: "object" } } },
       }),
       aiKey: aiKey(),
@@ -312,7 +312,7 @@ test("response_format accepts text, gates structured outputs by model capability
 
   // 非物件形狀與未知 type 回一般 400(與 unsupported_feature 可分辨)。
   await assert.rejects(
-    prepareAkentrosChatRequest({
+    prepareAutonomiaChatRequest({
       body: body({ response_format: "json" }),
       aiKey: aiKey(),
     }),
@@ -320,7 +320,7 @@ test("response_format accepts text, gates structured outputs by model capability
       error.status === 400 && error.param === "response_format" && error.code === "invalid_request",
   );
   await assert.rejects(
-    prepareAkentrosChatRequest({
+    prepareAutonomiaChatRequest({
       body: body({ response_format: { type: "yaml" } }),
       aiKey: aiKey(),
     }),
@@ -331,12 +331,12 @@ test("response_format accepts text, gates structured outputs by model capability
   );
 
   // 能力開啟的模型(json_mode + structured_outputs 皆 true):原樣透傳。
-  const jsonObjectRequest = await prepareAkentrosChatRequest({
+  const jsonObjectRequest = await prepareAutonomiaChatRequest({
     body: body({ response_format: { type: "json_object" } }),
     aiKey: aiKey(),
   });
   assert.deepEqual(jsonObjectRequest.body.response_format, { type: "json_object" });
-  const jsonSchemaRequest = await prepareAkentrosChatRequest({
+  const jsonSchemaRequest = await prepareAutonomiaChatRequest({
     body: body({
       response_format: {
         type: "json_schema",
@@ -362,14 +362,14 @@ test("response_format accepts text, gates structured outputs by model capability
 
   // json_object 僅接受 {type} 形狀;json_schema 缺 name/schema 回 400。
   await assert.rejects(
-    prepareAkentrosChatRequest({
+    prepareAutonomiaChatRequest({
       body: body({ response_format: { type: "json_object", extra: true } }),
       aiKey: aiKey(),
     }),
     (error: any) => error.status === 400 && error.param === "response_format",
   );
   await assert.rejects(
-    prepareAkentrosChatRequest({
+    prepareAutonomiaChatRequest({
       body: body({ response_format: { type: "json_schema", json_schema: { schema: { type: "object" } } } }),
       aiKey: aiKey(),
     }),
@@ -378,12 +378,12 @@ test("response_format accepts text, gates structured outputs by model capability
 
   // 指紋涵蓋整個 body:僅差 response_format 的兩個同鍵請求指紋必須不同,
   // 冪等衝突語意與其他欄位一致。
-  const plain = await prepareAkentrosChatRequest({
+  const plain = await prepareAutonomiaChatRequest({
     body: body(),
     aiKey: aiKey(),
     idempotencyKey: "rf-key",
   });
-  const structured = await prepareAkentrosChatRequest({
+  const structured = await prepareAutonomiaChatRequest({
     body: body({ response_format: { type: "json_object" } }),
     aiKey: aiKey(),
     idempotencyKey: "rf-key",
@@ -395,7 +395,7 @@ test("response_format accepts text, gates structured outputs by model capability
 // service_tier)接受後丟棄 —— 請求成功且上游請求體不含這些欄位;
 // 語意相關的欄位(logprobs 等)維持 400 且錯誤指名欄位。
 test("neutral OpenAI parameters are tolerated and dropped before upstream dispatch", async () => {
-  const tolerated = await prepareAkentrosChatRequest({
+  const tolerated = await prepareAutonomiaChatRequest({
     body: body({
       user: "user-123",
       store: true,
@@ -413,7 +413,7 @@ test("neutral OpenAI parameters are tolerated and dropped before upstream dispat
   // 明確不納入容忍清單的欄位:回 400 unsupported_parameter 且 param 指名。
   for (const field of ["logprobs", "top_logprobs", "parallel_tool_calls", "functions", "function_call"]) {
     await assert.rejects(
-      prepareAkentrosChatRequest({
+      prepareAutonomiaChatRequest({
         body: body({ [field]: true }),
         aiKey: aiKey(),
       }),
@@ -427,7 +427,7 @@ test("neutral OpenAI parameters are tolerated and dropped before upstream dispat
 // http:// 的 image_url 一律 400(僅放行 https:// 與 data:image/);
 // 估計輸入 token 含每個 image part 的固定保守值。
 test("vision models accept mixed content parts with conservative token estimates", async () => {
-  const visionRequest = await prepareAkentrosChatRequest({
+  const visionRequest = await prepareAutonomiaChatRequest({
     body: body({
       messages: [
         {
@@ -450,9 +450,9 @@ test("vision models accept mixed content parts with conservative token estimates
 
   // 非 vision 模型:parts 維持「string or null」契約的 400。
   await assert.rejects(
-    prepareAkentrosChatRequest({
+    prepareAutonomiaChatRequest({
       body: body({
-        model: "akentros/gpt-5.2-codex",
+        model: "autonomia/gpt-5.2-codex",
         messages: [{ role: "user", content: [{ type: "text", text: "no vision here" }] }],
       }),
       aiKey: aiKey(),
@@ -462,7 +462,7 @@ test("vision models accept mixed content parts with conservative token estimates
 
   // http:// 的 image_url 一律拒絕(防奇怪 scheme 透傳上游)。
   await assert.rejects(
-    prepareAkentrosChatRequest({
+    prepareAutonomiaChatRequest({
       body: body({
         messages: [
           {
@@ -481,7 +481,7 @@ test("vision models accept mixed content parts with conservative token estimates
 
   // 系統/assistant 訊息不可攜帶 parts(僅 user 開放)。
   await assert.rejects(
-    prepareAkentrosChatRequest({
+    prepareAutonomiaChatRequest({
       body: body({
         messages: [
           { role: "system", content: [{ type: "text", text: "system as parts" }] },
@@ -495,7 +495,7 @@ test("vision models accept mixed content parts with conservative token estimates
 
   // 未知 part 類型與空 parts 陣列回 400。
   await assert.rejects(
-    prepareAkentrosChatRequest({
+    prepareAutonomiaChatRequest({
       body: body({
         messages: [{ role: "user", content: [{ type: "video", video: "must-not-pass" }] }],
       }),
@@ -504,7 +504,7 @@ test("vision models accept mixed content parts with conservative token estimates
     (error: any) => error.status === 400 && /text or image_url items/.test(error.message),
   );
   await assert.rejects(
-    prepareAkentrosChatRequest({
+    prepareAutonomiaChatRequest({
       body: body({ messages: [{ role: "user", content: [] }] }),
       aiKey: aiKey(),
     }),
@@ -512,11 +512,11 @@ test("vision models accept mixed content parts with conservative token estimates
   );
 
   // 估計 token:同文字內容下,每加一個 image part 至少多 1,000 tokens。
-  const textOnly = await prepareAkentrosChatRequest({
+  const textOnly = await prepareAutonomiaChatRequest({
     body: body({ messages: [{ role: "user", content: "describe" }] }),
     aiKey: aiKey(),
   });
-  const withOneImage = await prepareAkentrosChatRequest({
+  const withOneImage = await prepareAutonomiaChatRequest({
     body: body({
       messages: [
         {
@@ -530,7 +530,7 @@ test("vision models accept mixed content parts with conservative token estimates
     }),
     aiKey: aiKey(),
   });
-  const withTwoImages = await prepareAkentrosChatRequest({
+  const withTwoImages = await prepareAutonomiaChatRequest({
     body: body({
       messages: [
         {
@@ -553,7 +553,7 @@ test("vision models accept mixed content parts with conservative token estimates
 // 替代做法;形狀不合法仍回一般 400;n=1 照常透傳。
 test("n beyond one returns a distinguishable unsupported_feature error", async () => {
   await assert.rejects(
-    prepareAkentrosChatRequest({ body: body({ n: 3 }), aiKey: aiKey() }),
+    prepareAutonomiaChatRequest({ body: body({ n: 3 }), aiKey: aiKey() }),
     (error: any) =>
       error.status === 400 &&
       error.code === "unsupported_feature" &&
@@ -561,10 +561,10 @@ test("n beyond one returns a distinguishable unsupported_feature error", async (
       /send separate requests/.test(error.message),
   );
   await assert.rejects(
-    prepareAkentrosChatRequest({ body: body({ n: 0 }), aiKey: aiKey() }),
+    prepareAutonomiaChatRequest({ body: body({ n: 0 }), aiKey: aiKey() }),
     (error: any) => error.status === 400 && error.param === "n" && error.code === "invalid_request",
   );
-  const single = await prepareAkentrosChatRequest({ body: body({ n: 1 }), aiKey: aiKey() });
+  const single = await prepareAutonomiaChatRequest({ body: body({ n: 1 }), aiKey: aiKey() });
   assert.equal(single.body.n, 1);
 });
 
@@ -572,7 +572,7 @@ test("n beyond one returns a distinguishable unsupported_feature error", async (
 // past the string|null contract; null content stays valid and is forwarded as null.
 test("chat preparation enforces string-or-null content on assistant tool-call turns", async () => {
   await assert.rejects(
-    prepareAkentrosChatRequest({
+    prepareAutonomiaChatRequest({
       body: body({
         messages: [
           {
@@ -588,7 +588,7 @@ test("chat preparation enforces string-or-null content on assistant tool-call tu
     (error: any) => error.status === 400 && /string or null/.test(error.message),
   );
   await assert.rejects(
-    prepareAkentrosChatRequest({
+    prepareAutonomiaChatRequest({
       body: body({
         messages: [
           {
@@ -603,7 +603,7 @@ test("chat preparation enforces string-or-null content on assistant tool-call tu
     }),
     (error: any) => error.status === 400 && /string or null/.test(error.message),
   );
-  const nullContent = await prepareAkentrosChatRequest({
+  const nullContent = await prepareAutonomiaChatRequest({
     body: body({
       messages: [
         {
@@ -623,7 +623,7 @@ test("chat preparation enforces string-or-null content on assistant tool-call tu
 });
 
 test("non-stream inference reserves, dispatches, calls provider, and settles in order", async () => {
-  const prepared = await prepareAkentrosChatRequest({ body: body(), aiKey: aiKey() });
+  const prepared = await prepareAutonomiaChatRequest({ body: body(), aiKey: aiKey() });
   prepared.routes = [
     {
       route_id: "test-openrouter",
@@ -635,7 +635,7 @@ test("non-stream inference reserves, dispatches, calls provider, and settles in 
   ];
   const billing = fakeBilling();
   const calls: any[] = [];
-  const runtime = createAkentrosInferenceRuntime({
+  const runtime = createAutonomiaInferenceRuntime({
     billing,
     claimCredential: async () => {
       calls.push("claim");
@@ -660,8 +660,8 @@ test("non-stream inference reserves, dispatches, calls provider, and settles in 
 
 for (const stream of [false, true]) {
   test(`${stream ? "streaming" : "JSON"} reasoning usage is billed once as part of completion tokens`, async () => {
-    const prepared = await prepareAkentrosChatRequest({
-      body: body({ model: "akentros/qwen-3.8-max", max_completion_tokens: 8192, stream }),
+    const prepared = await prepareAutonomiaChatRequest({
+      body: body({ model: "autonomia/qwen-3.8-max", max_completion_tokens: 8192, stream }),
       aiKey: aiKey(),
     });
     const usage = {
@@ -671,7 +671,7 @@ for (const stream of [false, true]) {
       completion_tokens_details: { reasoning_tokens: 6000 },
     };
     const billing = fakeBilling();
-    const runtime = createAkentrosInferenceRuntime({
+    const runtime = createAutonomiaInferenceRuntime({
       billing,
       claimCredential: async () => ({
         leaseId: "reasoning-lease",
@@ -726,13 +726,13 @@ for (const stream of [false, true]) {
 }
 
 test("Worker runtime forwards the native Cloudflare AI binding instead of using REST", async () => {
-  const prepared = await prepareAkentrosChatRequest({
-    body: body({ model: "akentros/qwen-3.8-27b" }),
+  const prepared = await prepareAutonomiaChatRequest({
+    body: body({ model: "autonomia/qwen-3.8-27b" }),
     aiKey: aiKey(),
   });
   const billing = fakeBilling();
   let bindingCalls = 0;
-  const runtime = createAkentrosInferenceRuntime({
+  const runtime = createAutonomiaInferenceRuntime({
     billing,
     claimCredential: async () => cloudflareClaim(),
     releaseCredential: async () => {},
@@ -759,7 +759,7 @@ test("Worker runtime forwards the native Cloudflare AI binding instead of using 
 });
 
 test("public non-stream completions strip execution metadata at every level", async () => {
-  const prepared = await prepareAkentrosChatRequest({ body: body(), aiKey: aiKey() });
+  const prepared = await prepareAutonomiaChatRequest({ body: body(), aiKey: aiKey() });
   prepared.routes = [
     {
       route_id: "sanitize",
@@ -769,7 +769,7 @@ test("public non-stream completions strip execution metadata at every level", as
       timeout_ms: 1000,
     },
   ];
-  const runtime = createAkentrosInferenceRuntime({
+  const runtime = createAutonomiaInferenceRuntime({
     billing: fakeBilling(),
     claimCredential: async () => openRouterClaim(),
     releaseCredential: async () => {},
@@ -843,8 +843,8 @@ test("reservation rejection and idempotent replay never call a provider", async 
     }),
   ]) {
     let providerCalls = 0;
-    const prepared = await prepareAkentrosChatRequest({ body: body(), aiKey: aiKey() });
-    const runtime = createAkentrosInferenceRuntime({
+    const prepared = await prepareAutonomiaChatRequest({ body: body(), aiKey: aiKey() });
+    const runtime = createAutonomiaInferenceRuntime({
       billing: fakeBilling({ reserve }),
       claimCredential: async () => {
         providerCalls += 1;
@@ -862,7 +862,7 @@ test("reservation rejection and idempotent replay never call a provider", async 
 });
 
 test("pre-stream provider failure falls back and refunds only when all routes fail", async () => {
-  const prepared = await prepareAkentrosChatRequest({ body: body(), aiKey: aiKey() });
+  const prepared = await prepareAutonomiaChatRequest({ body: body(), aiKey: aiKey() });
   prepared.routes = [
     {
       route_id: "first",
@@ -881,7 +881,7 @@ test("pre-stream provider failure falls back and refunds only when all routes fa
   ];
   let fetchCalls = 0;
   const billing = fakeBilling();
-  const runtime = createAkentrosInferenceRuntime({
+  const runtime = createAutonomiaInferenceRuntime({
     billing,
     claimCredential: async () => openRouterClaim(),
     releaseCredential: async () => {},
@@ -901,7 +901,7 @@ test("pre-stream provider failure falls back and refunds only when all routes fa
   );
 
   const failedBilling = fakeBilling();
-  const failedRuntime = createAkentrosInferenceRuntime({
+  const failedRuntime = createAutonomiaInferenceRuntime({
     billing: failedBilling,
     claimCredential: async () => openRouterClaim(),
     releaseCredential: async () => {},
@@ -912,7 +912,7 @@ test("pre-stream provider failure falls back and refunds only when all routes fa
 });
 
 test("fetch rejection after dispatch is reconciled without credential retry or route fallback", async () => {
-  const prepared = await prepareAkentrosChatRequest({ body: body(), aiKey: aiKey() });
+  const prepared = await prepareAutonomiaChatRequest({ body: body(), aiKey: aiKey() });
   prepared.routes = [
     {
       route_id: "ambiguous-first",
@@ -933,7 +933,7 @@ test("fetch rejection after dispatch is reconciled without credential retry or r
   let claimCalls = 0;
   let fetchCalls = 0;
   const releases: any[] = [];
-  const runtime = createAkentrosInferenceRuntime({
+  const runtime = createAutonomiaInferenceRuntime({
     billing,
     claimCredential: async () => {
       claimCalls += 1;
@@ -969,7 +969,7 @@ test("fetch rejection after dispatch is reconciled without credential retry or r
 });
 
 test("a rejected credential is excluded and the same route tries the next credential", async () => {
-  const prepared = await prepareAkentrosChatRequest({ body: body(), aiKey: aiKey() });
+  const prepared = await prepareAutonomiaChatRequest({ body: body(), aiKey: aiKey() });
   prepared.routes = [
     {
       route_id: "single-route",
@@ -981,7 +981,7 @@ test("a rejected credential is excluded and the same route tries the next creden
   ];
   const claims: any[] = [];
   let fetchCalls = 0;
-  const runtime = createAkentrosInferenceRuntime({
+  const runtime = createAutonomiaInferenceRuntime({
     billing: fakeBilling(),
     claimCredential: async (_route: any, _requestId: any, excludedCredentialIds: any) => {
       claims.push([...excludedCredentialIds]);
@@ -1008,7 +1008,7 @@ test("a rejected credential is excluded and the same route tries the next creden
 });
 
 test("attempt audit start failures release the credential and fail closed before provider dispatch", async () => {
-  const prepared = await prepareAkentrosChatRequest({ body: body(), aiKey: aiKey() });
+  const prepared = await prepareAutonomiaChatRequest({ body: body(), aiKey: aiKey() });
   prepared.routes = [
     {
       route_id: "audit-failure",
@@ -1021,7 +1021,7 @@ test("attempt audit start failures release the credential and fail closed before
   const billing = fakeBilling();
   const releases: any[] = [];
   let providerCalls = 0;
-  const runtime = createAkentrosInferenceRuntime({
+  const runtime = createAutonomiaInferenceRuntime({
     billing,
     attempts: {
       start: async () => {
@@ -1043,7 +1043,7 @@ test("attempt audit start failures release the credential and fail closed before
     assert.equal(error.retryAfter, 5);
     assert.equal(
       error.message,
-      "Akentros is temporarily unable to process this request. Please retry shortly.",
+      "Autonomia is temporarily unable to process this request. Please retry shortly.",
     );
     assert.doesNotMatch(error.message, /audit|database|provider|credential/i);
     return true;
@@ -1056,7 +1056,7 @@ test("attempt audit start failures release the credential and fail closed before
 });
 
 test("stream chunks use public IDs and provider usage settles the reservation", async () => {
-  const prepared = await prepareAkentrosChatRequest({ body: body({ stream: true }), aiKey: aiKey() });
+  const prepared = await prepareAutonomiaChatRequest({ body: body({ stream: true }), aiKey: aiKey() });
   prepared.routes = [
     {
       route_id: "stream-openrouter",
@@ -1083,7 +1083,7 @@ test("stream chunks use public IDs and provider usage settles the reservation", 
   });
   const billing = fakeBilling();
   const releases: any[] = [];
-  const runtime = createAkentrosInferenceRuntime({
+  const runtime = createAutonomiaInferenceRuntime({
     billing,
     claimCredential: async () => openRouterClaim(),
     releaseCredential: async (_claim: any, outcome: any) => releases.push(outcome.success),
@@ -1108,8 +1108,8 @@ test("stream chunks use public IDs and provider usage settles the reservation", 
 });
 
 test("Cloudflare native JSON SSE streams normalize and settle without REST", async () => {
-  const prepared = await prepareAkentrosChatRequest({
-    body: body({ model: "akentros/qwen-3.8-27b", stream: true }),
+  const prepared = await prepareAutonomiaChatRequest({
+    body: body({ model: "autonomia/qwen-3.8-27b", stream: true }),
     aiKey: aiKey(),
   });
   const encoder = new TextEncoder();
@@ -1117,7 +1117,7 @@ test("Cloudflare native JSON SSE streams normalize and settle without REST", asy
   const releases: any[] = [];
   let bindingCalls = 0;
   let fetchCalls = 0;
-  const runtime = createAkentrosInferenceRuntime({
+  const runtime = createAutonomiaInferenceRuntime({
     billing,
     claimCredential: async () => cloudflareClaim(),
     releaseCredential: async (_claim: any, outcome: any) => releases.push(outcome),
@@ -1194,7 +1194,7 @@ test("Cloudflare native JSON SSE streams normalize and settle without REST", asy
 });
 
 test("malformed stream usage is ignored and the stream settles with a conservative estimate", async () => {
-  const prepared = await prepareAkentrosChatRequest({ body: body({ stream: true }), aiKey: aiKey() });
+  const prepared = await prepareAutonomiaChatRequest({ body: body({ stream: true }), aiKey: aiKey() });
   prepared.routes = [
     {
       route_id: "stream-invalid-usage",
@@ -1222,7 +1222,7 @@ test("malformed stream usage is ignored and the stream settles with a conservati
     },
   });
   const billing = fakeBilling();
-  const runtime = createAkentrosInferenceRuntime({
+  const runtime = createAutonomiaInferenceRuntime({
     billing,
     claimCredential: async () => openRouterClaim(),
     releaseCredential: async () => {},
@@ -1254,8 +1254,8 @@ test("malformed stream usage is ignored and the stream settles with a conservati
 });
 
 test("Cloudflare native stream terminator is ignored and final response usage is preserved", async () => {
-  const prepared = await prepareAkentrosChatRequest({
-    body: body({ model: "akentros/qwen-3.8-27b", stream: true }),
+  const prepared = await prepareAutonomiaChatRequest({
+    body: body({ model: "autonomia/qwen-3.8-27b", stream: true }),
     aiKey: aiKey(),
   });
 
@@ -1277,12 +1277,12 @@ test("Cloudflare native stream terminator is ignored and final response usage is
 
   assert.throws(
     () => normalizeStreamChunk({ tool_calls: [{ name: "unexpected" }] }, prepared),
-    (error: any) => error instanceof AkentrosProviderError && error.category === "invalid_provider_response",
+    (error: any) => error instanceof AutonomiaProviderError && error.category === "invalid_provider_response",
   );
 });
 
 test("stream chunks preserve public content while stripping vendor metadata", async () => {
-  const prepared = await prepareAkentrosChatRequest({ body: body({ stream: true }), aiKey: aiKey() });
+  const prepared = await prepareAutonomiaChatRequest({ body: body({ stream: true }), aiKey: aiKey() });
   const chunk = normalizeStreamChunk(
     {
       id: "upstream-sentinel",
@@ -1329,7 +1329,7 @@ test("stream chunks preserve public content while stripping vendor metadata", as
   );
 });
 test("stream chunks preserve OpenAI-compatible tool call deltas", async () => {
-  const prepared = await prepareAkentrosChatRequest({ body: body({ stream: true }), aiKey: aiKey() });
+  const prepared = await prepareAutonomiaChatRequest({ body: body({ stream: true }), aiKey: aiKey() });
   const chunk = normalizeStreamChunk(
     {
       choices: [
@@ -1373,7 +1373,7 @@ test("stream chunks preserve OpenAI-compatible tool call deltas", async () => {
 });
 
 test("mid-stream errors never fall back or refund and are quarantined for reconciliation", async () => {
-  const prepared = await prepareAkentrosChatRequest({ body: body({ stream: true }), aiKey: aiKey() });
+  const prepared = await prepareAutonomiaChatRequest({ body: body({ stream: true }), aiKey: aiKey() });
   prepared.routes = [
     {
       route_id: "first",
@@ -1393,7 +1393,7 @@ test("mid-stream errors never fall back or refund and are quarantined for reconc
   const encoder = new TextEncoder();
   let providerCalls = 0;
   const billing = fakeBilling();
-  const runtime = createAkentrosInferenceRuntime({
+  const runtime = createAutonomiaInferenceRuntime({
     billing,
     claimCredential: async () => openRouterClaim(),
     releaseCredential: async () => {},
@@ -1424,7 +1424,7 @@ test("mid-stream errors never fall back or refund and are quarantined for reconc
       break;
     }
   }
-  assert.equal(streamError instanceof AkentrosProviderError, true);
+  assert.equal(streamError instanceof AutonomiaProviderError, true);
   assert.equal(streamError.responseStarted, true);
   await runtime.failStream(context, streamError);
   assert.equal(providerCalls, 1);
@@ -1436,7 +1436,7 @@ test("mid-stream errors never fall back or refund and are quarantined for reconc
 });
 
 test("concurrent and repeated failStream calls finalize one stream context exactly once", async () => {
-  const prepared = await prepareAkentrosChatRequest({ body: body({ stream: true }), aiKey: aiKey() });
+  const prepared = await prepareAutonomiaChatRequest({ body: body({ stream: true }), aiKey: aiKey() });
   prepared.routes = [
     {
       route_id: "stream-idempotent-failure",
@@ -1449,7 +1449,7 @@ test("concurrent and repeated failStream calls finalize one stream context exact
   const billing = fakeBilling();
   const attemptFinishes: any[] = [];
   const releases: any[] = [];
-  const runtime = createAkentrosInferenceRuntime({
+  const runtime = createAutonomiaInferenceRuntime({
     billing,
     attempts: {
       start: async () => ({ id: "attempt-one" }),
@@ -1468,13 +1468,13 @@ test("concurrent and repeated failStream calls finalize one stream context exact
       ),
   });
   const context = await runtime.openStream(prepared);
-  const firstError = new AkentrosProviderError("first internal stream failure", {
+  const firstError = new AutonomiaProviderError("first internal stream failure", {
     provider: "openrouter",
     category: "midstream_provider_error",
     responseStarted: true,
     usageUnknown: true,
   });
-  const secondError = new AkentrosProviderError("second internal stream failure", {
+  const secondError = new AutonomiaProviderError("second internal stream failure", {
     provider: "openrouter",
     category: "different_error",
     responseStarted: true,
@@ -1501,7 +1501,7 @@ test("concurrent and repeated failStream calls finalize one stream context exact
 });
 
 test("successful stream without provider usage settles with a conservative estimate", async () => {
-  const prepared = await prepareAkentrosChatRequest({ body: body({ stream: true }), aiKey: aiKey() });
+  const prepared = await prepareAutonomiaChatRequest({ body: body({ stream: true }), aiKey: aiKey() });
   prepared.routes = [
     {
       route_id: "stream-no-usage",
@@ -1513,7 +1513,7 @@ test("successful stream without provider usage settles with a conservative estim
   ];
   const encoder = new TextEncoder();
   const billing = fakeBilling();
-  const runtime = createAkentrosInferenceRuntime({
+  const runtime = createAutonomiaInferenceRuntime({
     billing,
     claimCredential: async () => openRouterClaim(),
     releaseCredential: async () => {},
@@ -1554,7 +1554,7 @@ test("successful stream without provider usage settles with a conservative estim
 });
 
 test("JSON completion without provider usage settles with a conservative estimate", async () => {
-  const prepared = await prepareAkentrosChatRequest({ body: body(), aiKey: aiKey() });
+  const prepared = await prepareAutonomiaChatRequest({ body: body(), aiKey: aiKey() });
   prepared.routes = [
     {
       route_id: "json-no-usage",
@@ -1565,7 +1565,7 @@ test("JSON completion without provider usage settles with a conservative estimat
     },
   ];
   const billing = fakeBilling();
-  const runtime = createAkentrosInferenceRuntime({
+  const runtime = createAutonomiaInferenceRuntime({
     billing,
     claimCredential: async () => openRouterClaim(),
     releaseCredential: async () => {},
@@ -1606,7 +1606,7 @@ test("JSON completion without provider usage settles with a conservative estimat
 });
 
 test("HTTP 200 embedded errors do not fallback or refund after dispatch", async () => {
-  const prepared = await prepareAkentrosChatRequest({ body: body(), aiKey: aiKey() });
+  const prepared = await prepareAutonomiaChatRequest({ body: body(), aiKey: aiKey() });
   prepared.routes = [
     {
       route_id: "first",
@@ -1625,7 +1625,7 @@ test("HTTP 200 embedded errors do not fallback or refund after dispatch", async 
   ];
   let providerCalls = 0;
   const billing = fakeBilling();
-  const runtime = createAkentrosInferenceRuntime({
+  const runtime = createAutonomiaInferenceRuntime({
     billing,
     claimCredential: async () => openRouterClaim(),
     releaseCredential: async () => {},
@@ -1655,7 +1655,7 @@ test("HTTP 200 embedded errors do not fallback or refund after dispatch", async 
 });
 
 test("provider timeout after dispatch does not fallback and keeps billing for reconciliation", async () => {
-  const prepared = await prepareAkentrosChatRequest({ body: body(), aiKey: aiKey() });
+  const prepared = await prepareAutonomiaChatRequest({ body: body(), aiKey: aiKey() });
   prepared.routes = [
     {
       route_id: "slow",
@@ -1674,7 +1674,7 @@ test("provider timeout after dispatch does not fallback and keeps billing for re
   ];
   let providerCalls = 0;
   const billing = fakeBilling();
-  const runtime = createAkentrosInferenceRuntime({
+  const runtime = createAutonomiaInferenceRuntime({
     billing,
     claimCredential: async () => openRouterClaim(),
     releaseCredential: async () => {},
@@ -1698,7 +1698,7 @@ test("provider timeout after dispatch does not fallback and keeps billing for re
 });
 
 test("client disconnect aborts routing without fallback or refund", async () => {
-  const prepared = await prepareAkentrosChatRequest({ body: body(), aiKey: aiKey() });
+  const prepared = await prepareAutonomiaChatRequest({ body: body(), aiKey: aiKey() });
   prepared.routes = [
     {
       route_id: "aborted",
@@ -1719,7 +1719,7 @@ test("client disconnect aborts routing without fallback or refund", async () => 
   controller.abort(new Error("client disconnected"));
   let providerCalls = 0;
   const billing = fakeBilling();
-  const runtime = createAkentrosInferenceRuntime({
+  const runtime = createAutonomiaInferenceRuntime({
     billing,
     claimCredential: async () => openRouterClaim(),
     releaseCredential: async () => {},
@@ -1742,7 +1742,7 @@ test("client disconnect aborts routing without fallback or refund", async () => 
 });
 
 test("public provider errors never expose provider status, category, or identifiers", () => {
-  const source = new AkentrosProviderError("Cloudflare credential rejected upstream request abc", {
+  const source = new AutonomiaProviderError("Cloudflare credential rejected upstream request abc", {
     provider: "cloudflare-workers-ai",
     status: 403,
     category: "credential_rejected",

@@ -1,22 +1,22 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
-import { AkentrosIcon } from "../components/AkentrosIcon";
+import { Link, useNavigate } from "react-router-dom";
+import { AutonomiaIcon } from "../components/AutonomiaIcon";
 import {
-  AkentrosAuthError,
-  loginAkentrosAccount,
-  registerAkentrosAccount,
-} from "../lib/akentros/api/akentrosAuthApi";
-import type { AkentrosConsoleUser } from "../lib/akentros/types";
-import { isAkentrosDemoMode } from "../services/demoApi";
+  AutonomiaAuthError,
+  loginAutonomiaAccount,
+  registerAutonomiaAccount,
+} from "../lib/autonomia/api/autonomiaAuthApi";
+import type { AutonomiaConsoleUser } from "../lib/autonomia/types";
+import { isAutonomiaDemoMode } from "../services/demoApi";
 
 // 登入/註冊二合一頁。成功後寫入 session context 並導向控制台。
 // 示範模式會顯示提示:任意帳號密碼即可登入。
 
 type AuthMode = "login" | "register";
 
-export function LoginPage({ onAuthenticated }: { onAuthenticated: (user: AkentrosConsoleUser) => void }) {
+export function LoginPage({ onAuthenticated }: { onAuthenticated: (user: AutonomiaConsoleUser) => void }) {
   const navigate = useNavigate();
-  const demo = isAkentrosDemoMode();
+  const demo = isAutonomiaDemoMode();
   const [mode, setMode] = React.useState<AuthMode>("login");
   const [email, setEmail] = React.useState("");
   const [username, setUsername] = React.useState("");
@@ -34,8 +34,8 @@ export function LoginPage({ onAuthenticated }: { onAuthenticated: (user: Akentro
     try {
       const user =
         mode === "login"
-          ? await loginAkentrosAccount(email, password)
-          : await registerAkentrosAccount(email, username, password);
+          ? await loginAutonomiaAccount(email, password)
+          : await registerAutonomiaAccount(email, username, password);
       if (!user) {
         // 防枚舉回應(gateway 回 202 受理但不發 session):無法區分信箱是否
         // 已被註冊,引導使用者改走登入。
@@ -44,9 +44,9 @@ export function LoginPage({ onAuthenticated }: { onAuthenticated: (user: Akentro
         return;
       }
       onAuthenticated(user);
-      navigate("/", { replace: true });
+      navigate("/overview", { replace: true });
     } catch (cause) {
-      setError(cause instanceof AkentrosAuthError ? cause.message : "操作失敗,請稍後再試。");
+      setError(cause instanceof AutonomiaAuthError ? cause.message : "操作失敗,請稍後再試。");
     } finally {
       setBusy(false);
     }
@@ -56,9 +56,9 @@ export function LoginPage({ onAuthenticated }: { onAuthenticated: (user: Akentro
     <div className="auth-wrap">
       <section className="card auth-card">
         <div className="auth-brand">
-          <AkentrosIcon size={40} />
-          <h1>Akentros 控制台</h1>
-          <p>{mode === "login" ? "登入以管理 API 金鑰與用量" : "建立新帳號,開始使用 Akentros"}</p>
+          <AutonomiaIcon size={40} />
+          <h1>Autonomia 控制台</h1>
+          <p>{mode === "login" ? "登入以管理 API 金鑰與用量" : "建立新帳號,開始使用 Autonomia"}</p>
         </div>
         <form className="auth-form" onSubmit={submit}>
           <label className="field">
@@ -69,7 +69,7 @@ export function LoginPage({ onAuthenticated }: { onAuthenticated: (user: Akentro
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               autoComplete="email"
-              placeholder={demo ? "demo@akentros.dev" : "you@example.com"}
+              placeholder={demo ? "demo@autonomia.dev" : "you@example.com"}
               required
             />
           </label>
@@ -132,6 +132,9 @@ export function LoginPage({ onAuthenticated }: { onAuthenticated: (user: Akentro
           >
             {mode === "login" ? "註冊新帳號" : "改為登入"}
           </button>
+        </p>
+        <p className="auth-switch">
+          <Link to="/home">← 回首頁</Link>
         </p>
       </section>
     </div>

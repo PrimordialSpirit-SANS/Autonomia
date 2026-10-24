@@ -1,21 +1,21 @@
 import { parseUsdToMicros, usdMicrosToDecimalString } from "./pricing.ts";
 
-const AKENTROS_API_KEY_PATTERN = /^sk-akentros-(live|test)_[A-Za-z0-9_-]{40,}$/;
+const AUTONOMIA_API_KEY_PATTERN = /^sk-autonomia-(live|test)_[A-Za-z0-9_-]{40,}$/;
 // ECO-04 P2:新金鑰直接取得 responses(/responses 橋接端點);僅有
 // chat:completions 的既有金鑰由端點層向後相容放行。
-export const AKENTROS_DEFAULT_SCOPES = Object.freeze([
+export const AUTONOMIA_DEFAULT_SCOPES = Object.freeze([
   "chat:completions",
   "embeddings",
   "responses",
   "models:read",
 ]);
-export const AKENTROS_MAX_ACTIVE_KEYS = 10;
-export const AKENTROS_MIN_KEY_TTL_MS = 60 * 60 * 1000;
+export const AUTONOMIA_MAX_ACTIVE_KEYS = 10;
+export const AUTONOMIA_MIN_KEY_TTL_MS = 60 * 60 * 1000;
 
 const MAX_BIGINT_ID = 9_223_372_036_854_775_807n;
 // 冪等重放 TTL 上限:7 天。0 = 關閉(完成鍵重送回 409,OpenAI 相容的
 // 「不落地回應」預設立場)。
-export const AKENTROS_MAX_IDEMPOTENCY_REPLAY_TTL_SECONDS = 604_800;
+export const AUTONOMIA_MAX_IDEMPOTENCY_REPLAY_TTL_SECONDS = 604_800;
 const ALLOWED_OPTION_KEYS = new Set([
   "name",
   "environment",
@@ -34,7 +34,7 @@ function optionError(message: string, code = "INVALID_AI_KEY_CONFIGURATION") {
   return error;
 }
 
-export function parseAkentrosJsonArray(value: any): any[] {
+export function parseAutonomiaJsonArray(value: any): any[] {
   if (Array.isArray(value)) return value;
   try {
     const parsed = JSON.parse(value || "[]");
@@ -46,9 +46,9 @@ export function parseAkentrosJsonArray(value: any): any[] {
 
 // 嚴格版的 model_allowlist 解析:此欄位一律由本系統寫入(必為合法 JSON 陣列),
 // 解析失敗代表資料列損毀。回傳 null 讓呼叫端 fail-closed(拒絕該金鑰);
-// 若使用 parseAkentrosJsonArray 會得到 [] = 「不限制任何模型」,形同損毀
+// 若使用 parseAutonomiaJsonArray 會得到 [] = 「不限制任何模型」,形同損毀
 // 靜默解除金鑰的模型限制。
-export function parseAkentrosModelAllowlistStrict(value: any): string[] | null {
+export function parseAutonomiaModelAllowlistStrict(value: any): string[] | null {
   if (value == null || value === "") return [];
   let parsed: any = value;
   if (typeof value === "string") {
@@ -82,40 +82,40 @@ function optionalBoundedInteger(
   return value;
 }
 
-export function requireAkentrosApiKeyPepper(value: any) {
+export function requireAutonomiaApiKeyPepper(value: any) {
   const pepper = String(value || "");
   if (new TextEncoder().encode(pepper).byteLength < 32) {
-    const error = new Error("AKENTROS_API_KEY_PEPPER must contain at least 32 bytes.") as Error & {
+    const error = new Error("AUTONOMIA_API_KEY_PEPPER must contain at least 32 bytes.") as Error & {
       code?: string;
     };
-    error.code = "AKENTROS_API_KEY_PEPPER_INVALID";
+    error.code = "AUTONOMIA_API_KEY_PEPPER_INVALID";
     throw error;
   }
   return pepper;
 }
 
-export function isAkentrosApiKey(value: any) {
-  return AKENTROS_API_KEY_PATTERN.test(String(value || ""));
+export function isAutonomiaApiKey(value: any) {
+  return AUTONOMIA_API_KEY_PATTERN.test(String(value || ""));
 }
 
-export function maskAkentrosApiKey(value: any) {
+export function maskAutonomiaApiKey(value: any) {
   const secret = String(value || "");
   return {
-    // 僅保留固定的環境前綴(sk-akentros-live_ / sk-akentros-test_,13 字)+ 4 個
+    // 僅保留固定的環境前綴(sk-autonomia-live_ / sk-autonomia-test_,13 字)+ 4 個
     // 秘密字元,足以辨識金鑰;再長就會不必要地洩漏 token 前段。
     key_prefix: secret.slice(0, 17),
     key_suffix: secret.slice(-4),
   };
 }
 
-export function normalizeAkentrosKeyOptions(options: any, enabledModelIds: string[] = []) {
+export function normalizeAutonomiaKeyOptions(options: any, enabledModelIds: string[] = []) {
   if (!options || typeof options !== "object" || Array.isArray(options)) {
     throw optionError("The request body must be a JSON object.");
   }
 
   for (const key of Object.keys(options)) {
     if (!ALLOWED_OPTION_KEYS.has(key)) {
-      throw optionError(`Unsupported Akentros key option: ${key}.`);
+      throw optionError(`Unsupported Autonomia key option: ${key}.`);
     }
   }
 
@@ -136,7 +136,7 @@ export function normalizeAkentrosKeyOptions(options: any, enabledModelIds: strin
   if (modelAllowlist.length > 0 && (!Array.isArray(enabledModelIds) || enabledModelIds.length === 0)) {
     // 指定了白名單卻沒有可用的模型目錄 = 設定錯誤;此時略過驗證會讓任意
     // (可能已停用)模型 id 進入白名單,因此明確拒絕。
-    throw optionError("The Akentros model catalog is unavailable; model_allowlist cannot be validated.");
+    throw optionError("The Autonomia model catalog is unavailable; model_allowlist cannot be validated.");
   }
   const enabledModels = new Set(enabledModelIds);
   const normalizedAllowlist: string[] = [];
@@ -146,7 +146,7 @@ export function normalizeAkentrosKeyOptions(options: any, enabledModelIds: strin
     }
     const modelId = rawModelId.trim();
     if (enabledModels.size > 0 && !enabledModels.has(modelId)) {
-      throw optionError(`Unknown or disabled Akentros model: ${modelId}.`);
+      throw optionError(`Unknown or disabled Autonomia model: ${modelId}.`);
     }
     if (!normalizedAllowlist.includes(modelId)) normalizedAllowlist.push(modelId);
   }
@@ -176,7 +176,7 @@ export function normalizeAkentrosKeyOptions(options: any, enabledModelIds: strin
     if (Number.isNaN(parsedExpiry.getTime())) {
       throw optionError("expires_at must be an RFC 3339 date-time.");
     }
-    if (parsedExpiry.getTime() < Date.now() + AKENTROS_MIN_KEY_TTL_MS) {
+    if (parsedExpiry.getTime() < Date.now() + AUTONOMIA_MIN_KEY_TTL_MS) {
       throw optionError("expires_at must be at least 1 hour in the future.");
     }
     expiresAt = parsedExpiry.toISOString();
@@ -185,7 +185,7 @@ export function normalizeAkentrosKeyOptions(options: any, enabledModelIds: strin
   const idempotencyReplayTtlSeconds = optionalBoundedInteger(
     options.idempotency_replay_ttl_seconds,
     "idempotency_replay_ttl_seconds",
-    { minimum: 0, maximum: AKENTROS_MAX_IDEMPOTENCY_REPLAY_TTL_SECONDS, fallback: 0 },
+    { minimum: 0, maximum: AUTONOMIA_MAX_IDEMPOTENCY_REPLAY_TTL_SECONDS, fallback: 0 },
   )!;
 
   return {
@@ -200,14 +200,14 @@ export function normalizeAkentrosKeyOptions(options: any, enabledModelIds: strin
   };
 }
 
-export function parseAkentrosKeyId(value: any) {
+export function parseAutonomiaKeyId(value: any) {
   const raw = String(value || "");
   if (!/^[1-9][0-9]*$/.test(raw)) return null;
   const parsed = BigInt(raw);
   return parsed <= MAX_BIGINT_ID ? parsed.toString() : null;
 }
 
-export function serializeAkentrosApiKey(row: any) {
+export function serializeAutonomiaApiKey(row: any) {
   if (!row) return null;
   const keyPrefix = String(row.key_prefix ?? row.prefix ?? "");
   const keySuffix = String(row.key_suffix ?? row.suffix ?? "");
@@ -218,8 +218,8 @@ export function serializeAkentrosApiKey(row: any) {
     key_prefix: keyPrefix,
     key_suffix: keySuffix,
     masked_key: `${keyPrefix}...${keySuffix}`,
-    scopes: parseAkentrosJsonArray(row.scopes),
-    model_allowlist: parseAkentrosJsonArray(row.model_allowlist),
+    scopes: parseAutonomiaJsonArray(row.scopes),
+    model_allowlist: parseAutonomiaJsonArray(row.model_allowlist),
     rpm_limit: Number(row.rpm_limit),
     max_in_flight: Number(row.max_in_flight),
     spend_limit_usd:
@@ -235,8 +235,8 @@ export function serializeAkentrosApiKey(row: any) {
   };
 }
 
-export function isAkentrosServiceRestricted(user: any) {
+export function isAutonomiaServiceRestricted(user: any) {
   if (!user?.is_flagged) return false;
-  const restrictions = parseAkentrosJsonArray(user.restricted_services);
+  const restrictions = parseAutonomiaJsonArray(user.restricted_services);
   return restrictions.some((item: any) => AI_SERVICE_ALIASES.has(String(item).trim().toLowerCase()));
 }

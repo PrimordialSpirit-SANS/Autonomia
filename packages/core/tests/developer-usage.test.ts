@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { createAkentrosDeveloperUsageStore } from "../src/developerUsage.ts";
+import { createAutonomiaDeveloperUsageStore } from "../src/developerUsage.ts";
 
 function requestRow(overrides: any = {}) {
   return {
@@ -10,7 +10,7 @@ function requestRow(overrides: any = {}) {
     user_id: "7",
     api_key_id: "9",
     key_name: "Production",
-    public_model: "akentros/qwen-3.8-27b",
+    public_model: "autonomia/qwen-3.8-27b",
     upstream_model: "owner/model",
     provider: "openrouter",
     status: "succeeded",
@@ -33,7 +33,7 @@ function requestRow(overrides: any = {}) {
 
 test("usage summary keeps its stable shape without free-model quotas", async () => {
   let capturedSql = "";
-  const store = createAkentrosDeveloperUsageStore(async (sql: any) => {
+  const store = createAutonomiaDeveloperUsageStore(async (sql: any) => {
     capturedSql = sql;
     return {
       rows: [
@@ -64,13 +64,13 @@ test("usage summary keeps its stable shape without free-model quotas", async () 
   });
   assert.match(capturedSql, /requests\.created_at >= \?/);
   assert.doesNotMatch(capturedSql, /INTERVAL|CURRENT_TIMESTAMP/);
-  assert.doesNotMatch(capturedSql, /akentros-flash|akentros-lite/);
+  assert.doesNotMatch(capturedSql, /autonomia-flash|autonomia-lite/);
   assert.doesNotMatch(capturedSql, /ai_rate_limit_buckets/);
 });
 
-test("usage logs are cursor paginated and expose only Akentros-owned model metadata", async () => {
+test("usage logs are cursor paginated and expose only Autonomia-owned model metadata", async () => {
   let captured: any;
-  const store = createAkentrosDeveloperUsageStore(async (sql: any, params: any) => {
+  const store = createAutonomiaDeveloperUsageStore(async (sql: any, params: any) => {
     captured = { sql, params };
     return {
       rows: [
@@ -84,9 +84,9 @@ test("usage logs are cursor paginated and expose only Akentros-owned model metad
   assert.equal(page.pagination.has_more, true);
   assert.equal(typeof page.pagination.next_cursor, "string");
   assert.equal(page.logs[0].request_id, "req_abcdefgh12345678");
-  assert.equal(page.logs[0].requested_model, "akentros/qwen-3.8-27b");
-  assert.equal(page.logs[0].actual_model, "akentros/qwen-3.8-27b");
-  assert.equal(page.logs[0].provider, "akentros");
+  assert.equal(page.logs[0].requested_model, "autonomia/qwen-3.8-27b");
+  assert.equal(page.logs[0].actual_model, "autonomia/qwen-3.8-27b");
+  assert.equal(page.logs[0].provider, "autonomia");
   assert.equal("prompt" in page.logs[0], false);
   assert.equal("completion" in page.logs[0], false);
   assert.doesNotMatch(JSON.stringify(page.logs[0]), /openrouter|owner\/model|opaque-upstream/i);
@@ -100,7 +100,7 @@ test("usage logs are cursor paginated and expose only Akentros-owned model metad
 });
 
 test("usage query validation rejects malformed cursors, ranges, and statuses", async () => {
-  const store = createAkentrosDeveloperUsageStore(async () => ({ rows: [] }));
+  const store = createAutonomiaDeveloperUsageStore(async () => ({ rows: [] }));
   await assert.rejects(store.list("7", { cursor: "not-a-cursor" }), /cursor is invalid/);
   await assert.rejects(store.list("7", { status: "made_up" }), /status is invalid/);
   await assert.rejects(
@@ -110,12 +110,12 @@ test("usage query validation rejects malformed cursors, ranges, and statuses", a
 });
 
 test("request detail keeps a stable public shape without exposing routing audit", async () => {
-  const store = createAkentrosDeveloperUsageStore(async () => ({
+  const store = createAutonomiaDeveloperUsageStore(async () => ({
     rows: [requestRow({ fallback_count: 2, error_code: "credential_rejected" })],
   }));
   const detail: any = await store.detail("7", "req_abcdefgh12345678");
   assert.equal(detail.actual_model, detail.requested_model);
-  assert.equal(detail.provider, "akentros");
+  assert.equal(detail.provider, "autonomia");
   assert.equal("fallback_count" in detail, false);
   assert.equal("upstream_request_id" in detail, false);
   assert.equal(detail.error_code, "service_unavailable");
@@ -127,7 +127,7 @@ test("request detail keeps a stable public shape without exposing routing audit"
   await assert.rejects(store.detail("7", "bad-id"), /requestId is invalid/);
 });
 
-test("internal execution failures collapse to stable Akentros public error codes", async () => {
+test("internal execution failures collapse to stable Autonomia public error codes", async () => {
   const serviceUnavailableCodes = [
     "credential_rejected",
     "provider_quota_exhausted",
@@ -145,7 +145,7 @@ test("internal execution failures collapse to stable Akentros public error codes
     "timeout",
   ];
   for (const internalCode of serviceUnavailableCodes) {
-    const store = createAkentrosDeveloperUsageStore(async () => ({
+    const store = createAutonomiaDeveloperUsageStore(async () => ({
       rows: [requestRow({ error_code: internalCode })],
     }));
     const page = await store.list("7");
@@ -156,7 +156,7 @@ test("internal execution failures collapse to stable Akentros public error codes
     ["client_disconnected", "request_cancelled"],
     ["invalid_request", "invalid_request"],
   ]) {
-    const store = createAkentrosDeveloperUsageStore(async () => ({
+    const store = createAutonomiaDeveloperUsageStore(async () => ({
       rows: [requestRow({ error_code: internalCode })],
     }));
     const page = await store.list("7");
@@ -164,7 +164,7 @@ test("internal execution failures collapse to stable Akentros public error codes
   }
 });
 
-test("native Akentros errors remain actionable in developer usage", async () => {
+test("native Autonomia errors remain actionable in developer usage", async () => {
   const nativeCodes = [
     "invalid_api_key",
     "insufficient_scope",
@@ -175,7 +175,7 @@ test("native Akentros errors remain actionable in developer usage", async () => 
     "max_in_flight_exceeded",
   ];
   for (const nativeCode of nativeCodes) {
-    const store = createAkentrosDeveloperUsageStore(async () => ({
+    const store = createAutonomiaDeveloperUsageStore(async () => ({
       rows: [requestRow({ error_code: nativeCode })],
     }));
     const page = await store.list("7");
@@ -185,7 +185,7 @@ test("native Akentros errors remain actionable in developer usage", async () => 
 
 test("Hono usage adapter uses the shared store", () => {
   const worker = readFileSync(new URL("../../../apps/gateway/src/utils/aiUsage.ts", import.meta.url), "utf8");
-  assert.match(worker, /createAkentrosDeveloperUsageStore/);
+  assert.match(worker, /createAutonomiaDeveloperUsageStore/);
   assert.match(worker, /ensureAiSchema/);
   assert.doesNotMatch(worker, /SELECT|prompt|completion/);
 });

@@ -5,7 +5,7 @@ name: Release
 # Pushing an annotated `v*` tag runs, in order:
 #   1. verify                   — the same gauntlet as CI
 #   2. guard-version-alignment  — every workspace manifest must equal the tag
-#   3. publish-npm              — stage + publish @akentros/core (NPM_TOKEN)
+#   3. publish-npm              — stage + publish @autonomia/core (NPM_TOKEN)
 #   4. publish-ghcr             — gateway/console images, version + latest
 #   5. github-release           — generated notes + npm registry probe
 #
@@ -102,7 +102,7 @@ jobs:
       # manifest stays private: true, so nothing but the staged directory
       # can ever be published — see packages/core/scripts/stage-publish.mjs.
       - name: Stage publishable artifact
-        run: npm run stage --workspace @akentros/core
+        run: npm run stage --workspace @autonomia/core
 
       - name: Publish staged artifact to npm
         run: npm publish packages/core/.publish-stage
@@ -171,14 +171,14 @@ jobs:
           set -euo pipefail
           VERSION="${GITHUB_REF_NAME#v}"
           for ATTEMPT in $(seq 1 12); do
-            if npm view "@akentros/core@${VERSION}" version >/dev/null 2>&1; then
-              echo "@akentros/core@${VERSION} is visible on the npm registry."
+            if npm view "@autonomia/core@${VERSION}" version >/dev/null 2>&1; then
+              echo "@autonomia/core@${VERSION} is visible on the npm registry."
               exit 0
             fi
             echo "attempt ${ATTEMPT}/12: not surfaced yet; waiting 10s…"
             sleep 10
           done
-          echo "::warning::@akentros/core@${VERSION} not visible on the npm registry after 2 minutes — publish propagation may be slow. Verify manually (docs/RELEASING.md §3)."
+          echo "::warning::@autonomia/core@${VERSION} not visible on the npm registry after 2 minutes — publish propagation may be slow. Verify manually (docs/RELEASING.md §3)."
 
       - name: Open GitHub Release with generated notes
         run: gh release create "$GITHUB_REF_NAME" --generate-notes --verify-tag

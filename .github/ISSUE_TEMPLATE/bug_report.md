@@ -18,7 +18,7 @@ What you expected to happen.
 
 **Environment**
 
-- Akentros version / commit:
+- Autonomia version / commit:
 - Node version:
 - Deployment (Workers / wrangler dev / other):
 

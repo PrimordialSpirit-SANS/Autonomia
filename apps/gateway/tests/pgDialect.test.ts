@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import { AsyncLocalStorage } from "node:async_hooks";
 import test from "node:test";
-import { createAkentrosApiLimitStore } from "@akentros/core/apiLimits";
-import { createAkentrosBillingStore } from "@akentros/core/billing";
-import { createAkentrosProviderPoolStore } from "@akentros/core/providerPool";
-import { PROVIDER_POOLS } from "@akentros/core/providers";
-import type { AkentrosQuery } from "@akentros/core/query";
-import { migrateAkentrosSchema } from "@akentros/core/schemaMigration";
+import { createAutonomiaApiLimitStore } from "@autonomia/core/apiLimits";
+import { createAutonomiaBillingStore } from "@autonomia/core/billing";
+import { createAutonomiaProviderPoolStore } from "@autonomia/core/providerPool";
+import { PROVIDER_POOLS } from "@autonomia/core/providers";
+import type { AutonomiaQuery } from "@autonomia/core/query";
+import { migrateAutonomiaSchema } from "@autonomia/core/schemaMigration";
 import { PGlite } from "@electric-sql/pglite";
 
 // PostgreSQL 方言的端到端驗證:以 @electric-sql/pglite(內嵌 PG16)跑
@@ -23,7 +23,7 @@ function normalizeParam(value: any): unknown {
   return value;
 }
 
-function createPgliteQuery(db: PGlite): AkentrosQuery {
+function createPgliteQuery(db: PGlite): AutonomiaQuery {
   const txStorage = new AsyncLocalStorage<{ db: PGlite }>();
   const query = (async (sql: string, params: any[] = []) => {
     const client = txStorage.getStore()?.db ?? db;
@@ -31,7 +31,7 @@ function createPgliteQuery(db: PGlite): AkentrosQuery {
     const text = sql.replace(/\?/g, () => `$${++index}`);
     const result = await client.query(text, params.map(normalizeParam));
     return { rows: result.rows as any[] };
-  }) as AkentrosQuery;
+  }) as AutonomiaQuery;
   query.dialect = "postgres";
   query.transaction = (fn: () => Promise<unknown>) =>
     db.transaction((tx) => txStorage.run({ db: tx as unknown as PGlite }, () => fn()));
@@ -84,7 +84,7 @@ async function pgFixture() {
     )`,
   );
 
-  await migrateAkentrosSchema(query);
+  await migrateAutonomiaSchema(query);
 
   const user = await query(
     `INSERT INTO users (username, email, password_hash, balance_usd_micros)
@@ -106,13 +106,13 @@ const fingerprint = "b".repeat(64);
 
 test("PG dialect: versioned migration runs and is idempotent", async () => {
   const { query } = await pgFixture();
-  const second = await migrateAkentrosSchema(query);
+  const second = await migrateAutonomiaSchema(query);
   assert.equal(second.migrated, false);
 });
 
 test("PG dialect: billing reserve, settle and refund track the ledger chain", async () => {
   const { query, userId, apiKeyId } = await pgFixture();
-  const store = createAkentrosBillingStore(query);
+  const store = createAutonomiaBillingStore(query);
 
   const reserved = await store.reserve({
     requestId: "req_pg_1",
@@ -120,7 +120,7 @@ test("PG dialect: billing reserve, settle and refund track the ledger chain", as
     apiKeyId,
     idempotencyKey: null,
     requestFingerprint: fingerprint,
-    publicModel: "akentros-test-model",
+    publicModel: "autonomia-test-model",
     pricingRevision: "pricing-v1",
     reservedCostMicros: "8",
     expiresAt: "2030-01-01T00:00:00.000Z",
@@ -157,14 +157,14 @@ test("PG dialect: zero reported cost settles when the provider explicitly report
   // FN-6 fix:provider 來源的 0/0 usage 允許結算(charged=0、全額退款);
   // estimated 來源的 0 維持拒絕。PG 方言與 SQLite 走同一份守衛 SQL。
   const { query, userId, apiKeyId } = await pgFixture();
-  const store = createAkentrosBillingStore(query);
+  const store = createAutonomiaBillingStore(query);
   const reserved = await store.reserve({
     requestId: "req_pg_zero",
     userId,
     apiKeyId,
     idempotencyKey: null,
     requestFingerprint: fingerprint,
-    publicModel: "akentros-test-model",
+    publicModel: "autonomia-test-model",
     pricingRevision: "pricing-v1",
     reservedCostMicros: "8",
     expiresAt: "2030-01-01T00:00:00.000Z",
@@ -186,14 +186,14 @@ test("PG dialect: zero reported cost settles when the provider explicitly report
 test("PG dialect: zero reported cost from estimated sources cannot settle a non-zero reservation", async () => {
   // 守衛對 estimated 來源的 0 成本照舊拒絕(資料異常,交由對帳隔離)。
   const { query, userId, apiKeyId } = await pgFixture();
-  const store = createAkentrosBillingStore(query);
+  const store = createAutonomiaBillingStore(query);
   const reserved = await store.reserve({
     requestId: "req_pg_zero_est",
     userId,
     apiKeyId,
     idempotencyKey: null,
     requestFingerprint: fingerprint,
-    publicModel: "akentros-test-model",
+    publicModel: "autonomia-test-model",
     pricingRevision: "pricing-v1",
     reservedCostMicros: "8",
     expiresAt: "2030-01-01T00:00:00.000Z",
@@ -214,14 +214,14 @@ test("PG dialect: zero reported cost from estimated sources cannot settle a non-
 
 test("PG dialect: idempotency replay returns the original request", async () => {
   const { query, userId, apiKeyId } = await pgFixture();
-  const store = createAkentrosBillingStore(query);
+  const store = createAutonomiaBillingStore(query);
   const input = {
     requestId: "req_pg_idem",
     userId,
     apiKeyId,
     idempotencyKey: "pg-idem-1",
     requestFingerprint: fingerprint,
-    publicModel: "akentros-test-model",
+    publicModel: "autonomia-test-model",
     pricingRevision: "pricing-v1",
     reservedCostMicros: "8",
     expiresAt: "2030-01-01T00:00:00.000Z",
@@ -238,7 +238,7 @@ test("PG dialect: idempotency replay returns the original request", async () => 
 
 test("PG dialect: provider pool sync, claim and release roundtrip", async () => {
   const { query } = await pgFixture();
-  const store = createAkentrosProviderPoolStore(query);
+  const store = createAutonomiaProviderPoolStore(query);
   await store.sync(PROVIDER_POOLS);
 
   const poolId = Object.keys(PROVIDER_POOLS.pools)[0];
@@ -279,7 +279,7 @@ test("PG dialect: provider pool sync, claim and release roundtrip", async () => 
 test("PG dialect: key RPM and in-flight admission control", async () => {
   const { query, apiKeyId } = await pgFixture();
   await query(`UPDATE ai_api_keys SET rpm_limit = 2, max_in_flight = 1 WHERE id = ?`, [apiKeyId]);
-  const store = createAkentrosApiLimitStore(query);
+  const store = createAutonomiaApiLimitStore(query);
 
   const first = await store.acquire({
     apiKeyId,

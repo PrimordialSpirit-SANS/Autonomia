@@ -1,8 +1,8 @@
 {
-  "name": "@akentros/core",
+  "name": "@autonomia/core",
   "version": "0.1.0",
   "type": "module",
-  "description": "Portable Akentros core: pricing authority, USD billing (reserve/settle/refund), API keys, provider pools, inference pipeline and SSE — the behavior core of the self-hosted OpenAI-compatible Akentros AI gateway.",
+  "description": "Portable Autonomia core: pricing authority, USD billing (reserve/settle/refund), API keys, provider pools, inference pipeline and SSE — the behavior core of the self-hosted OpenAI-compatible Autonomia AI gateway.",
   "license": "MIT",
   "keywords": [
     "ai-gateway",
@@ -17,11 +17,11 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/PrimordialSpirit-SANS/akentros.git",
+    "url": "git+https://github.com/PrimordialSpirit-SANS/autonomia.git",
     "directory": "packages/core"
   },
-  "bugs": "https://github.com/PrimordialSpirit-SANS/akentros/issues",
-  "homepage": "https://github.com/PrimordialSpirit-SANS/akentros#readme",
+  "bugs": "https://github.com/PrimordialSpirit-SANS/autonomia/issues",
+  "homepage": "https://github.com/PrimordialSpirit-SANS/autonomia#readme",
   "engines": {
     "node": ">=20.19"
   },

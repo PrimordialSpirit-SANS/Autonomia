@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { Hono } from "hono";
-import { AKENTROS_SMALL_BODY_MAX_BYTES, readCappedText } from "../src/utils/bodyLimit.ts";
+import { AUTONOMIA_SMALL_BODY_MAX_BYTES, readCappedText } from "../src/utils/bodyLimit.ts";
 import { readJsonObject } from "../src/utils/request.ts";
 
 // 請求體上限:Content-Length 預檢 + 串流逐塊計數。Hono 的 json()/text() 會
@@ -10,7 +10,7 @@ import { readJsonObject } from "../src/utils/request.ts";
 function appWith(handler: (c: any) => Promise<Response>) {
   const app = new Hono();
   app.post("/", (c: any) => handler(c));
-  // 對齊 app.ts 的 onError:AkentrosError 以其 status 回應(413 等由 sendOpenAiError 送出)。
+  // 對齊 app.ts 的 onError:AutonomiaError 以其 status 回應(413 等由 sendOpenAiError 送出)。
   app.onError((error: any, c: any) =>
     c.json({ message: error?.message, code: error?.code }, error?.status || 500),
   );
@@ -18,10 +18,10 @@ function appWith(handler: (c: any) => Promise<Response>) {
 }
 
 test("content-length precheck rejects oversized bodies before streaming", async () => {
-  const app = appWith((c) => readCappedText(c, AKENTROS_SMALL_BODY_MAX_BYTES).then((text) => c.text(text)));
+  const app = appWith((c) => readCappedText(c, AUTONOMIA_SMALL_BODY_MAX_BYTES).then((text) => c.text(text)));
   const response = await app.request("/", {
     method: "POST",
-    headers: { "content-length": String(AKENTROS_SMALL_BODY_MAX_BYTES + 1) },
+    headers: { "content-length": String(AUTONOMIA_SMALL_BODY_MAX_BYTES + 1) },
     body: "x",
   });
   assert.equal(response.status, 413);

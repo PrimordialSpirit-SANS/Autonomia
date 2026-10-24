@@ -1,6 +1,6 @@
-// 離線示範模式(VITE_AKENTROS_DEMO=1 或網址帶 ?demo=1)時,攔截指向 Akentros 後端的
+// 離線示範模式(VITE_AUTONOMIA_DEMO=1 或網址帶 ?demo=1)時,攔截指向 Autonomia 後端的
 // fetch,以記憶體內的假資料與模擬 SSE 串流回應,讓控制台在沒有後端的情況下可以完整瀏覽。
-// 靜態資源(public/data/akentros 目錄、品牌圖示等)不攔截,仍由實際伺服器提供。
+// 靜態資源(public/data/autonomia 目錄、品牌圖示等)不攔截,仍由實際伺服器提供。
 
 const DEVELOPER_PREFIX = "/api/ai/developer";
 const PUBLIC_CHAT_PATH = "/api/ai/v1/chat/completions";
@@ -18,7 +18,7 @@ interface DemoUser {
 const DEMO_ACCOUNT: DemoUser = {
   id: "1",
   username: "demo",
-  email: "demo@akentros.dev",
+  email: "demo@autonomia.dev",
   display_name: "Demo",
   role: "admin",
   balance_usd: "420.000000",
@@ -109,7 +109,7 @@ const state = {
       id: "key_demo_prod",
       name: "Production",
       environment: "live",
-      key_prefix: "sk-akentros-live_8f21",
+      key_prefix: "sk-autonomia-live_8f21",
       key_suffix: "d04a",
       scopes: ["chat:completions", "models:read"],
       model_allowlist: null,
@@ -126,10 +126,10 @@ const state = {
       id: "key_demo_staging",
       name: "Staging",
       environment: "test",
-      key_prefix: "sk-akentros-test_44cd",
+      key_prefix: "sk-autonomia-test_44cd",
       key_suffix: "91b7",
       scopes: ["chat:completions", "models:read"],
-      model_allowlist: ["akentros/qwen-3.8-27b"],
+      model_allowlist: ["autonomia/qwen-3.8-27b"],
       is_active: true,
       last_used_at: daysAgo(3),
       expires_at: daysAgo(-30),
@@ -144,7 +144,7 @@ const state = {
     seedLog({
       requestId: "req_demo_9f2c41a8e0b3",
       minutes: 2,
-      model: "akentros/qwen-3.8-27b",
+      model: "autonomia/qwen-3.8-27b",
       status: "succeeded",
       inputTokens: 412,
       outputTokens: 96,
@@ -154,7 +154,7 @@ const state = {
     seedLog({
       requestId: "req_demo_7b81d0c4a2e6",
       minutes: 26,
-      model: "akentros/gpt-5.2",
+      model: "autonomia/gpt-5.2",
       status: "succeeded",
       inputTokens: 1204,
       outputTokens: 388,
@@ -164,7 +164,7 @@ const state = {
     seedLog({
       requestId: "req_demo_1c4e9a77f3d2",
       minutes: 58,
-      model: "akentros/glm-5.3",
+      model: "autonomia/glm-5.3",
       status: "succeeded",
       inputTokens: 2531,
       outputTokens: 907,
@@ -174,7 +174,7 @@ const state = {
     seedLog({
       requestId: "req_demo_44a0b8e1c5d9",
       minutes: 173,
-      model: "akentros/grok-4.1-fast",
+      model: "autonomia/grok-4.1-fast",
       status: "refunded",
       inputTokens: 860,
       outputTokens: 212,
@@ -185,7 +185,7 @@ const state = {
     seedLog({
       requestId: "req_demo_b3d7f2a90c68",
       minutes: 421,
-      model: "akentros/claude-haiku-4-5",
+      model: "autonomia/claude-haiku-4-5",
       status: "succeeded",
       inputTokens: 640,
       outputTokens: 315,
@@ -195,7 +195,7 @@ const state = {
     seedLog({
       requestId: "req_demo_e8156cc2ab04",
       minutes: 688,
-      model: "akentros/qwen-3.8-flash",
+      model: "autonomia/qwen-3.8-flash",
       status: "rejected",
       inputTokens: 0,
       outputTokens: 0,
@@ -206,7 +206,7 @@ const state = {
     seedLog({
       requestId: "req_demo_5d90af13e7bb",
       minutes: 902,
-      model: "akentros/gemini-3.5-flash-lite",
+      model: "autonomia/gemini-3.5-flash-lite",
       status: "succeeded",
       inputTokens: 988,
       outputTokens: 260,
@@ -343,7 +343,7 @@ function buildDemoReply(modelId: string, prompt: string): { reasoning: string; c
       "2. 字元區塊以固定節奏送達,用來驗證 SSE 解析與逐字渲染。",
       "3. 串流結束時會附上 usage 統計與 [DONE] 訊號,格式與 OpenAI 相容。",
       "",
-      "要接上真實後端時,請移除 VITE_AKENTROS_DEMO 設定,並確認 VITE_AKENTROS_API_BASE 指向 Worker。",
+      "要接上真實後端時,請移除 VITE_AUTONOMIA_DEMO 設定,並確認 VITE_AUTONOMIA_API_BASE 指向 Worker。",
     ].join("\n"),
   };
 }
@@ -373,7 +373,7 @@ function recordDemoUsage(
 }
 
 async function streamDemoChat(body: Record<string, unknown>, signal?: AbortSignal): Promise<Response> {
-  const modelId = typeof body.model === "string" && body.model ? body.model : "akentros/gpt-6-astra";
+  const modelId = typeof body.model === "string" && body.model ? body.model : "autonomia/gpt-6-astra";
   const messages = Array.isArray(body.messages) ? body.messages : [];
   const prompt = messages
     .map((message) =>
@@ -487,7 +487,7 @@ async function handleAuthRequest(pathname: string, request: Request): Promise<Re
 
 async function handlePublicChat(request: Request): Promise<Response> {
   const auth = request.headers.get("Authorization") ?? "";
-  if (!/^Bearer sk-akentros-(live|test)_[A-Za-z0-9]{8,}$/.test(auth)) {
+  if (!/^Bearer sk-autonomia-(live|test)_[A-Za-z0-9]{8,}$/.test(auth)) {
     return errorJson("invalid_api_key", 401);
   }
   const body = await readJsonBody(request);
@@ -512,7 +512,7 @@ async function handleDeveloperRequest(pathname: string, request: Request): Promi
         ? Number(body.spend_limit_usd).toFixed(6)
         : null;
     const replayTtl = Number(body.idempotency_replay_ttl_seconds);
-    const secret = `sk-akentros-live_${randomHex(32)}`;
+    const secret = `sk-autonomia-live_${randomHex(32)}`;
     const key: DemoApiKey = {
       id: `key_demo_${randomHex(8)}`,
       name,
@@ -539,7 +539,7 @@ async function handleDeveloperRequest(pathname: string, request: Request): Promi
   if (rotateMatch && method === "POST") {
     const key = state.keys.find((item) => item.id === decodeURIComponent(rotateMatch[1]));
     if (!key) return errorJson("AI_KEY_NOT_FOUND", 404);
-    const secret = `sk-akentros-live_${randomHex(32)}`;
+    const secret = `sk-autonomia-live_${randomHex(32)}`;
     key.key_prefix = secret.slice(0, 18);
     key.key_suffix = secret.slice(-4);
     return json({ key, api_key: secret });
@@ -596,28 +596,28 @@ async function handleDeveloperRequest(pathname: string, request: Request): Promi
   return errorJson("not_found", 404);
 }
 
-export function isAkentrosDemoMode(): boolean {
-  if (import.meta.env.VITE_AKENTROS_DEMO === "1") return true;
+export function isAutonomiaDemoMode(): boolean {
+  if (import.meta.env.VITE_AUTONOMIA_DEMO === "1") return true;
   // SN-14 fix:?demo=1(任意值)可在正式網域啟動示範模式,營造假登入畫面的
   // 釣魚可信度。生產建置一律停用 URL 參數啟用路徑,只認構建期的
-  // VITE_AKENTROS_DEMO=1;本地開發(DEV)保留即時切換便利。
+  // VITE_AUTONOMIA_DEMO=1;本地開發(DEV)保留即時切換便利。
   if (import.meta.env.PROD) return false;
   if (typeof window === "undefined") return false;
   return new URLSearchParams(window.location.search).has("demo");
 }
 
 // 開機當下判定一次:SPA 導航會掉掉 ?demo=1,但攔截器與標籤應整個 session 生效。
-const demoActiveAtBoot = isAkentrosDemoMode();
+const demoActiveAtBoot = isAutonomiaDemoMode();
 
-export function isAkentrosDemoActive(): boolean {
+export function isAutonomiaDemoActive(): boolean {
   return demoActiveAtBoot;
 }
 
-export function installAkentrosDemoApi(): void {
+export function installAutonomiaDemoApi(): void {
   if (typeof window === "undefined") return;
-  const host = window as typeof window & { __akentrosDemoInstalled?: boolean };
-  if (host.__akentrosDemoInstalled) return;
-  host.__akentrosDemoInstalled = true;
+  const host = window as typeof window & { __autonomiaDemoInstalled?: boolean };
+  if (host.__autonomiaDemoInstalled) return;
+  host.__autonomiaDemoInstalled = true;
 
   // SPA 導航會把 ?demo=1 從網址拿掉;示範模式下永遠補回去,
   // 讓重新整理(F5)不會意外脫離示範模式。

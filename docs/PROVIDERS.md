@@ -37,7 +37,9 @@ secret or `.dev.vars` binding listed below.
 - **Anthropic.** The adapter converts system/developer messages into the
   `system` parameter, tool results into user `tool_result` blocks, assistant
   tool calls into `tool_use` blocks, folds consecutive same-role turns, maps
-  `tool_choice` (`required` → `any`), and drops unsupported fields
+  every `tool_choice` mode (`auto` → omitted, `none` → `{"type":"none"}`,
+  `required` → `{"type":"any"}`, named function → `{"type":"tool"}`), and
+  drops unsupported fields
   (`seed`, `n`, penalties, `stream_options`, `response_format` — the
   Messages API has no response_format, so `json_mode` and
   `structured_outputs` stay false for Anthropic models). `temperature` wins
@@ -73,9 +75,10 @@ secret or `.dev.vars` binding listed below.
 
 ## Models and Autonomia prices
 
-The published catalog covers 19 models from eight model families (OpenAI GPT,
+The published catalog covers 19 chat models from eight model families (OpenAI GPT,
 Anthropic Claude, Google Gemini, xAI Grok, DeepSeek, Moonshot AI Kimi, Z.ai
-GLM, and Alibaba Qwen). Rates use each provider's official public API prices
+GLM, and Alibaba Qwen), plus two `text-embedding-3` embedding models served
+from the OpenAI pool. Rates use each provider's official public API prices
 checked on 2026-09-14. Autonomia passes the upstream USD rate through with a small
 settlement margin (`input_usd_per_million_tokens` / `output_usd_per_million_tokens`,
 USD decimals), with a $0.0001 per-request minimum. Cache discounts, batch
@@ -84,31 +87,31 @@ published rates.
 
 ### OpenAI (`https://api.openai.com/v1`)
 
-| Public model | Upstream model | USD in / out per 1M | Points in / out per 1M |
-| --- | --- | --- | --- |
-| `autonomia/gpt-6-astra` | `gpt-6-astra` | 10 / 50.01 | 334 / 1667 |
-| `autonomia/gpt-5.2` | `gpt-5.2` | 1.26 / 10.02 | 42 / 334 |
-| `autonomia/gpt-5.2-codex` | `gpt-5.2-codex` | 1.26 / 10.02 | 42 / 334 |
+| Public model | Upstream model | USD in / out per 1M |
+| --- | --- | --- |
+| `autonomia/gpt-6-astra` | `gpt-6-astra` | 10 / 50.01 |
+| `autonomia/gpt-5.2` | `gpt-5.2` | 1.26 / 10.02 |
+| `autonomia/gpt-5.2-codex` | `gpt-5.2-codex` | 1.26 / 10.02 |
 
 Contexts: GPT-6 Astra 1,000,000 tokens; GPT-5.2 and GPT-5.2 Codex 400,000.
 
 ### Anthropic (`https://api.anthropic.com/v1`, Messages API)
 
-| Public model | Upstream model | USD in / out per 1M | Points in / out per 1M |
-| --- | --- | --- | --- |
-| `autonomia/claude-opus-4-8` | `claude-opus-4-8` | 5 / 25.01 | 167 / 834 |
-| `autonomia/claude-sonnet-5` | `claude-sonnet-5` | 2 / 10.01 | 67 / 334 |
-| `autonomia/claude-haiku-4-5` | `claude-haiku-4-5` | 1.02 / 5.01 | 34 / 167 |
+| Public model | Upstream model | USD in / out per 1M |
+| --- | --- | --- |
+| `autonomia/claude-opus-4-8` | `claude-opus-4-8` | 5 / 25.01 |
+| `autonomia/claude-sonnet-5` | `claude-sonnet-5` | 2 / 10.01 |
+| `autonomia/claude-haiku-4-5` | `claude-haiku-4-5` | 1.02 / 5.01 |
 
 Context 200,000 tokens. Prompt-cache write/read discounts are excluded.
 
 ### Google Gemini (`https://generativelanguage.googleapis.com/v1beta/openai`)
 
-| Public model | Upstream model | USD in / out per 1M | Points in / out per 1M |
-| --- | --- | --- | --- |
-| `autonomia/gemini-3.5-pro` | `gemini-3.5-pro` | 2.01 / 12.02 | 67 / 401 |
-| `autonomia/gemini-3.8-flash` | `gemini-3.8-flash` | 0.30 / 2.52 | 10 / 84 |
-| `autonomia/gemini-3.5-flash-lite` | `gemini-3.5-flash-lite` | 0.12 / 0.42 | 4 / 14 |
+| Public model | Upstream model | USD in / out per 1M |
+| --- | --- | --- |
+| `autonomia/gemini-3.5-pro` | `gemini-3.5-pro` | 2.01 / 12.02 |
+| `autonomia/gemini-3.8-flash` | `gemini-3.8-flash` | 0.30 / 2.52 |
+| `autonomia/gemini-3.5-flash-lite` | `gemini-3.5-flash-lite` | 0.12 / 0.42 |
 
 Context 1,048,576 tokens. Autonomia bills the baseline tier; tiered long-context
 pricing above 200k inputs is not reflected in the published rates, so very
@@ -116,49 +119,49 @@ large prompts can exceed the modeled upstream cost.
 
 ### xAI Grok (`https://api.x.ai/v1`)
 
-| Public model | Upstream model | USD in / out per 1M | Points in / out per 1M |
-| --- | --- | --- | --- |
-| `autonomia/grok-4.6` | `grok-4.6` | 2 / 6.01 | 67 / 201 |
-| `autonomia/grok-4.1-fast` | `grok-4.1-fast` | 0.21 / 0.51 | 7 / 17 |
+| Public model | Upstream model | USD in / out per 1M |
+| --- | --- | --- |
+| `autonomia/grok-4.6` | `grok-4.6` | 2 / 6.01 |
+| `autonomia/grok-4.1-fast` | `grok-4.1-fast` | 0.21 / 0.51 |
 
 Context 2,000,000 tokens for both models. Grok 4.6 applies higher long-context
 rates above 200k inputs; Autonomia bills the standard tier.
 
 ### DeepSeek (`https://api.deepseek.com/v1`)
 
-| Public model | Upstream model | USD in / out per 1M | Points in / out per 1M |
-| --- | --- | --- | --- |
-| `autonomia/deepseek-v4-pro` | `deepseek-v4-pro` | 1.32 / 3.96 | 44 / 132 |
-| `autonomia/deepseek-v4.1-flash` | `deepseek-v4.1-flash` | 0.15 / 0.6 | 5 / 20 |
+| Public model | Upstream model | USD in / out per 1M |
+| --- | --- | --- |
+| `autonomia/deepseek-v4-pro` | `deepseek-v4-pro` | 1.32 / 3.96 |
+| `autonomia/deepseek-v4.1-flash` | `deepseek-v4.1-flash` | 0.15 / 0.6 |
 
 Context 1,000,000 tokens. The 2026-08-16 DeepSeek price increase, off-peak
 discounts and cache-hit pricing are excluded.
 
 ### Moonshot AI Kimi (`https://api.moonshot.ai/v1`)
 
-| Public model | Upstream model | USD in / out per 1M | Points in / out per 1M |
-| --- | --- | --- | --- |
-| `autonomia/kimi-k3` | `kimi-k3` | 3 / 15 | 100 / 500 |
+| Public model | Upstream model | USD in / out per 1M |
+| --- | --- | --- |
+| `autonomia/kimi-k3` | `kimi-k3` | 3 / 15 |
 
 Context 1,048,576 tokens. Kimi K3 is the July 2026 open-weight flagship
 (2.8T-parameter MoE with native vision input).
 
 ### Z.ai GLM (`https://api.z.ai/api/paas/v4`)
 
-| Public model | Upstream model | USD in / out per 1M | Points in / out per 1M |
-| --- | --- | --- | --- |
-| `autonomia/glm-5.3` | `glm-5.3` | 1.41 / 4.41 | 47 / 147 |
-| `autonomia/glm-5.3-flash` | `glm-5.3-flash` | 0.15 / 0.6 | 5 / 20 |
+| Public model | Upstream model | USD in / out per 1M |
+| --- | --- | --- |
+| `autonomia/glm-5.3` | `glm-5.3` | 1.41 / 4.41 |
+| `autonomia/glm-5.3-flash` | `glm-5.3-flash` | 0.15 / 0.6 |
 
 Context 1,000,000 tokens. GLM-5.3 (August 2026) is the open-weight coding
 flagship; GLM-5.3 Flash is the natively multimodal 320B/18B-active model.
 
 ### QwenCloud (`https://dashscope-intl.aliyuncs.com/compatible-mode/v1`)
 
-| Public model | Upstream model | USD in / out per 1M | Points in / out per 1M |
-| --- | --- | --- | --- |
-| `autonomia/qwen-3.8-max` | `qwen3.8-max` | 2.01 / 6 | 67 / 200 |
-| `autonomia/qwen-3.8-flash` | `qwen3.8-flash` | 0.15 / 0.48 | 5 / 16 |
+| Public model | Upstream model | USD in / out per 1M |
+| --- | --- | --- |
+| `autonomia/qwen-3.8-max` | `qwen3.8-max` | 2.01 / 6 |
+| `autonomia/qwen-3.8-flash` | `qwen3.8-flash` | 0.15 / 0.48 |
 
 Context 1,000,000 tokens (input capped at 983,616). See
 [QWENCLOUD.md](QWENCLOUD.md) for the full QwenCloud integration notes,
@@ -166,9 +169,9 @@ including the GLM, Kimi and DeepSeek models it serves as a fallback route.
 
 ### Cloudflare Workers AI (native binding + REST)
 
-| Public model | Upstream model | USD in / out per 1M | Points in / out per 1M |
-| --- | --- | --- | --- |
-| `autonomia/qwen-3.8-27b` | `@cf/qwen/qwen3.8-27b` | 0.42 / 3 | 14 / 100 |
+| Public model | Upstream model | USD in / out per 1M |
+| --- | --- | --- |
+| `autonomia/qwen-3.8-27b` | `@cf/qwen/qwen3.8-27b` | 0.42 / 3 |
 
 Context 262,144 tokens. Served through the Worker's native AI binding (with a
 REST fallback transport); tool calling is not exposed for this route.

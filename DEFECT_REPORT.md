@@ -22,6 +22,19 @@
 | 7 | 低 | 關機流程可能被未斷開的 SSE 串流掛住 | `apps/gateway/src/nodeServer.ts:54-58` |
 | 8 | 低 | 冪等重放回 409 而非重播回應（與 OpenAI 語意不同） | `packages/core/src/inference.ts` `replayError` |
 
+> **狀態更新（2026-10-24）：以下 8 項已全數修復並以測試釘死。**
+> #1 `settle` 改以 `MIN(CAST(? AS BIGINT), reserved_usd_micros)` 夾制，
+> 「actual > reserved」案例由 `billing.test.ts` 以本報告的原始重現釘死；
+> #2 限流身份一律以 socket 位址為準，僅 `AUTONOMIA_TRUST_PROXY=true` 時採信
+> 代理標頭（偽造情境由 `gatewaySurface.test.ts` 覆蓋）；
+> #3 `db.node.ts` 以 per-database 序列化 chain 包裝交易（與 `doDb.ts` 同手法）；
+> #4 Hono app 於啟動時建立一次；
+> #5 註冊 race 捕捉 UNIQUE 約束改回 409 `email_taken`（anti-enumeration 模式下為同形 202）；
+> #6 `tool_choice: "none"` 映射為 `{"type":"none"}`，四種模式由 `providers.test.ts` 釘死；
+> #7 關機追蹤串流連線，`AUTONOMIA_SHUTDOWN_GRACE_MS` / `AUTONOMIA_SHUTDOWN_HARD_TIMEOUT_MS` 限期退出；
+> #8 金鑰級 opt-in 冪等重放（`idempotency_replay_ttl_seconds`，含 2MB tombstone），
+> 由 `idempotencyReplay.test.ts` 覆蓋。以下原文保留供審計軌跡。
+
 ---
 
 ## 高風險

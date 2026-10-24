@@ -29,3 +29,6 @@ Thumbs.db
 
 # ECO-SUPPLY-1: npm publish staging (assembled by packages/core/scripts/stage-publish.mjs)
 .publish-stage/
+
+# Temporary screenshots from local page checks
+.tmp_*

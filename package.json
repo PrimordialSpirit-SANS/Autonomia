@@ -22,6 +22,7 @@
     "deploy:worker": "npm run deploy:worker --workspace @autonomia/gateway",
     "migrate": "npm run migrate --workspace @autonomia/gateway",
     "revoke-sessions": "npm run revoke:sessions --workspace @autonomia/gateway",
+    "probe:autonomia-provider": "npm run probe:autonomia-provider --workspace @autonomia/gateway --",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "start:gateway": "node apps/gateway/src/nodeServer.ts"

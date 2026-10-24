@@ -7,7 +7,7 @@ Autonomia Gateway 的前端(React + Vite + TypeScript)。`src/pages/` 與 `src/c
 ```bash
 npm install        # 建議在 repo 根目錄執行(npm workspaces)
 npm run dev        # 開發伺服器:http://localhost:5173
-npm test           # vitest 單元測試(邏輯層 63 個測試)
+npm test           # vitest 單元測試(邏輯層 66 個測試)
 npm run build      # 型別檢查 + 生產建置到 dist/
 npm run preview    # 預覽生產建置
 ```
@@ -45,14 +45,15 @@ FN-11 fix:路由表與 App.tsx 實作對齊 —— 新版路徑為主路由,`/De
 
 | 路徑 | 頁面 |
 | --- | --- |
-| `/` | 控制台總覽(主路由) |
+| `/home` | 公開首頁(主路由;`/` 與未知路徑重定向至此) |
 | `/login` | 登入 |
-| `/keys` | API 金鑰 |
-| `/playground` | 串流測試 |
-| `/models` | 模型 |
-| `/logs` | 請求紀錄 |
-| `/docs` | 快速開始 |
-| `/Developer` | 轉址到 `/` |
+| `/overview` | 控制台總覽(需登入) |
+| `/keys` | API 金鑰(需登入) |
+| `/playground` | 串流測試(需登入) |
+| `/logs` | 請求紀錄(需登入) |
+| `/models` | 模型目錄(公開) |
+| `/docs` | 快速開始(公開) |
+| `/Developer` | 轉址到 `/overview` |
 | `/Developer/ai-api/*` | 轉址到對應新路徑(舊深連結相容) |
 
 ## 部署注意

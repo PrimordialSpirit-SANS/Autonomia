@@ -42,8 +42,9 @@ for await (const chunk of stream) console.log(chunk.content);
 - **結構化輸出**:`withStructuredOutput` 依賴 `response_format` 的 `json_schema`
   ——支援與否取決於模型的能力旗標(`structured_outputs`),不支援的模型會回
   可分辨的 `400`,換模型即可。
-- **工具呼叫**:透傳給上游;Anthropic 類上游的 `tool_choice: "none"` 已知
-  映射限制見 `docs/PROVIDERS.md`。
+- **工具呼叫**:透傳給上游;`tool_choice` 的四種模式(`none`/`auto`/
+  `required`/指定函式)皆已映射到 Anthropic Messages API 的對應語意
+  (`none` → `{"type":"none"}` 等,見 `docs/PROVIDERS.md`)。
 
 ## LangChain(Python)
 

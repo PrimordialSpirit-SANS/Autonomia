@@ -82,6 +82,16 @@ jobs:
           done
           exit "$FAILED"
 
+      - name: OpenAPI spec version must equal the tag
+        run: |
+          set -euo pipefail
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          SPEC_VERSION="$(awk '/^info:/{f=1} f && /^  version:/{sub(/^  version: */,""); print; exit}' docs/openapi.yaml)"
+          if [ "$SPEC_VERSION" != "$TAG_VERSION" ]; then
+            echo "::error file=docs/openapi.yaml::version ${SPEC_VERSION} diverges from tag ${GITHUB_REF_NAME} (expected ${TAG_VERSION})"
+            exit 1
+          fi
+
   publish-npm:
     runs-on: ubuntu-latest
     needs: [verify, guard-version-alignment]

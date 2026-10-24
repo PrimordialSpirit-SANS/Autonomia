@@ -5,7 +5,7 @@
 ```bash
 cp apps/gateway/.dev.vars.example apps/gateway/.dev.vars   # fill in secrets
 npm install
-npm run migrate                 # schema v3 + admin account
+npm run migrate                 # schema v4 + admin account
 npm run dev:gateway             # http://localhost:8787
 npm run dev:console             # http://localhost:5173
 ```
@@ -18,7 +18,7 @@ See [Quick start](#快速開始) below, [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
 
 | 目錄 | 說明 |
 | --- | --- |
-| `packages/core` | 可攜行為核心:定價權威、美元計費(預留/結算/退款,微美元整數)、API 金鑰(HMAC + pepper)、供應商池選路、SSE 解析、schema 版本化遷移。v0.1.0 起亦發佈於 npm:[@autonomia/core](https://www.npmjs.com/package/@autonomia/core) |
+| `packages/core` | 可攜行為核心:定價權威、美元計費(預留/結算/退款,微美元整數)、API 金鑰(HMAC + pepper)、供應商池選路、SSE 解析、schema 版本化遷移。打包為 npm 套件 [`@autonomia/core`](https://www.npmjs.com/package/@autonomia/core)(發佈管線已在 CI 驗證,套件隨首個 `v*` tag 發佈) |
 | `apps/gateway` | Gateway(Hono):Node server(`@hono/node-server` + `node:sqlite`)或 Cloudflare Workers(單一 Durable Object + `storage.sql`);對外暴露 OpenAI 相容 API、開發者管理面、內建帳號系統、定時對帳 |
 | `apps/console` | 開發者控制台(React + Vite):金鑰管理、串流測試、模型目錄、用量紀錄,含離線示範模式 |
 
@@ -98,7 +98,7 @@ cp apps/gateway/.dev.vars.example apps/gateway/.dev.vars
 #   填入 ADMIN_EMAIL / ADMIN_PASSWORD(管理員種子)
 #   填入至少一個供應商金鑰(例如 OPENROUTER_API_KEY_1)
 
-# 2. 安裝依賴並初始化資料庫(schema v3 + 帳號表 + 管理員)
+# 2. 安裝依賴並初始化資料庫(schema v4 + 帳號表 + 管理員)
 npm install
 npm run migrate
 
@@ -169,8 +169,8 @@ docker compose run --rm autonomia-gateway npm run migrate   # 首次部署
 ```
 
 映像檔、proxy 契約與備份/回滾程序見 [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) 的
-「Topology D: Docker / docker compose」章節；發佈版映像隨每個 `v*` tag 推送至
-GHCR。
+「Topology D: Docker / docker compose」章節;發佈版映像會隨每個 `v*` tag 推送至
+GHCR(發佈管線已就緒,映像隨首個 tag 出現)。
 
 ## 設定
 

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Autonomia API
-  version: 0.6.0
+  version: 0.1.0
   description: |
     Autonomia text-only OpenAI-compatible inference surface and signed-in developer
     management surface. Public inference routes use Autonomia API keys; developer

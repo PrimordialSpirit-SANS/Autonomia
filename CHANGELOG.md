@@ -13,8 +13,9 @@ versioning follows [SemVer](https://semver.org/).
   DoS, GHSA-4qv8-2p9j-2685, plus SIntegrity/content-encoding advisories) via
   two dev-only chains — `jsdom → undici 8.11.2` (console tests) and
   `wrangler → miniflare → undici 7.29.1` (Workers tooling). Neither reaches
-  the production runtime (the gateway's only runtime deps are
-  `@hono/node-server` + `@autonomia/core`), but CI's
+  the production runtime (the gateway's runtime deps are `hono`, `pg`,
+  `@neondatabase/serverless` and `dotenv` alongside `@autonomia/core`, plus
+  `@hono/node-server` at the repo root for the Node topology), but CI's
   `npm audit --audit-level=high` gate would have failed. Root `package.json`
   now pins `jsdom → undici ^8.12.2` and `miniflare → undici ^7.30.1` via
   npm `overrides`; the lockfile was regenerated within the declared semver
@@ -827,11 +828,13 @@ are in `docs/RELEASING.md`).
   the `NPM_TOKEN` creation recipe, post-release verification, and the
   2–4-week ecosystem metrics review (stars / external forks / external
   PRs, `@autonomia/core` weekly downloads, external mentions).
-- **Version anchors (ECO-SUPPLY-4).** This is the first tagged release: the
-  CHANGELOG's accumulated `[Unreleased]` history is cut into a dated
-  `[0.1.0]` section, all four workspace manifests align at `0.1.0`, the
-  annotated `v0.1.0` git tag exists, and compare/release links are recorded
-  at the bottom of this file. Future releases follow `docs/RELEASING.md`.
+- **Version anchors (ECO-SUPPLY-4).** Release-ready state: the CHANGELOG's
+  accumulated `[Unreleased]` history is cut into a dated `[0.1.0]` section,
+  and all four workspace manifests align at `0.1.0`. Cutting the annotated
+  `v0.1.0` git tag (per `docs/RELEASING.md`) publishes npm + GHCR and
+  activates the compare/release links recorded at the bottom of this file;
+  until that tag is pushed, those links are placeholders. Future releases
+  follow `docs/RELEASING.md`.
 - **Community facilities (ECO-COMM-1..5).** `CODEOWNERS` now names the real
   maintainer accounts (the org and the release runner) instead of the
   unconfigured `@your-handle` template; `CODE_OF_CONDUCT.md` adopts

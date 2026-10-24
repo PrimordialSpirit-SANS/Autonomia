@@ -78,6 +78,11 @@ AUTONOMIA_ENABLED=true
 # Workers 部署沒有此端點(觀測走 Cloudflare observability)。
 AUTONOMIA_METRICS_ENABLED=
 
+# /metrics 的存取令牌(SN-1,僅 Node 拓撲):設定後 /metrics 需要
+# `Authorization: Bearer <token>`;未設定時僅回應 loopback(127.0.0.1/::1),
+# 其餘來源回 404。反向代理部署必須設定此 token,或在代理層封鎖 /metrics。
+AUTONOMIA_METRICS_TOKEN=
+
 # Node 自架的關機行為(僅 Node 拓撲;Workers 由平台管理生命週期):
 # GRACE:收到 SIGTERM/SIGINT 後先等在途請求自然完成,逾時才主動斷開仍在
 # 串流的連線(SSE 等)。預設 3000ms 夠一般重啟;上游推論串流可達

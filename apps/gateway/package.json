@@ -8,6 +8,7 @@
   "scripts": {
     "migrate": "node scripts/migrateAutonomia.ts",
     "revoke:sessions": "node scripts/revokeAutonomiaSessions.ts",
+    "probe:autonomia-provider": "node scripts/providerDiagnostic.ts",
     "typecheck": "tsc --noEmit",
     "test": "node --test \"tests/*.test.ts\"",
     "start": "node src/nodeServer.ts",

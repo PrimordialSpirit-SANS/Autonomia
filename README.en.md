@@ -2,11 +2,10 @@
 
 [![CI](https://github.com/PrimordialSpirit-SANS/autonomia/actions/workflows/ci.yml/badge.svg)](https://github.com/PrimordialSpirit-SANS/autonomia/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
-[![npm](https://img.shields.io/npm/v/@autonomia/core)](https://www.npmjs.com/package/@autonomia/core)
 
 **English** | [繁體中文](README.md)
 
-Autonomia Gateway is a self-hosted, OpenAI-compatible AI gateway: USD-based billing with integer micro-dollar settlement, multi-provider pooling with automatic failover, `sk-autonomia-*` API keys, and a built-in developer console. Core (`packages/core`) is a portable TypeScript library — also published to npm as [`@autonomia/core`](https://www.npmjs.com/package/@autonomia/core); the gateway runs as a plain Node.js server on SQLite (no external database), on PostgreSQL — from a long-lived VPS to serverless platforms (Neon's WebSocket driver, Cloudflare Hyperdrive) — or on Cloudflare Workers inside a Durable Object; the console is a React + Vite app deployable to Cloudflare Pages. A Docker/compose topology (`docker compose up -d --build`) is documented in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) as Topology D.
+Autonomia Gateway is a self-hosted, OpenAI-compatible AI gateway: USD-based billing with integer micro-dollar settlement, multi-provider pooling with automatic failover, `sk-autonomia-*` API keys, and a built-in developer console. Core (`packages/core`) is a portable TypeScript library, packaged for npm as [`@autonomia/core`](https://www.npmjs.com/package/@autonomia/core) (publish pipeline verified in CI; the package goes live with the first `v*` tag); the gateway runs as a plain Node.js server on SQLite (no external database), on PostgreSQL — from a long-lived VPS to serverless platforms (Neon's WebSocket driver, Cloudflare Hyperdrive) — or on Cloudflare Workers inside a Durable Object; the console is a React + Vite app deployable to Cloudflare Pages. A Docker/compose topology (`docker compose up -d --build`) is documented in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) as Topology D.
 
 ```bash
 cp apps/gateway/.dev.vars.example apps/gateway/.dev.vars   # fill in secrets
@@ -168,7 +167,7 @@ docker compose up -d --build              # console on http://localhost:8080
 docker compose run --rm autonomia-gateway npm run migrate
 ```
 
-Configuration, secrets and caveats: Topology D in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). Released images are published to GHCR on every `v*` tag.
+Configuration, secrets and caveats: Topology D in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). Release images publish to GHCR on every `v*` tag (pipeline verified; images appear with the first tag).
 
 ## Configuration
 

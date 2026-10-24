@@ -90,7 +90,7 @@ function normalizeLog(row: any) {
     key_name: row.key_name || null,
     requested_model: requestedModel,
     actual_model: requestedModel,
-    provider: "akentros",
+    provider: "autonomia",
     status: String(row.status),
     input_tokens: safeNumber(row.input_tokens),
     output_tokens: safeNumber(row.output_tokens),
@@ -105,7 +105,7 @@ function normalizeLog(row: any) {
   };
 }
 
-export function createAkentrosDeveloperUsageStore(query: any) {
+export function createAutonomiaDeveloperUsageStore(query: any) {
   if (typeof query !== "function") throw new TypeError("A database query function is required.");
   return Object.freeze({
     async summary(userId: any) {

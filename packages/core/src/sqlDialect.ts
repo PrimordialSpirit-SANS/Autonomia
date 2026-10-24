@@ -9,7 +9,7 @@
 //
 // dialect 由 query 契約攜帶(query.dialect,見 query.ts);未標註一律視為
 // SQLite——現有 Node/DO adapter 與全部測試替身都不帶此欄位,行為不變。
-export interface AkentrosSqlDialect {
+export interface AutonomiaSqlDialect {
   /** 兩參數極值函式名(SQLite: MIN,PostgreSQL: LEAST)。 */
   readonly min: "MIN" | "LEAST";
   /** 兩參數極值函式名(SQLite: MAX,PostgreSQL: GREATEST)。 */
@@ -27,7 +27,7 @@ export interface AkentrosSqlDialect {
   readonly claimLock: string;
 }
 
-const SQLITE_DIALECT: AkentrosSqlDialect = Object.freeze({
+const SQLITE_DIALECT: AutonomiaSqlDialect = Object.freeze({
   min: "MIN",
   max: "MAX",
   jsonValues: "SELECT value FROM json_each(?)",
@@ -35,7 +35,7 @@ const SQLITE_DIALECT: AkentrosSqlDialect = Object.freeze({
   claimLock: "",
 });
 
-const POSTGRES_DIALECT: AkentrosSqlDialect = Object.freeze({
+const POSTGRES_DIALECT: AutonomiaSqlDialect = Object.freeze({
   min: "LEAST",
   max: "GREATEST",
   jsonValues: "SELECT value::text FROM json_array_elements_text(?::json)",
@@ -43,6 +43,6 @@ const POSTGRES_DIALECT: AkentrosSqlDialect = Object.freeze({
   claimLock: "SELECT pg_advisory_xact_lock(hashtext(?))",
 });
 
-export function sqlDialect(query?: { dialect?: "postgres" | "sqlite" }): AkentrosSqlDialect {
+export function sqlDialect(query?: { dialect?: "postgres" | "sqlite" }): AutonomiaSqlDialect {
   return query?.dialect === "postgres" ? POSTGRES_DIALECT : SQLITE_DIALECT;
 }

@@ -1,24 +1,24 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { AKENTROS_API_LIMIT_SQL, createAkentrosApiLimitStore } from "../src/apiLimits.ts";
-import { createAkentrosInferenceRuntime, prepareAkentrosChatRequest } from "../src/inference.ts";
+import { AUTONOMIA_API_LIMIT_SQL, createAutonomiaApiLimitStore } from "../src/apiLimits.ts";
+import { createAutonomiaInferenceRuntime, prepareAutonomiaChatRequest } from "../src/inference.ts";
 import {
-  AKENTROS_PROVIDER_ATTEMPT_SQL,
-  createAkentrosProviderAttemptStore,
+  AUTONOMIA_PROVIDER_ATTEMPT_SQL,
+  createAutonomiaProviderAttemptStore,
 } from "../src/providerAttempts.ts";
 import {
-  AKENTROS_PROVIDER_POOL_SQL,
-  claimConfiguredAkentrosProviderCredential,
-  createAkentrosProviderPoolStore,
-  syncAkentrosProviderCredentials,
+  AUTONOMIA_PROVIDER_POOL_SQL,
+  claimConfiguredAutonomiaProviderCredential,
+  createAutonomiaProviderPoolStore,
+  syncAutonomiaProviderCredentials,
 } from "../src/providerPool.ts";
 import { requireProviderPool } from "../src/providers.ts";
-import { migrateAkentrosSchema } from "../src/schemaMigration.ts";
+import { migrateAutonomiaSchema } from "../src/schemaMigration.ts";
 import { createSqliteTestDb } from "./sqliteTestDb.ts";
 
 async function runtimeFixture() {
   const { query } = createSqliteTestDb();
-  await migrateAkentrosSchema(query);
+  await migrateAutonomiaSchema(query);
   await query(
     `INSERT INTO users (username, email, password_hash) VALUES ('pool-tester', 'pool@test.local', 'x')`,
   );
@@ -31,17 +31,17 @@ async function runtimeFixture() {
 }
 
 test("API admission contract: bucket upsert, lease insert, bound parameters", () => {
-  assert.match(AKENTROS_API_LIMIT_SQL.acquireKey, /FROM ai_api_keys/);
-  assert.match(AKENTROS_API_LIMIT_SQL.activeLeaseCount, /released_at IS NULL/);
-  assert.match(AKENTROS_API_LIMIT_SQL.incrementBucket, /request_count \+ 1/);
-  assert.match(AKENTROS_API_LIMIT_SQL.incrementBucket, /request_count < \?/);
-  assert.match(AKENTROS_API_LIMIT_SQL.lease, /INSERT INTO ai_api_inflight_leases/);
-  assert.match(AKENTROS_API_LIMIT_SQL.release, /released_at IS NULL/);
+  assert.match(AUTONOMIA_API_LIMIT_SQL.acquireKey, /FROM ai_api_keys/);
+  assert.match(AUTONOMIA_API_LIMIT_SQL.activeLeaseCount, /released_at IS NULL/);
+  assert.match(AUTONOMIA_API_LIMIT_SQL.incrementBucket, /request_count \+ 1/);
+  assert.match(AUTONOMIA_API_LIMIT_SQL.incrementBucket, /request_count < \?/);
+  assert.match(AUTONOMIA_API_LIMIT_SQL.lease, /INSERT INTO ai_api_inflight_leases/);
+  assert.match(AUTONOMIA_API_LIMIT_SQL.release, /released_at IS NULL/);
 });
 
 test("API admission serializes each key and atomically applies RPM and inflight limits", async () => {
   const { query, apiKeyId } = await runtimeFixture();
-  const store = createAkentrosApiLimitStore(query);
+  const store = createAutonomiaApiLimitStore(query);
 
   const lease = await store.acquire({
     apiKeyId,
@@ -74,7 +74,7 @@ test("API admission serializes each key and atomically applies RPM and inflight 
 test("API admission RPM limit blocks beyond the configured rate", async () => {
   const { query } = await runtimeFixture();
   await query(`UPDATE ai_api_keys SET rpm_limit = 2 WHERE id = 1`);
-  const store = createAkentrosApiLimitStore(query);
+  const store = createAutonomiaApiLimitStore(query);
   await store.acquire({ apiKeyId: "1", requestId: "req_r1", rpmLimit: 2, maxInFlight: 4 });
   await store.acquire({ apiKeyId: "1", requestId: "req_r2", rpmLimit: 2, maxInFlight: 4 });
   await assert.rejects(
@@ -84,20 +84,20 @@ test("API admission RPM limit blocks beyond the configured rate", async () => {
 });
 
 test("provider pool is lease-based, weighted, capacity bounded, and secret-free", async () => {
-  assert.match(AKENTROS_PROVIDER_POOL_SQL.candidateCredentials, /active_leases/);
-  assert.match(AKENTROS_PROVIDER_POOL_SQL.candidateCredentials, /< credentials\.max_in_flight/);
+  assert.match(AUTONOMIA_PROVIDER_POOL_SQL.candidateCredentials, /active_leases/);
+  assert.match(AUTONOMIA_PROVIDER_POOL_SQL.candidateCredentials, /< credentials\.max_in_flight/);
   assert.match(
-    AKENTROS_PROVIDER_POOL_SQL.candidateCredentials,
+    AUTONOMIA_PROVIDER_POOL_SQL.candidateCredentials,
     /NOT IN \(SELECT value FROM json_each\(\?\)\)/,
   );
   assert.match(
-    AKENTROS_PROVIDER_POOL_SQL.candidateCredentials,
+    AUTONOMIA_PROVIDER_POOL_SQL.candidateCredentials,
     /selection_count \* 1\.0 \/ MAX\(credentials\.weight, 1\)/,
   );
-  assert.match(AKENTROS_PROVIDER_POOL_SQL.markReleased, /released_at IS NULL/);
+  assert.match(AUTONOMIA_PROVIDER_POOL_SQL.markReleased, /released_at IS NULL/);
 
   const calls: any[] = [];
-  await syncAkentrosProviderCredentials(async (sql: any, params: any) => {
+  await syncAutonomiaProviderCredentials(async (sql: any, params: any) => {
     calls.push({ sql, params });
     return { rows: [] };
   });
@@ -113,8 +113,8 @@ test("provider pool is lease-based, weighted, capacity bounded, and secret-free"
 
 test("provider pool claim respects in-flight capacity and excluded credentials", async () => {
   const { query } = createSqliteTestDb();
-  await migrateAkentrosSchema(query);
-  const store = createAkentrosProviderPoolStore(query);
+  await migrateAutonomiaSchema(query);
+  const store = createAutonomiaProviderPoolStore(query);
   await (store as any).sync();
 
   const claim: any = await store.claim({
@@ -139,8 +139,8 @@ test("provider pool claim respects in-flight capacity and excluded credentials",
 
 test("provider pool claim and circuit release use one shared database state", async () => {
   const { query } = createSqliteTestDb();
-  await migrateAkentrosSchema(query);
-  const store = createAkentrosProviderPoolStore(query);
+  await migrateAutonomiaSchema(query);
+  const store = createAutonomiaProviderPoolStore(query);
   await (store as any).sync();
 
   const claim: any = await store.claim({
@@ -172,14 +172,14 @@ test("provider pool claim and circuit release use one shared database state", as
 // ---------------------------------------------------------------------------
 
 test("FUNC-02: in-flight reconciliation zeroes expired leases and preserves active ones", async () => {
-  assert.match(AKENTROS_PROVIDER_POOL_SQL.reconcileInFlight, /released_at IS NULL/);
-  assert.match(AKENTROS_PROVIDER_POOL_SQL.reconcileInFlight, /expires_at > \?/);
+  assert.match(AUTONOMIA_PROVIDER_POOL_SQL.reconcileInFlight, /released_at IS NULL/);
+  assert.match(AUTONOMIA_PROVIDER_POOL_SQL.reconcileInFlight, /expires_at > \?/);
   // 對帳只重算觀測值,絕不能刪租約列或改寫 released_at。
-  assert.doesNotMatch(AKENTROS_PROVIDER_POOL_SQL.reconcileInFlight, /DELETE/);
+  assert.doesNotMatch(AUTONOMIA_PROVIDER_POOL_SQL.reconcileInFlight, /DELETE/);
 
   const { query } = createSqliteTestDb();
-  await migrateAkentrosSchema(query);
-  const store = createAkentrosProviderPoolStore(query);
+  await migrateAutonomiaSchema(query);
+  const store = createAutonomiaProviderPoolStore(query);
   await (store as any).sync();
 
   // cloudflare-workers-ai-production 有三個等權重 credential;各 claim 一筆
@@ -289,7 +289,7 @@ test("provider pool releases unusable claims and advances to the next healthy cr
     },
   };
 
-  const claim = await claimConfiguredAkentrosProviderCredential({
+  const claim = await claimConfiguredAutonomiaProviderCredential({
     store,
     pool,
     poolId: "openrouter-production",
@@ -354,7 +354,7 @@ test("native provider binding claims capacity without requiring REST secrets", a
     },
   };
 
-  const claim = await claimConfiguredAkentrosProviderCredential({
+  const claim = await claimConfiguredAutonomiaProviderCredential({
     store,
     pool,
     poolId: "cloudflare-workers-ai-production",
@@ -371,18 +371,18 @@ test("native provider binding claims capacity without requiring REST secrets", a
 });
 
 test("provider attempt audit stores opaque routing metadata and attaches successes", async () => {
-  assert.match(AKENTROS_PROVIDER_ATTEMPT_SQL.start, /INSERT INTO ai_provider_attempts/);
-  assert.match(AKENTROS_PROVIDER_ATTEMPT_SQL.finishAttempt, /finished_at IS NULL/);
-  assert.doesNotMatch(AKENTROS_PROVIDER_ATTEMPT_SQL.start, /prompt|completion|api_key|api_token/);
+  assert.match(AUTONOMIA_PROVIDER_ATTEMPT_SQL.start, /INSERT INTO ai_provider_attempts/);
+  assert.match(AUTONOMIA_PROVIDER_ATTEMPT_SQL.finishAttempt, /finished_at IS NULL/);
+  assert.doesNotMatch(AUTONOMIA_PROVIDER_ATTEMPT_SQL.start, /prompt|completion|api_key|api_token/);
 
   const { query } = createSqliteTestDb();
-  await migrateAkentrosSchema(query);
+  await migrateAutonomiaSchema(query);
   await query(
     `INSERT INTO ai_requests (request_id, user_id, api_key_id, request_fingerprint, public_model, pricing_revision, pricing_snapshot)
-     VALUES ('req_attempt', 1, 1, ?, 'akentros-test-model', 'pricing-v1', '{}')`,
+     VALUES ('req_attempt', 1, 1, ?, 'autonomia-test-model', 'pricing-v1', '{}')`,
     ["b".repeat(64)],
   );
-  const store = createAkentrosProviderAttemptStore(query);
+  const store = createAutonomiaProviderAttemptStore(query);
 
   const attempt: any = await store.start({
     requestId: "req_attempt",
@@ -405,7 +405,7 @@ test("provider attempt audit stores opaque routing metadata and attaches success
   });
   assert.equal(finished.status, "succeeded");
 
-  // 成功的 attempt 回寫請求列的供應商欄位(provider 仍是對外的 'akentros')。
+  // 成功的 attempt 回寫請求列的供應商欄位(provider 仍是對外的 'autonomia')。
   const request = await query(
     `SELECT upstream_model, upstream_request_id FROM ai_requests WHERE request_id = 'req_attempt'`,
   );
@@ -414,9 +414,9 @@ test("provider attempt audit stores opaque routing metadata and attaches success
 });
 
 test("lease bookkeeping failure after provider success never repeats inference", async () => {
-  const prepared = await prepareAkentrosChatRequest({
+  const prepared = await prepareAutonomiaChatRequest({
     body: {
-      model: "akentros/qwen-3.8-27b",
+      model: "autonomia/qwen-3.8-27b",
       messages: [{ role: "user", content: "hello" }],
     },
     aiKey: { id: "1", user: { id: "2" }, model_allowlist: [], spend_limit_usd_micros: null },
@@ -439,7 +439,7 @@ test("lease bookkeeping failure after provider success never repeats inference",
   ];
   let providerCalls = 0;
   const billingCalls: any[] = [];
-  const runtime = createAkentrosInferenceRuntime({
+  const runtime = createAutonomiaInferenceRuntime({
     billing: {
       reserve: async () => ({ requestId: prepared.requestId, idempotentReplay: false }),
       markDispatched: async () => {},

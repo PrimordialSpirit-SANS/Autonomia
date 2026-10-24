@@ -1,18 +1,65 @@
 # Changelog
 
-All notable changes to Akentros Gateway are documented here.
+All notable changes to Autonomia Gateway are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versioning follows [SemVer](https://semver.org/).
 
 ## [Unreleased]
 
+### Security
+
+- **Dependency audit clean: vulnerable `undici` pinned to patched versions
+  (dev dependencies only).** `npm audit` reported 1 high (EventSource parser
+  DoS, GHSA-4qv8-2p9j-2685, plus SIntegrity/content-encoding advisories) via
+  two dev-only chains — `jsdom → undici 8.11.2` (console tests) and
+  `wrangler → miniflare → undici 7.29.1` (Workers tooling). Neither reaches
+  the production runtime (the gateway's runtime deps are `hono`, `pg`,
+  `@neondatabase/serverless` and `dotenv` alongside `@autonomia/core`, plus
+  `@hono/node-server` at the repo root for the Node topology), but CI's
+  `npm audit --audit-level=high` gate would have failed. Root `package.json`
+  now pins `jsdom → undici ^8.12.2` and `miniflare → undici ^7.30.1` via
+  npm `overrides`; the lockfile was regenerated within the declared semver
+  ranges (notably jsdom 30.1.2→30.1.3, wrangler 4.149.0→4.152.0,
+  workerd 1.20261006.1→1.20261019.1, with the `allowScripts` install-script
+  allowlist updated to the new workerd pin). The Workers bundle still builds
+  (`wrangler deploy --dry-run` verified).
+
 ### Added
+
+- **Cross-platform line endings enforced via `.gitattributes`.** All text
+  files now check out with LF on every platform (`* text=auto eol=lf`, with
+  binary exceptions and CRLF preserved for `*.bat`/`*.cmd`/`*.ps1`). Without
+  this, Windows contributors with the default `core.autocrlf` got a working
+  tree full of CRLF files that Biome (the CI lint/format gate) rejects —
+  `npx biome check .` failed locally with ~29 format errors while CI on
+  Linux stayed green. Open-source onboarding should not depend on the
+  contributor's git config.
+- **Configurable shutdown grace for the Node topology.**
+  `AUTONOMIA_SHUTDOWN_GRACE_MS` (default 3000) and
+  `AUTONOMIA_SHUTDOWN_HARD_TIMEOUT_MS` (default 10000, automatically kept ≥
+  grace + 2000) control how long the gateway waits for in-flight requests
+  after SIGTERM/SIGINT before force-closing still-streaming SSE connections.
+  Upstream streams can run up to `route.timeout_ms` (240s cap), so rolling
+  deploys (k8s / compose) that want to drain streams instead of cutting them
+  can now raise the grace. Effective values are logged in the
+  `autonomia_gateway_listening` startup event.
+- **Per-provider Prometheus metrics for failover health.** Three new
+  `/metrics` families recorded on every audited upstream attempt:
+  `autonomia_provider_attempts_total{provider,outcome}`,
+  `autonomia_provider_failures_total{provider,error_category}`, and
+  `autonomia_provider_attempt_duration_seconds_{sum,count}{provider,outcome}`
+  (label values normalized to a safe charset and bounded, mirroring the
+  `ai_provider_attempts` table). Previously a provider entering cooldown was
+  invisible to Prometheus — operators had to query the database to learn
+  which upstream was failing and why.
+
+### Fixed
 
 - **Release pipeline workflow lands (ECO-SUPPLY-3 completion).**
   `.github/workflows/release.yml` — pushing an annotated `v*` tag runs the
   CI gauntlet (`verify`), hard-fails if any of the four workspace manifests
   diverges from the tag (`guard-version-alignment`), stages + publishes
-  `@akentros/core` to npm with `NPM_TOKEN` (`publish-npm`), builds and pushes
+  `@autonomia/core` to npm with `NPM_TOKEN` (`publish-npm`), builds and pushes
   the `gateway`/`console` Docker targets to GHCR with version + `latest`
   tags and a lowercased owner path (`publish-ghcr`), and opens the GitHub
   Release with generated notes plus an npm registry availability probe
@@ -38,7 +85,7 @@ versioning follows [SemVer](https://semver.org/).
 - **nginx console proxy body limit aligned with the gateway contract
   (ECO-SUPPLY-2 follow-up).** `client_max_body_size` was 20m while the
   gateway's contract-tested public body limit is 32MiB
-  (`AKENTROS_PUBLIC_BODY_MAX_BYTES`), so 20–32 MiB bodies (e.g. base64 vision
+  (`AUTONOMIA_PUBLIC_BODY_MAX_BYTES`), so 20–32 MiB bodies (e.g. base64 vision
   parts) were rejected with a raw 413 by nginx before the gateway's precise
   error path could run. The proxy guard is now 32m — never tighter than the
   gateway contract.
@@ -48,7 +95,7 @@ versioning follows [SemVer](https://semver.org/).
 ### Security
 
 - **Server-side session revocation via session epochs (SEC-01, schema v4).**
-  The 7-day stateless `akentros_token` JWT had no server-side kill switch:
+  The 7-day stateless `autonomia_token` JWT had no server-side kill switch:
   logout only deleted the browser cookie, a stolen token stayed valid until
   expiry, and the only global off-switch was rotating `JWT_SECRET` (which
   logs out every user). Schema migration v4 adds `users.session_epoch`
@@ -59,10 +106,10 @@ versioning follows [SemVer](https://semver.org/).
   invalidate the whole token), and `authenticateToken` rejects tokens whose
   `epv` diverges from `users.session_epoch` with `401 session_revoked`.
   Revoking is `UPDATE users SET session_epoch = session_epoch + 1`, exposed
-  as `node apps/gateway/scripts/revokeAkentrosSessions.ts --all | --id <user>
+  as `node apps/gateway/scripts/revokeAutonomiaSessions.ts --all | --id <user>
   | --email <addr>` (also `npm run revoke:sessions -- --all` from
   `apps/gateway`; the script applies v4
-  idempotently first, and the same `revokeAkentrosSessions` util is the hook
+  idempotently first, and the same `revokeAutonomiaSessions` util is the hook
   for the future change-password / admin-block flows). Bootstrap order
   changed: `ensureUsersSchema` now runs before the versioned migrations
   (v4 ALTERs `users`, mirroring how v1's partial indexes depend on
@@ -71,14 +118,14 @@ versioning follows [SemVer](https://semver.org/).
   mismatch / match / legacy-token cases in
   `apps/gateway/tests/sessionEpoch.test.ts`.
 - **Untrusted-header rate-limit identity branch now warns (SEC-02).** When
-  no socket address is injected and `AKENTROS_TRUST_PROXY` is unset, the
+  no socket address is injected and `AUTONOMIA_TRUST_PROXY` is unset, the
   auth rate limiter falls back to the spoofable `cf-connecting-ip` header
   (behavior kept: falling back to the shared `"local"` bucket would
   reintroduce the SN-2 site-wide lockout). That branch previously bypassed
-  the one-time `akentros_auth_rate_limit_identity_degraded` alert —
+  the one-time `autonomia_auth_rate_limit_identity_degraded` alert —
   embedders of `createApp()` (test harnesses, sidecars) were invisible to
   operators. It now emits the one-time
-  `akentros_auth_rate_limit_identity_untrusted_header` warning with an
+  `autonomia_auth_rate_limit_identity_untrusted_header` warning with an
   integration hint; pinned by `apps/gateway/tests/rateLimit.test.ts`.
 - **Fixed-window rate-limit boundary documented (SEC-03, accepted).** The
   fixed-window counter allows up to `2 × max` requests across a window
@@ -144,7 +191,7 @@ versioning follows [SemVer](https://semver.org/).
 - **Serverless PostgreSQL support across deployment platforms.** Setting
   `DATABASE_URL` to a `postgres://` string now works beyond long-lived
   servers: the adapter layer picks a driver per environment.
-  `*.neon.tech` hosts (or an explicit `AKENTROS_PG_WS_PROXY`) select a
+  `*.neon.tech` hosts (or an explicit `AUTONOMIA_PG_WS_PROXY`) select a
   Neon-compatible **WebSocket driver** (`db.pg.serverless.ts`) that runs a
   genuine interactive PG session — `BEGIN`/`COMMIT`, `FOR UPDATE` row locks
   and `pg_advisory_xact_lock` all execute statement-by-statement, so the
@@ -152,12 +199,12 @@ versioning follows [SemVer](https://semver.org/).
   drivers are deliberately not used because the money path needs
   read-then-decide transactions. Everything else uses the TCP `pg` pool,
   hardened for serverless: remote hosts infer `sslmode=require` semantics
-  automatically (URL params honored, `AKENTROS_PG_SSL=disable|require|
+  automatically (URL params honored, `AUTONOMIA_PG_SSL=disable|require|
   verify-full` overrides, loopback/private/unix-socket hosts stay plaintext),
   pools default to one connection per instance on Vercel/Netlify/Lambda/
   Workers runtimes, pools are cached on `globalThis` to survive hot reloads,
   and idle-client errors are logged instead of crashing the process.
-  `AKENTROS_PG_DRIVER=pg-pool|neon` forces a driver (unknown values fail
+  `AUTONOMIA_PG_DRIVER=pg-pool|neon` forces a driver (unknown values fail
   fast). On Cloudflare Workers, a `DATABASE_URL` secret or a new `HYPERDRIVE`
   binding switches the entry off the Durable Object into a PG runtime that
   runs the Hono app directly (migrations on cold boot are serialized by a
@@ -171,8 +218,8 @@ versioning follows [SemVer](https://semver.org/).
 
 - **OpenAI-compatible embeddings endpoint.** `POST /api/ai/v1/embeddings`
   serves text embeddings for models whose pricing capabilities declare
-  `embeddings` (new catalog entries `akentros/text-embedding-3-small` at
-  $0.02/M input tokens and `akentros/text-embedding-3-large` at $0.13/M,
+  `embeddings` (new catalog entries `autonomia/text-embedding-3-small` at
+  $0.02/M input tokens and `autonomia/text-embedding-3-large` at $0.13/M,
   routed through the openai pool). The endpoint reuses the chat pipeline
   verbatim — key auth, model allowlist, RPM/in-flight admission, the
   reserve→settle→refund ledger, provider attempt auditing and
@@ -192,7 +239,7 @@ versioning follows [SemVer](https://semver.org/).
   `ai_idempotency_replays` table (schema v3) keyed by
   `(api_key_id, idempotency_key)`, and retrying a completed key with an
   identical request body replays the stored response (`200` +
-  `X-Akentros-Idempotent-Replay: true`) without a second execution, a second
+  `X-Autonomia-Idempotent-Replay: true`) without a second execution, a second
   charge, or RPM/in-flight admission. A body mismatch under the same key
   returns `409 idempotency_conflict`, matching the reservation fingerprint
   check. Keys without the opt-in keep the default no-storage stance
@@ -211,9 +258,9 @@ versioning follows [SemVer](https://semver.org/).
   self-hosted topology only; not mounted on Workers, where in-process
   counters would be meaningless) exposes request counters by endpoint and
   HTTP status, request duration sums/counts, settled token usage by
-  direction, settled spend in micro-USD, plus `akentros_up`,
-  `akentros_process_uptime_seconds` and a live `akentros_db_up` probe. Set
-  `AKENTROS_METRICS_ENABLED=false` to opt out. The metrics module uses no
+  direction, settled spend in micro-USD, plus `autonomia_up`,
+  `autonomia_process_uptime_seconds` and a live `autonomia_db_up` probe. Set
+  `AUTONOMIA_METRICS_ENABLED=false` to opt out. The metrics module uses no
   Node-specific APIs and no dependencies; Workers imports remain inert.
 
 ### Changed
@@ -232,9 +279,9 @@ versioning follows [SemVer](https://semver.org/).
   without hue. Hardcoded values elsewhere in the stylesheet
   (`::selection`, badge/alert borders, auth-page gradient, dialog/drawer
   backdrops, shadows, code-block tints, demo badge) were flipped in place;
-  the favicon `brand/akentros/models/akentros.svg` now renders in light
+  the favicon `brand/autonomia/models/autonomia.svg` now renders in light
   gray and the static `api-404.html` already matches the dark base.
-  Third-party provider logos under `public/brand/akentros/providers/` are
+  Third-party provider logos under `public/brand/autonomia/providers/` are
   trademarks and are intentionally untouched.
 - **Neutral OpenAI parameters are tolerated instead of rejected
   (`ECO-02`).** `user`, `store`, `metadata` and `service_tier` — common in
@@ -272,7 +319,7 @@ versioning follows [SemVer](https://semver.org/).
   NULL and the retry executes as a brand-new request, re-storing its response
   via `ON CONFLICT … DO UPDATE` (previously `DO NOTHING` silently swallowed
   the new response against the expired-but-unpurged row). Oversized responses
-  now store a same-TTL tombstone (`application/x-akentros-replay-tombstone`)
+  now store a same-TTL tombstone (`application/x-autonomia-replay-tombstone`)
   instead of skipping storage silently: within the window, same-key retries
   return the new distinguishable `409 idempotency_replay_not_stored` (no
   replay, no re-execution, no double charge); after the window the key is
@@ -319,8 +366,8 @@ versioning follows [SemVer](https://semver.org/).
   `tools[].function.parameters` ≤ 64 K serialized chars). Contract test
   updated to the dialect-neutral `is_active = 1` pin.
 - **The developer console font stack referenced a font that does not exist.**
-  The rebrand renamed `"Noto Sans TC"` to `"Noto Akentros TC"` and the generic
-  `sans-serif` fallback to an invalid `akentros-serif`, so every client fell
+  The rebrand renamed `"Noto Sans TC"` to `"Noto Autonomia TC"` and the generic
+  `sans-serif` fallback to an invalid `autonomia-serif`, so every client fell
   through to arbitrary system fonts. The real font names are restored.
 - **Hono apps were rebuilt per request on the Durable Object path.** The
   earlier fix hoisted `createApp(env)` out of the per-request fetch on Node;
@@ -330,7 +377,7 @@ versioning follows [SemVer](https://semver.org/).
 - **The IP rate limiter's database path never activated on default
   deployments.** The middleware gated the database counter on
   `DATABASE_URL` being set, but the documented Node setup configures
-  `AKENTROS_DB_PATH` (no `DATABASE_URL`), and Workers deployments never set it
+  `AUTONOMIA_DB_PATH` (no `DATABASE_URL`), and Workers deployments never set it
   — so the documented "SQLite fixed-window limiter (global)" silently ran
   per-isolate in memory and reset on eviction. The limiter now always tries
   the installed adapter (node:sqlite, DO storage.sql, or PostgreSQL) and only
@@ -384,14 +431,14 @@ versioning follows [SemVer](https://semver.org/).
   deployment an attacker could send a different fake IP per request to defeat
   the 60/15 min limit entirely (unlimited password brute force and signup
   farming). The Node entry point now injects the socket remote address into
-  each request env (`AKENTROS_REMOTE_ADDR`) and the limiter uses it as the
-  identity; the header is only honored when `AKENTROS_TRUST_PROXY=true`
+  each request env (`AUTONOMIA_REMOTE_ADDR`) and the limiter uses it as the
+  identity; the header is only honored when `AUTONOMIA_TRUST_PROXY=true`
   explicitly opts into a trusted reverse proxy. Cloudflare Workers/Durable
   Object deployments (where every request transits Cloudflare and the runtime
   cannot expose the socket address) keep using the header. Unit tests pin the
   full decision table.
 - **Node SQLite adapter did not serialize transactions.**
-  `withAkentrosTransaction` executed `BEGIN IMMEDIATE` immediately; two
+  `withAutonomiaTransaction` executed `BEGIN IMMEDIATE` immediately; two
   overlapping transactions would make the second throw `cannot start a
   transaction within a transaction` (surfacing as a 503). It worked only by
   the accident that every transaction body so far contains only synchronous
@@ -416,12 +463,12 @@ versioning follows [SemVer](https://semver.org/).
   shutdown flow indefinitely. Connections are now tracked; after a 3s grace
   they are destroyed, and a 10s hard timeout forces exit regardless.
 
-- **`AKENTROS_DB_PATH` was resolved against `process.cwd()`, so `npm run
+- **`AUTONOMIA_DB_PATH` was resolved against `process.cwd()`, so `npm run
   migrate` and `npm run dev:gateway` opened different databases.** `migrate`
   is a workspace script (cwd `apps/gateway/`) while `dev:gateway` /
   `start:gateway` run from the repo root; with the documented default
-  `./akentros.db` the schema landed in `apps/gateway/akentros.db` but the server
-  opened a fresh, empty `akentros.db` at the repo root, and the first request
+  `./autonomia.db` the schema landed in `apps/gateway/autonomia.db` but the server
+  opened a fresh, empty `autonomia.db` at the repo root, and the first request
   failed with `500 no such table: users`. Relative paths — including the
   `sqlite://` / `file:` forms — now anchor to the gateway package directory
   regardless of cwd; absolute paths and `:memory:` keep their literal
@@ -429,7 +476,7 @@ versioning follows [SemVer](https://semver.org/).
   slash of `file:///abs/path` (which previously degraded absolute paths to
   package-relative ones). Regression tests pin cwd-invariance from both the
   repo root and `apps/gateway/`.
-- **Same-UTC-day API key expiry bypass.** `authenticateAkentrosApiKey` compared
+- **Same-UTC-day API key expiry bypass.** `authenticateAutonomiaApiKey` compared
   `expires_at` (stored as UTC ISO-8601 text, e.g. `2026-09-15T10:00:00.000Z`)
   against SQLite `CURRENT_TIMESTAMP` (rendered with a space separator,
   `2026-09-15 10:00:00`). Lexicographically `T` > ` `, so a key expiring
@@ -441,14 +488,14 @@ versioning follows [SemVer](https://semver.org/).
   SELECT never returned a `points` column (the users table has no such
   column; the billing ledger is USD-only), so `key.user.points` was always
   `NaN`. The field is removed, and the SELECT result is now typed by a
-  `AkentrosApiKeyAuthRow` interface so reading a column outside the SELECT is a
+  `AutonomiaApiKeyAuthRow` interface so reading a column outside the SELECT is a
   compile-time error.
-- **README documented a `AKENTROS_SIGNUP_BONUS_POINTS` environment variable**
+- **README documented a `AUTONOMIA_SIGNUP_BONUS_POINTS` environment variable**
   that does not exist; the row was removed.
 
 ### Added
 
-- **`AKENTROS_TRUST_PROXY` configuration.** Opt-in flag (see Fixed above and
+- **`AUTONOMIA_TRUST_PROXY` configuration.** Opt-in flag (see Fixed above and
   `apps/gateway/.dev.vars.example`) controlling whether the auth rate limiter
   trusts the `cf-connecting-ip` header on Node self-hosted deployments behind
   a reverse proxy that overwrites it. Default (unset) uses the socket remote
@@ -457,12 +504,12 @@ versioning follows [SemVer](https://semver.org/).
 - **`GET /healthz` liveness/readiness probe.** Reports `200 ok` or
   `503 degraded` (with `database: ok|unavailable`) based on a `SELECT 1`
   probe through the installed DB adapter. The endpoint sits outside the
-  `AKENTROS_ENABLED` fail-closed gate and sends `Cache-Control: no-store`, so
+  `AUTONOMIA_ENABLED` fail-closed gate and sends `Cache-Control: no-store`, so
   load balancers can distinguish "alive but not ready" even before the
   gateway is enabled. Covered by a gateway surface test (degraded path via
   the missing adapter, ok path via a fake adapter).
 - **Structured JSON logging.** New `src/utils/logger.ts`
-  (`logAkentrosEvent(level, event, fields)`) emits one JSON line per event
+  (`logAutonomiaEvent(level, event, fields)`) emits one JSON line per event
   (`time`, `level`, `event`, plus event metadata) on both runtimes; all
   free-text `console.error` call sites (gateway onError, key auth, key
   management, usage queries, rate-limit degradation, scheduled maintenance)
@@ -470,7 +517,7 @@ versioning follows [SemVer](https://semver.org/).
   no-keys rule from the security model is unchanged.
 - **Opt-in provider smoke test** (`apps/gateway/tests/providerSmoke.test.ts`).
   Skipped by default so local runs and CI are unaffected; with
-  `AKENTROS_SMOKE_TEST=1` (plus `AKENTROS_SMOKE_PROVIDER` / `AKENTROS_SMOKE_MODEL`
+  `AUTONOMIA_SMOKE_TEST=1` (plus `AUTONOMIA_SMOKE_PROVIDER` / `AUTONOMIA_SMOKE_MODEL`
   to narrow scope and the matching provider credentials) it sends a minimal
   live completion over an enabled route, asserting route enablement,
   credential resolution, a 200 upstream response and the usage source — the
@@ -484,7 +531,7 @@ versioning follows [SemVer](https://semver.org/).
 ### Changed
 
 - **Idempotency replay semantics are now documented explicitly.** OpenAI
-  replays the original response for a completed idempotency key; Akentros
+  replays the original response for a completed idempotency key; Autonomia
   (which never persists prompts/completions) returns
   `409 idempotent_request_replayed` with the original `X-Request-Id`, and
   `409 idempotent_request_in_progress` for keys still in flight. The README
@@ -496,24 +543,24 @@ versioning follows [SemVer](https://semver.org/).
   PBKDF2-HMAC-SHA256). Old-format hashes still verify: the iteration count
   is stored inside the hash string, so no migration is needed. The
   timing-safe dummy hash used when an account does not exist now derives
-  from `AKENTROS_PASSWORD_ITERATIONS` instead of a hardcoded `25000` literal,
+  from `AUTONOMIA_PASSWORD_ITERATIONS` instead of a hardcoded `25000` literal,
   keeping both login paths equally expensive, and `verifyPassword` rejects
   iteration counts below the 10,000 floor the hasher already enforced.
   Cloudflare Workers free-plan CPU limits may require lowering
-  `AKENTROS_PBKDF2_ITERATIONS` on that topology (documented in
+  `AUTONOMIA_PBKDF2_ITERATIONS` on that topology (documented in
   `.dev.vars.example`).
 - **The core billing/provider-pool/attempt interfaces are fully typed.** New
   `packages/core/src/query.ts` defines the DB query contract
-  (`AkentrosQuery`/`AkentrosQueryResult`) shared by the node:sqlite and Durable
-  Object adapters; `billing.ts` exports `AkentrosBillingStore`,
-  `AkentrosBillableBilling` (the runtime-consumed subset), typed
-  reserve/settle/refund inputs and `AkentrosBillingRow`; `providerPool.ts`
-  exports `AkentrosCredentialClaim`/`AkentrosProviderPoolClaimStore`;
-  `providerAttempts.ts` exports `AkentrosAttemptAuditor`;
-  `inference.ts`'s `createAkentrosInferenceRuntime` now takes
-  `AkentrosInferenceRuntimeOptions` instead of `any`. The gateway side
+  (`AutonomiaQuery`/`AutonomiaQueryResult`) shared by the node:sqlite and Durable
+  Object adapters; `billing.ts` exports `AutonomiaBillingStore`,
+  `AutonomiaBillableBilling` (the runtime-consumed subset), typed
+  reserve/settle/refund inputs and `AutonomiaBillingRow`; `providerPool.ts`
+  exports `AutonomiaCredentialClaim`/`AutonomiaProviderPoolClaimStore`;
+  `providerAttempts.ts` exports `AutonomiaAttemptAuditor`;
+  `inference.ts`'s `createAutonomiaInferenceRuntime` now takes
+  `AutonomiaInferenceRuntimeOptions` instead of `any`. The gateway side
   (`aiBilling.ts`, `aiProviderPool.ts`, `aiProviderAttempts.ts`,
-  `createAkentrosQuery`) and its runtime wiring lost their `any` annotations;
+  `createAutonomiaQuery`) and its runtime wiring lost their `any` annotations;
   a wrong field on a billing call is now a compile error instead of a
   runtime surprise. Test doubles were updated to the typed contracts.
 - **All Biome a11y warnings fixed and the severity overrides removed.** The
@@ -527,14 +574,14 @@ versioning follows [SemVer](https://semver.org/).
   `role="img"` for their `aria-label`s, a decorative `aria-label` on
   `<code>` became a `title`, and every brand SVG gained a `<title>`.
 - **The gateway's Hono layer is fully typed.** New `src/types.ts` defines the
-  shared `AkentrosEnv` (Bindings: `AkentrosRuntimeEnv`; Variables: `user`,
-  `aiKey`, `aiUser`, `aiRequestId`) plus `AkentrosAuthenticatedKey`; all
-  middleware, routes and handlers now use `AkentrosContext`/`AkentrosNext`
+  shared `AutonomiaEnv` (Bindings: `AutonomiaRuntimeEnv`; Variables: `user`,
+  `aiKey`, `aiUser`, `aiRequestId`) plus `AutonomiaAuthenticatedKey`; all
+  middleware, routes and handlers now use `AutonomiaContext`/`AutonomiaNext`
   instead of `(c: any, next: any)`, `sendOpenAiError` takes `unknown` errors,
-  `authenticateAkentrosApiKey`/`ensureAkentrosSessionCredential` have explicit
+  `authenticateAutonomiaApiKey`/`ensureAutonomiaSessionCredential` have explicit
   return types, and `env` parameters across gateway utils are typed as
-  `AkentrosRuntimeEnv`. Remaining `any`s are limited to the deliberate
-  boundary to `@akentros/core`'s untyped inference-runtime factory.
+  `AutonomiaRuntimeEnv`. Remaining `any`s are limited to the deliberate
+  boundary to `@autonomia/core`'s untyped inference-runtime factory.
 - Removed the unused `distributed` option from `createRateLimit` (dead code;
   the DB path is selected by `DATABASE_URL` presence) and its one vestigial
   caller flag.
@@ -543,11 +590,11 @@ versioning follows [SemVer](https://semver.org/).
 
 ### Changed
 
-- **Gateway imports `@akentros/core` through the workspace package boundary.**
+- **Gateway imports `@autonomia/core` through the workspace package boundary.**
   All 19 gateway source/script/test files previously reached into
   `packages/core/src/*` via four-level relative paths; they now import
-  subpaths (`@akentros/core/billing`, `@akentros/core/pricing`, …) declared in a
-  new `exports` map in `packages/core/package.json`, with `@akentros/core`
+  subpaths (`@autonomia/core/billing`, `@autonomia/core/pricing`, …) declared in a
+  new `exports` map in `packages/core/package.json`, with `@autonomia/core`
   added to the gateway's dependencies. The core boundary is now enforced by
   module resolution instead of convention. Behavior is unchanged; both the
   Node server and the Workers bundle resolve identically.
@@ -568,7 +615,7 @@ versioning follows [SemVer](https://semver.org/).
   MiniMax, Gemini 2.5, Grok 4.x, DeepSeek V3.2, Kimi K2, GLM-5.2) were
   removed from the catalogs and their tests/fixtures updated to match.
 - **Official brand icons shipped locally.** `apps/console/public/brand/
-  akentros/providers/` now bundles each provider's official mark (downloaded
+  autonomia/providers/` now bundles each provider's official mark (downloaded
   from official sites / Wikimedia Commons: OpenAI blossom, Claude starburst,
   Gemini sparkle, xAI, DeepSeek whale, Kimi K, Z.ai, Qwen, Cloudflare), the
   manifest points `display_asset_url` at the local files instead of showing
@@ -611,7 +658,7 @@ versioning follows [SemVer](https://semver.org/).
     v2 IP rate-limit windows).
   - `docker-compose.yml` and the Cloudflare Worker entrypoint (`index.ts`,
     `wrangler.toml`) removed; new Node entrypoint `apps/gateway/src/nodeServer.ts`.
-  - `AKENTROS_DB_PATH` replaces `DATABASE_URL`/`POSTGRES_DB_URL`.
+  - `AUTONOMIA_DB_PATH` replaces `DATABASE_URL`/`POSTGRES_DB_URL`.
 - Core behavioral tests upgraded from fake query mocks to a real in-memory
   SQLite database (`packages/core/tests/sqliteTestDb.ts`).
 
@@ -620,12 +667,12 @@ versioning follows [SemVer](https://semver.org/).
 - Gateway-layer test suite (auth session, CSRF double-submit, fail-closed gate,
   input validation, rate-limit fallback paths) running under `node --test`.
 - Distributed rate limiting for auth and key-management endpoints: fixed-window
-  counters stored in PostgreSQL (`akentros_ip_rate_limit_windows`), effective across
+  counters stored in PostgreSQL (`autonomia_ip_rate_limit_windows`), effective across
   Worker isolates, with an in-isolate memory limiter as degraded fallback.
 - Biome lint/format toolchain (`npm run lint`), enforced in CI.
 - `npm audit` dependency check in CI; Dependabot for npm actions/updates.
 
-- Schema migration v7 (`akentros_ip_rate_limit_windows`): the IP rate-limit table
+- Schema migration v7 (`autonomia_ip_rate_limit_windows`): the IP rate-limit table
   is created through the versioned migration instead of ad-hoc DDL, per the
   "schema only moves forward" rule in CONTRIBUTING.md.
 
@@ -641,10 +688,10 @@ versioning follows [SemVer](https://semver.org/).
   exposing a freshly started self-hosted deployment to the whole network —
   including the unauthenticated `/healthz`, CORS preflight handling and the
   auth endpoints — before any firewall or reverse proxy had been configured.
-  The server now binds to `127.0.0.1` unless `AKENTROS_HOST` (or `HOST`) is
+  The server now binds to `127.0.0.1` unless `AUTONOMIA_HOST` (or `HOST`) is
   set explicitly; containerized or proxied deployments that need external
-  reachability set `AKENTROS_HOST=0.0.0.0` themselves and own access control
-  in front of the process. The `akentros_gateway_listening` log line now also
+  reachability set `AUTONOMIA_HOST=0.0.0.0` themselves and own access control
+  in front of the process. The `autonomia_gateway_listening` log line now also
   records the bound address so operators can verify it.
 - **Signup no longer doubles as an account-enumeration oracle.**
   `POST /api/auth/register` used to answer a duplicate email with
@@ -655,12 +702,12 @@ versioning follows [SemVer](https://semver.org/).
   response timing with the login endpoint's dummy-hash technique, and
   (2) answers duplicate emails with an indistinct `202 {"ok": true}` accepted
   response — no session cookie, no user object, no `email_taken` code — with
-  the duplicate concealed behind a `akentros_signup_duplicate_concealed` warn
+  the duplicate concealed behind a `autonomia_signup_duplicate_concealed` warn
   log for operator visibility. Console registration handles the
   session-less 202 by guiding the user to the login form. Private,
   internal-only deployments can restore the explicit `409 email_taken`
-  contract with `AKENTROS_SIGNUP_ANTI_ENUMERATION=false`; public deployments
-  should additionally consider `AKENTROS_DISABLE_REGISTRATION=true`.
+  contract with `AUTONOMIA_SIGNUP_ANTI_ENUMERATION=false`; public deployments
+  should additionally consider `AUTONOMIA_DISABLE_REGISTRATION=true`.
 - **Dev dependency audit is clean again.** `vitest` is bumped from
   `^3.2.4` to `^4.1.11` in `apps/console`, clearing the moderate-severity
   path traversal in `@vitest/mocker` (GHSA-82fw-gwwq-j7x9, `npm audit`
@@ -685,12 +732,12 @@ versioning follows [SemVer](https://semver.org/).
   credentialed cross-origin requests" and "origins allowed to submit login
   forms" remain a single list and cannot drift. Same-origin detection
   rebuilds the deployment's own origin from `x-forwarded-proto` /
-  `x-forwarded-host` when `AKENTROS_TRUST_PROXY=true` — behind a
+  `x-forwarded-host` when `AUTONOMIA_TRUST_PROXY=true` — behind a
   TLS-terminating reverse proxy the socket URL stays `http://` while the
   browser's Origin is `https://`, so without the forwarded headers a
   same-origin console deployment that never listed its public origin would
   be locked out; without the opt-in the forgeable headers stay untrusted.
-  Rejections are visible as `akentros_auth_origin_rejected` warn logs and
+  Rejections are visible as `autonomia_auth_origin_rejected` warn logs and
   still consume the auth rate-limit budget.
 - **Fresh and duplicate signups are now truly indistinguishable in
   anti-enumeration mode.** The concealed-signup feature answered a duplicate
@@ -698,14 +745,14 @@ versioning follows [SemVer](https://semver.org/).
   plus a session cookie, so the status code alone was a complete
   account-enumeration oracle, defeating the concealment the README already
   promises ("不可區分" / indistinguishable). In
-  `AKENTROS_SIGNUP_ANTI_ENUMERATION` mode (the default), both paths now
+  `AUTONOMIA_SIGNUP_ANTI_ENUMERATION` mode (the default), both paths now
   return the byte-identical `202` accepted response: no user object, no
   session cookie, same PBKDF2-equalized timing. Fresh signups no longer
   auto-login; the console registration form already guides users to the
   login flow (the session-less 202 path was built for it), and the account
   is immediately usable with the registered credentials. The explicit
   opt-out contract for internal-only deployments is unchanged:
-  `AKENTROS_SIGNUP_ANTI_ENUMERATION=false` still returns `201` + auto-login
+  `AUTONOMIA_SIGNUP_ANTI_ENUMERATION=false` still returns `201` + auto-login
   for fresh signups and `409 email_taken` for duplicates. The deployment
   smoke test in `docs/DEPLOYMENT.md` now probes for the identical-202
   property instead of the old 201-then-202 distinction.
@@ -734,7 +781,7 @@ tracked as ECO-SUPPLY / ECO-COMM / ECO-INTEG; the runbook-level tracking
 conventions and the two platform settings that cannot be committed as files
 are in `docs/RELEASING.md`).
 
-- **Publish `@akentros/core` to npm (ECO-SUPPLY-1).** The portable core was
+- **Publish `@autonomia/core` to npm (ECO-SUPPLY-1).** The portable core was
   previously unpublished — the README's "portable library" claim was
   unverifiable by dependency management. The in-repo manifest stays
   `private: true` (an accidental `npm publish` in `packages/core` is refused
@@ -755,12 +802,12 @@ are in `docs/RELEASING.md`).
 - **Docker distribution (ECO-SUPPLY-2).** Multi-stage `Dockerfile` with two
   runnable targets: `gateway` (node:22-slim, production dependency tree via
   `npm ci --omit=dev --ignore-scripts`, unprivileged `node` user, SQLite on
-  the `/data` volume, `AKENTROS_HOST=0.0.0.0`, `/healthz` healthcheck,
+  the `/data` volume, `AUTONOMIA_HOST=0.0.0.0`, `/healthz` healthcheck,
   TypeScript sources executed directly — same runtime mode as the bare-metal
   topology) and `console` (nginx:1.27-alpine serving the Vite build with
   same-origin `/api`, hashed-asset immutable caching, SPA fallback).
   `docker-compose.yml` wires both with a named data volume and
-  `AKENTROS_TRUST_PROXY=true`; `deploy/nginx-console.conf` implements the
+  `AUTONOMIA_TRUST_PROXY=true`; `deploy/nginx-console.conf` implements the
   README's identity-header contract (overwrites `cf-connecting-ip` from the
   socket, appends `X-Forwarded-For`) and SSE-safe proxying (buffering off,
   3600s read timeout). Documented as Topology D in `docs/DEPLOYMENT.md`
@@ -771,7 +818,7 @@ are in `docs/RELEASING.md`).
 - **Tag-driven release automation (ECO-SUPPLY-3).** `.github/workflows/
   release.yml`: pushing an annotated `v*` tag runs the full CI gauntlet,
   hard-fails if any of the four workspace manifests diverges from the tag
-  (`guard-version-alignment`), stages + publishes `@akentros/core` to npm
+  (`guard-version-alignment`), stages + publishes `@autonomia/core` to npm
   (`NPM_TOKEN`), builds and pushes both Docker targets to GHCR (lowercased
   repository path, `gateway`/`console` image names, version + `latest`
   tags), and opens the GitHub Release with generated notes — including a
@@ -780,12 +827,14 @@ are in `docs/RELEASING.md`).
   settings (repo topics list, Discussions enablement — both web-UI-only),
   the `NPM_TOKEN` creation recipe, post-release verification, and the
   2–4-week ecosystem metrics review (stars / external forks / external
-  PRs, `@akentros/core` weekly downloads, external mentions).
-- **Version anchors (ECO-SUPPLY-4).** This is the first tagged release: the
-  CHANGELOG's accumulated `[Unreleased]` history is cut into a dated
-  `[0.1.0]` section, all four workspace manifests align at `0.1.0`, the
-  annotated `v0.1.0` git tag exists, and compare/release links are recorded
-  at the bottom of this file. Future releases follow `docs/RELEASING.md`.
+  PRs, `@autonomia/core` weekly downloads, external mentions).
+- **Version anchors (ECO-SUPPLY-4).** Release-ready state: the CHANGELOG's
+  accumulated `[Unreleased]` history is cut into a dated `[0.1.0]` section,
+  and all four workspace manifests align at `0.1.0`. Cutting the annotated
+  `v0.1.0` git tag (per `docs/RELEASING.md`) publishes npm + GHCR and
+  activates the compare/release links recorded at the bottom of this file;
+  until that tag is pushed, those links are placeholders. Future releases
+  follow `docs/RELEASING.md`.
 - **Community facilities (ECO-COMM-1..5).** `CODEOWNERS` now names the real
   maintainer accounts (the org and the release runner) instead of the
   unconfigured `@your-handle` template; `CODE_OF_CONDUCT.md` adopts
@@ -802,11 +851,11 @@ are in `docs/RELEASING.md`).
   (JS + Python), Vercel AI SDK, OpenWebUI and LobeChat wiring plus the
   three cross-framework semantic differences; `docs/MIGRATION.md` maps
   LiteLLM and one-api concepts (virtual keys/tokens, channels/provider
-  pools, budgets/quota, model naming) onto Akentros with a
+  pools, budgets/quota, model naming) onto Autonomia with a
   post-migration verification checklist; `README.en.md` provides the full
   English README with bilingual switch links, CI/license/npm badges, and
   the Docker topology. Both READMEs, `CONTRIBUTING.md` and the docs tables
   now reference the new material.
 
-[Unreleased]: https://github.com/PrimordialSpirit-SANS/akentros/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/PrimordialSpirit-SANS/akentros/releases/tag/v0.1.0
+[Unreleased]: https://github.com/PrimordialSpirit-SANS/autonomia/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/PrimordialSpirit-SANS/autonomia/releases/tag/v0.1.0

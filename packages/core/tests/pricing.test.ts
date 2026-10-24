@@ -14,12 +14,12 @@ import {
   requireModelPricing,
 } from "../src/pricing.ts";
 
-const GPT_6_ASTRA = "akentros/gpt-6-astra";
-const GPT_52 = "akentros/gpt-5.2";
-const GPT_52_CODEX = "akentros/gpt-5.2-codex";
-const CLAUDE_OPUS_48 = "akentros/claude-opus-4-8";
-const QWEN_38_27B = "akentros/qwen-3.8-27b";
-const QWEN_38_FLASH = "akentros/qwen-3.8-flash";
+const GPT_6_ASTRA = "autonomia/gpt-6-astra";
+const GPT_52 = "autonomia/gpt-5.2";
+const GPT_52_CODEX = "autonomia/gpt-5.2-codex";
+const CLAUDE_OPUS_48 = "autonomia/claude-opus-4-8";
+const QWEN_38_27B = "autonomia/qwen-3.8-27b";
+const QWEN_38_FLASH = "autonomia/qwen-3.8-flash";
 
 function createSyntheticModel(billing: any) {
   return {
@@ -41,23 +41,23 @@ test("canonical pricing exposes only enabled public models", () => {
       GPT_52,
       GPT_52_CODEX,
       CLAUDE_OPUS_48,
-      "akentros/claude-sonnet-5",
-      "akentros/claude-haiku-4-5",
-      "akentros/gemini-3.5-pro",
-      "akentros/gemini-3.8-flash",
-      "akentros/gemini-3.5-flash-lite",
-      "akentros/grok-4.6",
-      "akentros/grok-4.1-fast",
-      "akentros/deepseek-v4-pro",
-      "akentros/deepseek-v4.1-flash",
-      "akentros/kimi-k3",
-      "akentros/glm-5.3",
-      "akentros/glm-5.3-flash",
-      "akentros/qwen-3.8-max",
+      "autonomia/claude-sonnet-5",
+      "autonomia/claude-haiku-4-5",
+      "autonomia/gemini-3.5-pro",
+      "autonomia/gemini-3.8-flash",
+      "autonomia/gemini-3.5-flash-lite",
+      "autonomia/grok-4.6",
+      "autonomia/grok-4.1-fast",
+      "autonomia/deepseek-v4-pro",
+      "autonomia/deepseek-v4.1-flash",
+      "autonomia/kimi-k3",
+      "autonomia/glm-5.3",
+      "autonomia/glm-5.3-flash",
+      "autonomia/qwen-3.8-max",
       QWEN_38_FLASH,
       QWEN_38_27B,
-      "akentros/text-embedding-3-small",
-      "akentros/text-embedding-3-large",
+      "autonomia/text-embedding-3-small",
+      "autonomia/text-embedding-3-large",
     ],
   );
   assert.equal(getModelPricing(GPT_6_ASTRA), BACKEND_PRICING.models[GPT_6_ASTRA]);
@@ -65,10 +65,10 @@ test("canonical pricing exposes only enabled public models", () => {
   assert.equal(getModelPricing(GPT_52_CODEX), BACKEND_PRICING.models[GPT_52_CODEX]);
   assert.equal(getModelPricing(CLAUDE_OPUS_48), BACKEND_PRICING.models[CLAUDE_OPUS_48]);
   assert.equal(getModelPricing(QWEN_38_27B), BACKEND_PRICING.models[QWEN_38_27B]);
-  assert.equal(getModelPricing("akentros/unknown"), null);
-  assert.throws(() => requireModelPricing("akentros/unknown"), {
+  assert.equal(getModelPricing("autonomia/unknown"), null);
+  assert.throws(() => requireModelPricing("autonomia/unknown"), {
     name: "RangeError",
-    message: "Unknown or disabled Akentros model: akentros/unknown",
+    message: "Unknown or disabled Autonomia model: autonomia/unknown",
   });
 });
 
@@ -102,12 +102,12 @@ test("USD billing is exact to micro-USD, rounds up once, and applies the minimum
 
 test("USD rates pass through upstream provider prices exactly", () => {
   for (const [modelId, inputUsd, outputUsd] of [
-    ["akentros/qwen-3.8-max", "2.01", "6.00"],
+    ["autonomia/qwen-3.8-max", "2.01", "6.00"],
     [QWEN_38_FLASH, "0.15", "0.48"],
-    ["akentros/glm-5.3", "1.41", "4.41"],
-    ["akentros/kimi-k3", "3.00", "15.00"],
-    ["akentros/deepseek-v4.1-flash", "0.15", "0.60"],
-    ["akentros/deepseek-v4-pro", "1.32", "3.96"],
+    ["autonomia/glm-5.3", "1.41", "4.41"],
+    ["autonomia/kimi-k3", "3.00", "15.00"],
+    ["autonomia/deepseek-v4.1-flash", "0.15", "0.60"],
+    ["autonomia/deepseek-v4-pro", "1.32", "3.96"],
   ] as const) {
     assert.equal(calculateActualCostMicros(modelId, 1_000_000, 0), Number(parseUsdToMicros(inputUsd)));
     assert.equal(calculateActualCostMicros(modelId, 0, 1_000_000), Number(parseUsdToMicros(outputUsd)));
@@ -186,41 +186,41 @@ test("Claude Opus 4.8 keeps its official Anthropic route", () => {
 });
 
 test("Gemini 3.5 Pro bills through the official Gemini API route", () => {
-  assert.equal(calculateActualCostMicros("akentros/gemini-3.5-pro", 1_000_000, 1_000_000), 14030000);
+  assert.equal(calculateActualCostMicros("autonomia/gemini-3.5-pro", 1_000_000, 1_000_000), 14030000);
   assert.deepEqual(
-    listCandidateRoutes("akentros/gemini-3.5-pro").map((route) => route.upstream_model),
+    listCandidateRoutes("autonomia/gemini-3.5-pro").map((route) => route.upstream_model),
     ["gemini-3.5-pro"],
   );
 });
 
 test("Grok 4.6 bills through the official xAI route", () => {
-  assert.equal(calculateActualCostMicros("akentros/grok-4.6", 1_000_000, 1_000_000), 8010000);
+  assert.equal(calculateActualCostMicros("autonomia/grok-4.6", 1_000_000, 1_000_000), 8010000);
   assert.deepEqual(
-    listCandidateRoutes("akentros/grok-4.6").map((route) => route.upstream_model),
+    listCandidateRoutes("autonomia/grok-4.6").map((route) => route.upstream_model),
     ["grok-4.6"],
   );
 });
 
 test("DeepSeek V4 Pro falls back from the official API to QwenCloud", () => {
-  assert.equal(calculateActualCostMicros("akentros/deepseek-v4-pro", 1_000_000, 1_000_000), 5280000);
+  assert.equal(calculateActualCostMicros("autonomia/deepseek-v4-pro", 1_000_000, 1_000_000), 5280000);
   assert.deepEqual(
-    listCandidateRoutes("akentros/deepseek-v4-pro").map((route) => route.route_id),
+    listCandidateRoutes("autonomia/deepseek-v4-pro").map((route) => route.route_id),
     ["deepseek-v4-pro-deepseek", "deepseek-v4-pro-qwencloud"],
   );
 });
 
 test("Kimi K3 falls back from Moonshot AI to QwenCloud", () => {
-  assert.equal(calculateActualCostMicros("akentros/kimi-k3", 1_000_000, 1_000_000), 18000000);
+  assert.equal(calculateActualCostMicros("autonomia/kimi-k3", 1_000_000, 1_000_000), 18000000);
   assert.deepEqual(
-    listCandidateRoutes("akentros/kimi-k3").map((route) => route.route_id),
+    listCandidateRoutes("autonomia/kimi-k3").map((route) => route.route_id),
     ["kimi-k3-moonshot", "kimi-k3-qwencloud"],
   );
 });
 
 test("GLM-5.3 falls back from Z.ai to QwenCloud", () => {
-  assert.equal(calculateActualCostMicros("akentros/glm-5.3", 1_000_000, 1_000_000), 5820000);
+  assert.equal(calculateActualCostMicros("autonomia/glm-5.3", 1_000_000, 1_000_000), 5820000);
   assert.deepEqual(
-    listCandidateRoutes("akentros/glm-5.3").map((route) => route.route_id),
+    listCandidateRoutes("autonomia/glm-5.3").map((route) => route.route_id),
     ["glm-5.3-zhipu", "glm-5.3-qwencloud"],
   );
 });

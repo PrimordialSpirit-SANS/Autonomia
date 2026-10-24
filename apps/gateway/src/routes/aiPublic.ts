@@ -1,58 +1,61 @@
 import {
-  createAkentrosInferenceRuntime,
-  createAkentrosResponsesStreamBridge,
-  listPublicAkentrosModels,
+  createAutonomiaInferenceRuntime,
+  createAutonomiaResponsesStreamBridge,
+  listPublicAutonomiaModels,
   measureStreamChunkOutputChars,
   normalizeStreamChunk,
-  prepareAkentrosChatRequest,
-  prepareAkentrosEmbeddingsRequest,
-  prepareAkentrosResponsesRequest,
+  prepareAutonomiaChatRequest,
+  prepareAutonomiaEmbeddingsRequest,
+  prepareAutonomiaResponsesRequest,
   publicProviderError,
   publicResponsesObject,
-} from "@akentros/core/inference";
-import { BACKEND_PRICING } from "@akentros/core/pricing";
-import { AkentrosProviderError } from "@akentros/core/providers";
+} from "@autonomia/core/inference";
+import { BACKEND_PRICING } from "@autonomia/core/pricing";
+import { AutonomiaProviderError } from "@autonomia/core/providers";
 import { Hono } from "hono";
-import { authenticateAkentrosKey, requireAiScope, requireAnyAiScope } from "../middleware/aiAuth.ts";
+import { authenticateAutonomiaKey, requireAiScope, requireAnyAiScope } from "../middleware/aiAuth.ts";
 import type {
-  AkentrosAuthenticatedKey,
-  AkentrosContext,
-  AkentrosEnv,
-  AkentrosNext,
-  AkentrosRuntimeEnv,
+  AutonomiaAuthenticatedKey,
+  AutonomiaContext,
+  AutonomiaEnv,
+  AutonomiaNext,
+  AutonomiaRuntimeEnv,
 } from "../types.ts";
 import {
-  markAkentrosDispatched,
-  markAkentrosNeedsReconciliation,
-  refundAkentrosSpend,
-  reserveAkentrosSpend,
-  settleAkentrosSpend,
+  markAutonomiaDispatched,
+  markAutonomiaNeedsReconciliation,
+  refundAutonomiaSpend,
+  reserveAutonomiaSpend,
+  settleAutonomiaSpend,
 } from "../utils/aiBilling.ts";
-import { AkentrosError, invalidRequest, openAiErrorBody, sendOpenAiError } from "../utils/aiErrors.ts";
+import { AutonomiaError, invalidRequest, openAiErrorBody, sendOpenAiError } from "../utils/aiErrors.ts";
 import {
-  readAkentrosIdempotentReplay,
-  recordAkentrosIdempotentReplay,
-  saveAkentrosIdempotentReplay,
+  readAutonomiaIdempotentReplay,
+  recordAutonomiaIdempotentReplay,
+  saveAutonomiaIdempotentReplay,
 } from "../utils/aiIdempotency.ts";
-import { acquireAkentrosApiLimit, releaseAkentrosApiLimit } from "../utils/aiLimits.ts";
-import { finishAkentrosProviderAttempt, startAkentrosProviderAttempt } from "../utils/aiProviderAttempts.ts";
+import { acquireAutonomiaApiLimit, releaseAutonomiaApiLimit } from "../utils/aiLimits.ts";
 import {
-  claimAkentrosProviderCredential,
-  releaseAkentrosProviderCredential,
+  finishAutonomiaProviderAttempt,
+  startAutonomiaProviderAttempt,
+} from "../utils/aiProviderAttempts.ts";
+import {
+  claimAutonomiaProviderCredential,
+  releaseAutonomiaProviderCredential,
 } from "../utils/aiProviderPool.ts";
-import { AKENTROS_PUBLIC_BODY_MAX_BYTES, readCappedText } from "../utils/bodyLimit.ts";
-import { recordAkentrosAiRequest } from "../utils/metrics.ts";
+import { AUTONOMIA_PUBLIC_BODY_MAX_BYTES, readCappedText } from "../utils/bodyLimit.ts";
+import { recordAutonomiaAiRequest, recordAutonomiaProviderAttempt } from "../utils/metrics.ts";
 
-export const aiPublicRoutes = new Hono<AkentrosEnv>();
+export const aiPublicRoutes = new Hono<AutonomiaEnv>();
 
 function newRequestId() {
   return `req_${globalThis.crypto.randomUUID().replaceAll("-", "")}`;
 }
 
-function setPublicHeaders(c: AkentrosContext, requestId: string) {
+function setPublicHeaders(c: AutonomiaContext, requestId: string) {
   c.header("Cache-Control", "no-store, no-transform");
   c.header("X-Request-Id", requestId);
-  c.header("X-Akentros-Pricing-Revision", BACKEND_PRICING.revision);
+  c.header("X-Autonomia-Pricing-Revision", BACKEND_PRICING.revision);
 }
 
 function publicEndpointLabel(path: string) {
@@ -66,59 +69,73 @@ function publicEndpointLabel(path: string) {
 // 觀測:記錄公開 AI 面每個請求的 endpoint、HTTP 狀態與延遲。資料由 Node
 // 拓撲的 /metrics 以 Prometheus 文字格式輸出;Workers 拓撲計數留在隔離區內
 // 不輸出,成本可忽略。
-aiPublicRoutes.use("*", async (c: AkentrosContext, next: AkentrosNext) => {
+aiPublicRoutes.use("*", async (c: AutonomiaContext, next: AutonomiaNext) => {
   const startedAt = Date.now();
   try {
     await next();
   } finally {
-    recordAkentrosAiRequest(publicEndpointLabel(c.req.path), c.res?.status ?? 0, Date.now() - startedAt);
+    recordAutonomiaAiRequest(publicEndpointLabel(c.req.path), c.res?.status ?? 0, Date.now() - startedAt);
   }
 });
 
-// createAkentrosInferenceRuntime 的 options 由 @akentros/core/inference 的
-// AkentrosInferenceRuntimeOptions 契約定型;此處的注入 lambda 參數型別由該
+// createAutonomiaInferenceRuntime 的 options 由 @autonomia/core/inference 的
+// AutonomiaInferenceRuntimeOptions 契約定型;此處的注入 lambda 參數型別由該
 // 契約推導,不必再以 any 標註。
-function runtimeFor(env: AkentrosRuntimeEnv) {
-  return createAkentrosInferenceRuntime({
+function runtimeFor(env: AutonomiaRuntimeEnv) {
+  return createAutonomiaInferenceRuntime({
     billing: {
-      reserve: (input) => reserveAkentrosSpend(env, input),
-      markDispatched: (requestId) => markAkentrosDispatched(env, requestId),
-      settle: (input) => settleAkentrosSpend(env, input),
-      refund: (input) => refundAkentrosSpend(env, input),
-      markNeedsReconciliation: (input) => markAkentrosNeedsReconciliation(env, input),
+      reserve: (input) => reserveAutonomiaSpend(env, input),
+      markDispatched: (requestId) => markAutonomiaDispatched(env, requestId),
+      settle: (input) => settleAutonomiaSpend(env, input),
+      refund: (input) => refundAutonomiaSpend(env, input),
+      markNeedsReconciliation: (input) => markAutonomiaNeedsReconciliation(env, input),
     },
     attempts: {
-      start: (input) => startAkentrosProviderAttempt(env, input),
-      finish: (attempt, outcome) => finishAkentrosProviderAttempt(env, attempt, outcome),
+      start: (input) => startAutonomiaProviderAttempt(env, input),
+      finish: async (attempt, outcome) => {
+        const finished = await finishAutonomiaProviderAttempt(env, attempt, outcome);
+        // 觀測:每筆上游嘗試結束即計入 provider 維度指標(failover 健康度)。
+        // 僅在 audit 落地成功時計數,與 ai_provider_attempts 表口徑一致;
+        // 指標記錄是純記憶體操作,不影響推論流程的錯誤傳遞。
+        if (finished) {
+          recordAutonomiaProviderAttempt({
+            provider: (finished as { provider?: unknown }).provider,
+            success: Boolean(outcome?.success),
+            errorCategory: outcome?.errorCategory,
+            latencyMs: outcome?.latencyMs,
+          });
+        }
+        return finished;
+      },
     },
     claimCredential: (route, requestId, excludedCredentialIds) =>
-      claimAkentrosProviderCredential(
+      claimAutonomiaProviderCredential(
         env,
         route as { credential_pool: string },
         requestId,
         excludedCredentialIds,
       ),
-    releaseCredential: (claim, outcome) => releaseAkentrosProviderCredential(env, claim, outcome),
+    releaseCredential: (claim, outcome) => releaseAutonomiaProviderCredential(env, claim, outcome),
     cloudflareAiBinding: null, // Bypassed to prevent using Wrangler CLI logged-in account
   });
 }
 
-async function readPublicJsonObject(c: AkentrosContext): Promise<Record<string, unknown>> {
+async function readPublicJsonObject(c: AutonomiaContext): Promise<Record<string, unknown>> {
   // 請求體以串流計數上限讀取(Content-Length 預檢 + 逐塊硬上限):Hono 的
   // json()/text() 會先全量緩衝,持金鑰的高 RPM 客戶端可用超大請求體放大
   // 記憶體壓力。上限 32MB 覆蓋目錄最大輸入(約 2M token)與 tools 餘量。
   let text: string;
   try {
-    text = await readCappedText(c, AKENTROS_PUBLIC_BODY_MAX_BYTES);
+    text = await readCappedText(c, AUTONOMIA_PUBLIC_BODY_MAX_BYTES);
   } catch (error) {
-    if (error instanceof AkentrosError) throw error;
+    if (error instanceof AutonomiaError) throw error;
     throw invalidRequest("The request body is not valid JSON.", null, "invalid_json");
   }
   let value: unknown;
   try {
     value = text ? JSON.parse(text) : undefined;
   } catch {
-    throw new AkentrosError("The request body is not valid JSON.", {
+    throw new AutonomiaError("The request body is not valid JSON.", {
       status: 400,
       type: "invalid_request_error",
       code: "invalid_json",
@@ -130,8 +147,8 @@ async function readPublicJsonObject(c: AkentrosContext): Promise<Record<string, 
   return value as Record<string, unknown>;
 }
 
-function visibleModels(aiKey: AkentrosAuthenticatedKey) {
-  const list = listPublicAkentrosModels();
+function visibleModels(aiKey: AutonomiaAuthenticatedKey) {
+  const list = listPublicAutonomiaModels();
   if (!Array.isArray(aiKey.model_allowlist) || aiKey.model_allowlist.length === 0) return list;
   return { ...list, data: list.data.filter((model) => aiKey.model_allowlist.includes(model.id)) };
 }
@@ -141,17 +158,17 @@ function visibleModels(aiKey: AkentrosAuthenticatedKey) {
 // 完成鍵重送維持 409 idempotent_request_replayed。重放不執行推論,也不計入
 // RPM/併發(在 admission 之前短路),但會落一列 status='replayed' 的輕量
 // 請求紀錄,避免重放在管理面完全隱形。
-async function replayForPrepared(env: AkentrosRuntimeEnv, aiKey: any, prepared: any) {
+async function replayForPrepared(env: AutonomiaRuntimeEnv, aiKey: any, prepared: any) {
   const idempotencyKey = prepared?.reservation?.idempotencyKey;
   if (!idempotencyKey || !(Number(aiKey?.idempotency_replay_ttl_seconds) > 0)) return null;
-  const replay = await readAkentrosIdempotentReplay(env, {
+  const replay = await readAutonomiaIdempotentReplay(env, {
     apiKeyId: aiKey.id,
     idempotencyKey,
     requestFingerprint: prepared.reservation.requestFingerprint,
   });
   if (!replay) return null;
   try {
-    await recordAkentrosIdempotentReplay(env, {
+    await recordAutonomiaIdempotentReplay(env, {
       requestId: prepared.requestId,
       replayedRequestId: replay.requestId,
       userId: prepared.reservation.userId,
@@ -169,7 +186,7 @@ async function replayForPrepared(env: AkentrosRuntimeEnv, aiKey: any, prepared: 
 }
 
 function replayToResponse(
-  c: AkentrosContext,
+  c: AutonomiaContext,
   replay: { status: number; contentType: string; payload: string },
 ) {
   return new Response(replay.payload, {
@@ -178,14 +195,14 @@ function replayToResponse(
       "content-type": replay.contentType,
       "cache-control": "no-store, no-transform",
       "x-request-id": c.get("aiRequestId") || "",
-      "x-akentros-pricing-revision": BACKEND_PRICING.revision,
-      "x-akentros-idempotent-replay": "true",
+      "x-autonomia-pricing-revision": BACKEND_PRICING.revision,
+      "x-autonomia-idempotent-replay": "true",
     },
   });
 }
 
 async function saveReplayForPrepared(
-  env: AkentrosRuntimeEnv,
+  env: AutonomiaRuntimeEnv,
   aiKey: any,
   prepared: any,
   contentType: string,
@@ -195,7 +212,7 @@ async function saveReplayForPrepared(
   const ttlSeconds = Number(aiKey?.idempotency_replay_ttl_seconds) || 0;
   if (!idempotencyKey || ttlSeconds <= 0) return;
   try {
-    await saveAkentrosIdempotentReplay(env, {
+    await saveAutonomiaIdempotentReplay(env, {
       requestId: prepared.requestId,
       apiKeyId: aiKey.id,
       idempotencyKey,
@@ -210,17 +227,17 @@ async function saveReplayForPrepared(
   }
 }
 
-type MaybeKey = AkentrosAuthenticatedKey | null | undefined;
+type MaybeKey = AutonomiaAuthenticatedKey | null | undefined;
 type MaybeKeyOrResolver = MaybeKey | (() => MaybeKey) | (() => Promise<MaybeKey>);
 
-aiPublicRoutes.use("*", async (c: AkentrosContext, next: AkentrosNext) => {
+aiPublicRoutes.use("*", async (c: AutonomiaContext, next: AutonomiaNext) => {
   c.set("aiRequestId", newRequestId());
   setPublicHeaders(c, c.get("aiRequestId") || "");
   await next();
 });
-aiPublicRoutes.use("*", authenticateAkentrosKey);
+aiPublicRoutes.use("*", authenticateAutonomiaKey);
 
-aiPublicRoutes.get("/models", requireAiScope("models:read"), async (c: AkentrosContext) => {
+aiPublicRoutes.get("/models", requireAiScope("models:read"), async (c: AutonomiaContext) => {
   const aiKey = c.get("aiKey")!;
   const requestId = newRequestId();
   c.set("aiRequestId", requestId);
@@ -229,7 +246,7 @@ aiPublicRoutes.get("/models", requireAiScope("models:read"), async (c: AkentrosC
   // IP 限流只涵蓋 auth),持金鈅者可無限率存取。納入與 chat 同一桶的
   // 金鈅級 RPM admission;併發上限取小值,避免 /models 洪峰吃光金鈅的
   // in-flight 配額。
-  await acquireAkentrosApiLimit(c.env, {
+  await acquireAutonomiaApiLimit(c.env, {
     apiKeyId: aiKey.id,
     requestId,
     rpmLimit: aiKey.rpm_limit,
@@ -239,19 +256,19 @@ aiPublicRoutes.get("/models", requireAiScope("models:read"), async (c: AkentrosC
   try {
     return c.json(visibleModels(aiKey));
   } finally {
-    await releaseAkentrosApiLimit(c.env, requestId).catch(() => {});
+    await releaseAutonomiaApiLimit(c.env, requestId).catch(() => {});
   }
 });
 
-export async function handleAkentrosChatCompletions(
-  c: AkentrosContext,
+export async function handleAutonomiaChatCompletions(
+  c: AutonomiaContext,
   aiKeyOrResolver: MaybeKeyOrResolver = c.get("aiKey"),
 ) {
   if (!c.get("aiRequestId")) {
     c.set("aiRequestId", newRequestId());
   }
   setPublicHeaders(c, c.get("aiRequestId") || "");
-  // prepared/streamContext 的形狀由 @akentros/core/inference 的未型別化 API 決定。
+  // prepared/streamContext 的形狀由 @autonomia/core/inference 的未型別化 API 決定。
   let prepared: any;
   let streamContext: any;
   let admissionAcquired = false;
@@ -261,7 +278,7 @@ export async function handleAkentrosChatCompletions(
     if (!admissionAcquired || !admissionRequestId) return Promise.resolve();
     if (!admissionReleasePromise) {
       const leasedId = admissionRequestId;
-      admissionReleasePromise = releaseAkentrosApiLimit(c.env, leasedId)
+      admissionReleasePromise = releaseAutonomiaApiLimit(c.env, leasedId)
         .catch(() => {})
         .finally(() => {
           admissionAcquired = false;
@@ -272,7 +289,7 @@ export async function handleAkentrosChatCompletions(
   try {
     const aiKey = typeof aiKeyOrResolver === "function" ? await aiKeyOrResolver() : aiKeyOrResolver;
     if (!aiKey) {
-      throw new AkentrosError("Akentros authentication is unavailable.", {
+      throw new AutonomiaError("Autonomia authentication is unavailable.", {
         status: 503,
         type: "service_unavailable",
         code: "authentication_unavailable",
@@ -284,7 +301,7 @@ export async function handleAkentrosChatCompletions(
     // 短路,opt-in TTL 金鑰可無界重放。統一以臨時 requestId 先租;重放
     // 命中與驗證失敗路徑都會釋放(finally 保證)。
     const provisionalId = newRequestId();
-    await acquireAkentrosApiLimit(c.env, {
+    await acquireAutonomiaApiLimit(c.env, {
       apiKeyId: aiKey.id,
       requestId: provisionalId,
       rpmLimit: aiKey.rpm_limit,
@@ -296,7 +313,7 @@ export async function handleAkentrosChatCompletions(
     });
     admissionAcquired = true;
     admissionRequestId = provisionalId;
-    prepared = await prepareAkentrosChatRequest({
+    prepared = await prepareAutonomiaChatRequest({
       body: await readPublicJsonObject(c),
       aiKey,
       idempotencyKey: c.req.header("idempotency-key") || null,
@@ -309,7 +326,7 @@ export async function handleAkentrosChatCompletions(
       return replayToResponse(c, replay);
     }
     if (c.req.raw.signal.aborted) {
-      throw new AkentrosProviderError("The client disconnected before dispatch.", {
+      throw new AutonomiaProviderError("The client disconnected before dispatch.", {
         category: "client_disconnected",
         fallbackAllowed: false,
       });
@@ -356,7 +373,7 @@ export async function handleAkentrosChatCompletions(
             try {
               upstream = JSON.parse(event.data);
             } catch (cause) {
-              throw new AkentrosProviderError("The model stream contained invalid JSON.", {
+              throw new AutonomiaProviderError("The model stream contained invalid JSON.", {
                 provider: "unknown",
                 category: "invalid_provider_response",
                 fallbackAllowed: false,
@@ -381,7 +398,7 @@ export async function handleAkentrosChatCompletions(
             controller.enqueue(encoder.encode(frame));
           }
           if (!sawDone) {
-            throw new AkentrosProviderError("The model stream ended unexpectedly.", {
+            throw new AutonomiaProviderError("The model stream ended unexpectedly.", {
               provider: "unknown",
               category: "stream_interrupted",
               fallbackAllowed: false,
@@ -404,9 +421,9 @@ export async function handleAkentrosChatCompletions(
           }
           const safe = publicProviderError(error);
           const envelope = openAiErrorBody(
-            safe instanceof AkentrosError
+            safe instanceof AutonomiaError
               ? safe
-              : new AkentrosError("Akentros streaming was interrupted.", {
+              : new AutonomiaError("Autonomia streaming was interrupted.", {
                   status: 503,
                   type: "server_error",
                   code: "service_unavailable",
@@ -450,7 +467,7 @@ export async function handleAkentrosChatCompletions(
         "content-type": "text/event-stream; charset=utf-8",
         "cache-control": "no-store, no-transform",
         "x-request-id": prepared.requestId,
-        "x-akentros-pricing-revision": BACKEND_PRICING.revision,
+        "x-autonomia-pricing-revision": BACKEND_PRICING.revision,
       },
     });
   } catch (error) {
@@ -468,19 +485,19 @@ export async function handleAkentrosChatCompletions(
   }
 }
 
-aiPublicRoutes.post("/chat/completions", requireAiScope("chat:completions"), (c: AkentrosContext) =>
-  handleAkentrosChatCompletions(c),
+aiPublicRoutes.post("/chat/completions", requireAiScope("chat:completions"), (c: AutonomiaContext) =>
+  handleAutonomiaChatCompletions(c),
 );
 
 // ECO-04 P2:/responses → chat/completions 橋接。請求面由
-// prepareAkentrosResponsesRequest 轉換(input/instructions/stream 子集),
+// prepareAutonomiaResponsesRequest 轉換(input/instructions/stream 子集),
 // 執行與計費完全共用 chat 管線(reserve→settle→refund,endpoint 標
 // `responses`);非串流回應包回 Responses 的 response 物件,串流將公開
 // chat chunk 橋接為 Responses SSE 事件序列(response.created →
 // response.output_text.delta → response.completed)。既有僅有
 // chat:completions scope 的金鑰向後相容放行(與 embeddings 同立場)。
-export async function handleAkentrosResponses(
-  c: AkentrosContext,
+export async function handleAutonomiaResponses(
+  c: AutonomiaContext,
   aiKeyOrResolver: MaybeKeyOrResolver = c.get("aiKey"),
 ) {
   if (!c.get("aiRequestId")) {
@@ -496,7 +513,7 @@ export async function handleAkentrosResponses(
     if (!admissionAcquired || !admissionRequestId) return Promise.resolve();
     if (!admissionReleasePromise) {
       const leasedId = admissionRequestId;
-      admissionReleasePromise = releaseAkentrosApiLimit(c.env, leasedId)
+      admissionReleasePromise = releaseAutonomiaApiLimit(c.env, leasedId)
         .catch(() => {})
         .finally(() => {
           admissionAcquired = false;
@@ -507,7 +524,7 @@ export async function handleAkentrosResponses(
   try {
     const aiKey = typeof aiKeyOrResolver === "function" ? await aiKeyOrResolver() : aiKeyOrResolver;
     if (!aiKey) {
-      throw new AkentrosError("Akentros authentication is unavailable.", {
+      throw new AutonomiaError("Autonomia authentication is unavailable.", {
         status: 503,
         type: "service_unavailable",
         code: "authentication_unavailable",
@@ -515,7 +532,7 @@ export async function handleAkentrosResponses(
     }
     // 與 chat 相同:admission 提到 body 緩衝與 replay 檢查之前。
     const provisionalId = newRequestId();
-    await acquireAkentrosApiLimit(c.env, {
+    await acquireAutonomiaApiLimit(c.env, {
       apiKeyId: aiKey.id,
       requestId: provisionalId,
       rpmLimit: aiKey.rpm_limit,
@@ -524,7 +541,7 @@ export async function handleAkentrosResponses(
     });
     admissionAcquired = true;
     admissionRequestId = provisionalId;
-    prepared = await prepareAkentrosResponsesRequest({
+    prepared = await prepareAutonomiaResponsesRequest({
       body: await readPublicJsonObject(c),
       aiKey,
       idempotencyKey: c.req.header("idempotency-key") || null,
@@ -537,7 +554,7 @@ export async function handleAkentrosResponses(
       return replayToResponse(c, replay);
     }
     if (c.req.raw.signal.aborted) {
-      throw new AkentrosProviderError("The client disconnected before dispatch.", {
+      throw new AutonomiaProviderError("The client disconnected before dispatch.", {
         category: "client_disconnected",
         fallbackAllowed: false,
       });
@@ -573,7 +590,7 @@ export async function handleAkentrosResponses(
     const replayFrames: string[] = [];
     // Responses SSE 以 `event:` + `data:` 雙行編頓;橋接狀態機把已正規化的
     // chat chunk 翻譯為事件序列,結束時補齊 done 序列與 response.completed。
-    const bridge = createAkentrosResponsesStreamBridge(prepared);
+    const bridge = createAutonomiaResponsesStreamBridge(prepared);
     const frameOf = (frame: { event: string; data: any }) =>
       `event: ${frame.event}\ndata: ${JSON.stringify(frame.data)}\n\n`;
     const stream = new ReadableStream({
@@ -590,7 +607,7 @@ export async function handleAkentrosResponses(
             try {
               upstream = JSON.parse(event.data);
             } catch (cause) {
-              throw new AkentrosProviderError("The model stream contained invalid JSON.", {
+              throw new AutonomiaProviderError("The model stream contained invalid JSON.", {
                 provider: "unknown",
                 category: "invalid_provider_response",
                 fallbackAllowed: false,
@@ -614,7 +631,7 @@ export async function handleAkentrosResponses(
             }
           }
           if (!sawDone) {
-            throw new AkentrosProviderError("The model stream ended unexpectedly.", {
+            throw new AutonomiaProviderError("The model stream ended unexpectedly.", {
               provider: "unknown",
               category: "stream_interrupted",
               fallbackAllowed: false,
@@ -642,9 +659,9 @@ export async function handleAkentrosResponses(
           if (!cancelled) {
             const safe = publicProviderError(error);
             const envelope = openAiErrorBody(
-              safe instanceof AkentrosError
+              safe instanceof AutonomiaError
                 ? safe
-                : new AkentrosError("Akentros streaming was interrupted.", {
+                : new AutonomiaError("Autonomia streaming was interrupted.", {
                     status: 503,
                     type: "server_error",
                     code: "service_unavailable",
@@ -691,7 +708,7 @@ export async function handleAkentrosResponses(
         "content-type": "text/event-stream; charset=utf-8",
         "cache-control": "no-store, no-transform",
         "x-request-id": prepared.requestId,
-        "x-akentros-pricing-revision": BACKEND_PRICING.revision,
+        "x-autonomia-pricing-revision": BACKEND_PRICING.revision,
       },
     });
   } catch (error) {
@@ -712,15 +729,15 @@ export async function handleAkentrosResponses(
 aiPublicRoutes.post(
   "/responses",
   // 既有金鑰僅有 chat:completions 時向後相容放行(與 embeddings 同立場);
-  // 新金鑰由 AKENTROS_DEFAULT_SCOPES 直接取得 responses。
+  // 新金鑰由 AUTONOMIA_DEFAULT_SCOPES 直接取得 responses。
   requireAnyAiScope("responses", "chat:completions"),
-  (c: AkentrosContext) => handleAkentrosResponses(c),
+  (c: AutonomiaContext) => handleAutonomiaResponses(c),
 );
 
 // embeddings 無串流路徑,流程與 chat 的非串流分支相同:準備(含保留單)→
 // 併發/RPM 限流 → runtime.executeJson(reserve → invoke → settle)→ JSON 回應。
-export async function handleAkentrosEmbeddings(
-  c: AkentrosContext,
+export async function handleAutonomiaEmbeddings(
+  c: AutonomiaContext,
   aiKeyOrResolver: MaybeKeyOrResolver = c.get("aiKey"),
 ) {
   if (!c.get("aiRequestId")) {
@@ -735,7 +752,7 @@ export async function handleAkentrosEmbeddings(
     if (!admissionAcquired || !admissionRequestId) return Promise.resolve();
     if (!admissionReleasePromise) {
       const leasedId = admissionRequestId;
-      admissionReleasePromise = releaseAkentrosApiLimit(c.env, leasedId)
+      admissionReleasePromise = releaseAutonomiaApiLimit(c.env, leasedId)
         .catch(() => {})
         .finally(() => {
           admissionAcquired = false;
@@ -746,7 +763,7 @@ export async function handleAkentrosEmbeddings(
   try {
     const aiKey = typeof aiKeyOrResolver === "function" ? await aiKeyOrResolver() : aiKeyOrResolver;
     if (!aiKey) {
-      throw new AkentrosError("Akentros authentication is unavailable.", {
+      throw new AutonomiaError("Autonomia authentication is unavailable.", {
         status: 503,
         type: "service_unavailable",
         code: "authentication_unavailable",
@@ -755,7 +772,7 @@ export async function handleAkentrosEmbeddings(
     // SN-10 fix + SN-9 fix:與 chat 相同,admission 提到 body 緩衝與 replay
     // 檢查之前;臨時 requestId 先租,重放命中與驗證失敗都會釋放。
     const provisionalId = newRequestId();
-    await acquireAkentrosApiLimit(c.env, {
+    await acquireAutonomiaApiLimit(c.env, {
       apiKeyId: aiKey.id,
       requestId: provisionalId,
       rpmLimit: aiKey.rpm_limit,
@@ -765,7 +782,7 @@ export async function handleAkentrosEmbeddings(
     });
     admissionAcquired = true;
     admissionRequestId = provisionalId;
-    prepared = await prepareAkentrosEmbeddingsRequest({
+    prepared = await prepareAutonomiaEmbeddingsRequest({
       body: await readPublicJsonObject(c),
       aiKey,
       idempotencyKey: c.req.header("idempotency-key") || null,
@@ -778,7 +795,7 @@ export async function handleAkentrosEmbeddings(
       return replayToResponse(c, replay);
     }
     if (c.req.raw.signal.aborted) {
-      throw new AkentrosProviderError("The client disconnected before dispatch.", {
+      throw new AutonomiaProviderError("The client disconnected before dispatch.", {
         category: "client_disconnected",
         fallbackAllowed: false,
       });
@@ -810,13 +827,13 @@ aiPublicRoutes.post(
   "/embeddings",
   // 既有金鑰僅有 chat:completions 時向後相容放行;新金鑰直接取得 embeddings。
   requireAnyAiScope("embeddings", "chat:completions"),
-  (c: AkentrosContext) => handleAkentrosEmbeddings(c),
+  (c: AutonomiaContext) => handleAutonomiaEmbeddings(c),
 );
 
-aiPublicRoutes.all("*", (c: AkentrosContext) =>
+aiPublicRoutes.all("*", (c: AutonomiaContext) =>
   sendOpenAiError(
     c,
-    new AkentrosError("The requested Akentros endpoint does not exist.", {
+    new AutonomiaError("The requested Autonomia endpoint does not exist.", {
       status: 404,
       type: "invalid_request_error",
       code: "route_not_found",

@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-# Akentros Gateway — containerized Node topology (ECO-SUPPLY-2).
+# Autonomia Gateway — containerized Node topology (ECO-SUPPLY-2).
 # Full runbook: "Topology D" in docs/DEPLOYMENT.md.
 #
 # Produces two runnable targets:
@@ -8,10 +8,10 @@
 #             SQLite data volume at /data, non-root user, /healthz healthcheck.
 #   console   nginx serving the built Vite app on / and proxying /api to the
 #             gateway with SSE-safe settings and the identity headers the
-#             README's AKENTROS_TRUST_PROXY contract requires.
+#             README's AUTONOMIA_TRUST_PROXY contract requires.
 #
-#   docker build --target gateway -t akentros-gateway .
-#   docker build --target console -t akentros-console .
+#   docker build --target gateway -t autonomia-gateway .
+#   docker build --target console -t autonomia-console .
 #   docker compose up -d --build      # both, wired together
 
 # ---------- Stage 1: build the console (Vite) ----------
@@ -26,10 +26,10 @@ COPY packages/core/package.json packages/core/
 RUN npm ci
 # Same-origin API base: the nginx console target proxies /api to the gateway,
 # so the built app works behind any hostname without rebuilding. Override
-# with --build-arg VITE_AKENTROS_API_BASE=https://api.example.com/api when
+# with --build-arg VITE_AUTONOMIA_API_BASE=https://api.example.com/api when
 # the console is served from a different origin than the gateway.
-ARG VITE_AKENTROS_API_BASE=/api
-ENV VITE_AKENTROS_API_BASE=${VITE_AKENTROS_API_BASE}
+ARG VITE_AUTONOMIA_API_BASE=/api
+ENV VITE_AUTONOMIA_API_BASE=${VITE_AUTONOMIA_API_BASE}
 COPY . .
 RUN npm run build
 
@@ -37,9 +37,9 @@ RUN npm run build
 FROM node:22-slim AS gateway
 ENV NODE_ENV=production \
     # containers must bind all interfaces, unlike the loopback default of
-    # the bare-metal Node topology (README: AKENTROS_HOST)
-    AKENTROS_HOST=0.0.0.0 \
-    AKENTROS_DB_PATH=/data/akentros.db
+    # the bare-metal Node topology (README: AUTONOMIA_HOST)
+    AUTONOMIA_HOST=0.0.0.0 \
+    AUTONOMIA_DB_PATH=/data/autonomia.db
 WORKDIR /repo
 COPY package.json package-lock.json ./
 COPY apps/console/package.json apps/console/

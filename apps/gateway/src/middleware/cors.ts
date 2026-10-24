@@ -1,12 +1,12 @@
 import { cors } from "hono/cors";
 import { DEFAULT_ALLOWED_ORIGINS } from "../constants.ts";
-import type { AkentrosContext, AkentrosRuntimeEnv } from "../types.ts";
+import type { AutonomiaContext, AutonomiaRuntimeEnv } from "../types.ts";
 
 function trimTrailingSlash(value: unknown) {
   return String(value || "").replace(/\/+$/, "");
 }
 
-function getAllowedOrigins(env: AkentrosRuntimeEnv = {}) {
+function getAllowedOrigins(env: AutonomiaRuntimeEnv = {}) {
   const configuredOrigins = String(env.FRONTEND_ORIGINS || "")
     .split(",")
     .map((origin) => trimTrailingSlash(origin.trim()))
@@ -31,7 +31,7 @@ function isLocalHostname(hostname: unknown) {
   );
 }
 
-function isLocalDevelopmentRequest(c: AkentrosContext) {
+function isLocalDevelopmentRequest(c: AutonomiaContext) {
   try {
     return (
       isLocalHostname(new URL(c.req.url).hostname) ||
@@ -51,7 +51,7 @@ function isLocalDevelopmentOrigin(value: unknown) {
   }
 }
 
-export function isCredentialedOriginAllowed(c: AkentrosContext, origin: unknown) {
+export function isCredentialedOriginAllowed(c: AutonomiaContext, origin: unknown) {
   const normalized = trimTrailingSlash(origin);
   if (isLocalDevelopmentOrigin(normalized)) {
     return isLocalDevelopmentRequest(c);
@@ -61,10 +61,10 @@ export function isCredentialedOriginAllowed(c: AkentrosContext, origin: unknown)
 }
 
 // 公開推理端點的額外放行來源(例如你的 API 遊樂場、文件站),
-// 以逗號分隔的 AKENTROS_PUBLIC_ORIGINS 環境變數設定。
-function getAkentrosPublicOrigins(env: AkentrosRuntimeEnv = {}): Set<string> {
+// 以逗號分隔的 AUTONOMIA_PUBLIC_ORIGINS 環境變數設定。
+function getAutonomiaPublicOrigins(env: AutonomiaRuntimeEnv = {}): Set<string> {
   return new Set(
-    String(env.AKENTROS_PUBLIC_ORIGINS || "")
+    String(env.AUTONOMIA_PUBLIC_ORIGINS || "")
       .split(",")
       .map((origin) => trimTrailingSlash(origin.trim()))
       .filter(Boolean),
@@ -86,12 +86,12 @@ export function createCorsMiddleware() {
   });
 }
 
-export function createAkentrosPublicCorsMiddleware() {
+export function createAutonomiaPublicCorsMiddleware() {
   return cors({
     origin: (origin, c) => {
       if (!origin) return null;
       return isCredentialedOriginAllowed(c, origin) ||
-        getAkentrosPublicOrigins(c?.env).has(trimTrailingSlash(origin))
+        getAutonomiaPublicOrigins(c?.env).has(trimTrailingSlash(origin))
         ? origin
         : null;
     },

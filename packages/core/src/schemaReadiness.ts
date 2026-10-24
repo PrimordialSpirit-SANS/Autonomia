@@ -1,4 +1,4 @@
-export const AKENTROS_SCHEMA_VERSION = 4;
+export const AUTONOMIA_SCHEMA_VERSION = 4;
 
 function freezeRecord(record: Record<string, string[]>) {
   return Object.freeze(
@@ -6,7 +6,7 @@ function freezeRecord(record: Record<string, string[]>) {
   );
 }
 
-export const REQUIRED_AKENTROS_COLUMNS = freezeRecord({
+export const REQUIRED_AUTONOMIA_COLUMNS = freezeRecord({
   ai_api_keys: [
     "id",
     "user_id",
@@ -145,7 +145,7 @@ export const REQUIRED_AKENTROS_COLUMNS = freezeRecord({
   ],
 });
 
-export const REQUIRED_AKENTROS_INDEXES = Object.freeze([
+export const REQUIRED_AUTONOMIA_INDEXES = Object.freeze([
   "idx_ai_api_keys_user_created",
   "idx_ai_api_keys_digest_active",
   "idx_ai_requests_key_idempotency",
@@ -159,8 +159,8 @@ export const REQUIRED_AKENTROS_INDEXES = Object.freeze([
   "idx_ai_api_inflight_active",
   "idx_ai_idempotency_replays_key",
   "idx_ai_idempotency_replays_expiry",
-  "idx_ledger_entries_akentros_ai_reservation",
-  "idx_ledger_entries_akentros_ai_refund",
+  "idx_ledger_entries_autonomia_ai_reservation",
+  "idx_ledger_entries_autonomia_ai_refund",
 ]);
 
 function rows(result: any): any[] {
@@ -199,20 +199,20 @@ function catalogSql(dialect: "postgres" | "sqlite") {
   };
 }
 
-export async function isAkentrosSchemaReady(query: any) {
+export async function isAutonomiaSchemaReady(query: any) {
   const dialect: "postgres" | "sqlite" = query?.dialect === "postgres" ? "postgres" : "sqlite";
   const catalog = catalogSql(dialect);
 
-  const migrationTable = await query(catalog.migrationTableExists, ["akentros_ai_schema_migrations"]);
+  const migrationTable = await query(catalog.migrationTableExists, ["autonomia_ai_schema_migrations"]);
   if (!rows(migrationTable)[0]?.name) return false;
 
   const versionResult = await query(`
     SELECT COALESCE(MAX(version), 0) AS version
-    FROM akentros_ai_schema_migrations
+    FROM autonomia_ai_schema_migrations
   `);
-  if (Number(rows(versionResult)[0]?.version || 0) < AKENTROS_SCHEMA_VERSION) return false;
+  if (Number(rows(versionResult)[0]?.version || 0) < AUTONOMIA_SCHEMA_VERSION) return false;
 
-  for (const [table, columns] of Object.entries(REQUIRED_AKENTROS_COLUMNS)) {
+  for (const [table, columns] of Object.entries(REQUIRED_AUTONOMIA_COLUMNS)) {
     const columnsResult = await query(catalog.tableColumns, [table]);
     const existing = new Set(rows(columnsResult).map((row: any) => String(row.name)));
     for (const column of columns) {
@@ -220,17 +220,17 @@ export async function isAkentrosSchemaReady(query: any) {
     }
   }
 
-  const indexPlaceholders = REQUIRED_AKENTROS_INDEXES.map(() => "?").join(", ");
-  const indexesResult = await query(catalog.indexNames(indexPlaceholders), [...REQUIRED_AKENTROS_INDEXES]);
+  const indexPlaceholders = REQUIRED_AUTONOMIA_INDEXES.map(() => "?").join(", ");
+  const indexesResult = await query(catalog.indexNames(indexPlaceholders), [...REQUIRED_AUTONOMIA_INDEXES]);
   const existingIndexes = new Set(rows(indexesResult).map((row: any) => String(row.name)));
-  return REQUIRED_AKENTROS_INDEXES.every((index) => existingIndexes.has(index));
+  return REQUIRED_AUTONOMIA_INDEXES.every((index) => existingIndexes.has(index));
 }
 
-export async function assertAkentrosSchemaReady(query: any) {
-  if (await isAkentrosSchemaReady(query)) return;
+export async function assertAutonomiaSchemaReady(query: any) {
+  if (await isAutonomiaSchemaReady(query)) return;
   const error = new Error(
-    "Akentros database schema is not ready. Run the versioned Akentros migration before serving requests.",
+    "Autonomia database schema is not ready. Run the versioned Autonomia migration before serving requests.",
   ) as Error & { code?: string };
-  error.code = "AKENTROS_SCHEMA_NOT_READY";
+  error.code = "AUTONOMIA_SCHEMA_NOT_READY";
   throw error;
 }

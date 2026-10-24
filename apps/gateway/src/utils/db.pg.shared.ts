@@ -1,12 +1,12 @@
 import { AsyncLocalStorage } from "node:async_hooks";
-import type { AkentrosQuery } from "@akentros/core/query";
-import type { AkentrosRuntimeEnv } from "../types.ts";
-import { logAkentrosEvent } from "./logger.ts";
+import type { AutonomiaQuery } from "@autonomia/core/query";
+import type { AutonomiaRuntimeEnv } from "../types.ts";
+import { logAutonomiaEvent } from "./logger.ts";
 
 // PostgreSQL adapter 的共用實作:TCP pg Pool(db.pg.ts)與 Neon 相容
 // WebSocket 驅動(db.pg.serverless.ts)共用同一套查詢介面與交易語意,
 // 契約與 db.node.ts / doDb.ts 相同:(sql, params) => { rows },交易以
-// withAkentrosTransaction(env, fn) 包裝,fn 內不得有真實 I/O await。
+// withAutonomiaTransaction(env, fn) 包裝,fn 內不得有真實 I/O await。
 //
 // 本檔刻意不 import 任何資料庫驅動(pg、@neondatabase/serverless):
 // 兩個 adapter 模組只被 Node 進入點 / Workers PG 模式以動態 import 載入,
@@ -19,28 +19,28 @@ import { logAkentrosEvent } from "./logger.ts";
 //   AsyncLocalStorage 綁定同一 client;巢狀呼叫沿用外層交易。
 
 /** node-postgres 與 @neondatabase/serverless 共通的 client 形狀。 */
-export interface AkentrosPgLikeClient {
+export interface AutonomiaPgLikeClient {
   query(text: string, params?: unknown[]): Promise<{ rows: any[] }>;
   release(): void;
 }
 
 /** node-postgres 與 @neondatabase/serverless 共通的 Pool 形狀。 */
-export interface AkentrosPgLikePool {
-  connect(): Promise<AkentrosPgLikeClient>;
+export interface AutonomiaPgLikePool {
+  connect(): Promise<AutonomiaPgLikeClient>;
   end(): Promise<void>;
   /** 交易外的查詢直接走 pool(排隊取用間置連線);兩個驅動都支援。 */
   query?(text: string, params?: unknown[]): Promise<{ rows: any[] }>;
   on?(event: "error", listener: (error: unknown) => void): unknown;
 }
 
-export interface AkentrosPgAdapterConfig {
+export interface AutonomiaPgAdapterConfig {
   /** 連線池快取(key 為連線字串)。呼叫端負責掛在 globalThis 上,讓
    * Vercel/Netlify 等無伺服器平台的熱重載 / 隔離重複載入不會重複建池。 */
-  pools: Map<string, AkentrosPgLikePool>;
+  pools: Map<string, AutonomiaPgLikePool>;
   /** 依連線字串與執行期環境建立底層 Pool(驅動特定;env 用於 SSL/池上限判定)。 */
-  createPool: (connectionString: string, env: AkentrosRuntimeEnv) => AkentrosPgLikePool;
+  createPool: (connectionString: string, env: AutonomiaRuntimeEnv) => AutonomiaPgLikePool;
   /** 從執行期環境解析連線字串(HYPERDRIVE 綁定優先等邏輯由呼叫端決定)。 */
-  resolveConnectionString: (env: AkentrosRuntimeEnv) => string;
+  resolveConnectionString: (env: AutonomiaRuntimeEnv) => string;
 }
 
 // 佔位符轉換:SQLite 風格「?」→ PostgreSQL「$n」。
@@ -63,14 +63,14 @@ export function normalizePgParam(value: unknown): unknown {
 // ---------------------------------------------------------------------------
 // SSL 推導:無伺服器平台(Neon、Supabase、Render 外網、RDS…)一律要求
 // TLS;自架 PG(localhost / 內網 / unix socket)則不應被強制加密。
-// 解析優先序:AKENTROS_PG_SSL 環境變數 > 連線字串 sslmode/ssl 參數 >
+// 解析優先序:AUTONOMIA_PG_SSL 環境變數 > 連線字串 sslmode/ssl 參數 >
 // 主機啟發式(遠端主機自動 require)。Hyperdrive 由邊緣終結 TLS,本機
 // socket 不加密。
 // ---------------------------------------------------------------------------
 
-export type AkentrosPgSslOption = false | { rejectUnauthorized: boolean };
+export type AutonomiaPgSslOption = false | { rejectUnauthorized: boolean };
 
-function sslFromMode(mode: string): AkentrosPgSslOption | null {
+function sslFromMode(mode: string): AutonomiaPgSslOption | null {
   const normalized = mode.trim().toLowerCase();
   if (!normalized) return null;
   switch (normalized) {
@@ -88,7 +88,7 @@ function sslFromMode(mode: string): AkentrosPgSslOption | null {
   }
 }
 
-/** 內網 / 本機主機不強制 TLS(可用 AKENTROS_PG_SSL=require 覆寫)。 */
+/** 內網 / 本機主機不強制 TLS(可用 AUTONOMIA_PG_SSL=require 覆寫)。 */
 export function isPrivatePgHost(host: string): boolean {
   if (!host) return true; // 無 host = unix socket
   const h = host.toLowerCase().replace(/^\[|\]$/g, "");
@@ -104,8 +104,8 @@ export function isPrivatePgHost(host: string): boolean {
 
 export function resolvePgSslOptions(
   connectionString: string,
-  options?: { env?: Pick<AkentrosRuntimeEnv, "AKENTROS_PG_SSL">; viaHyperdrive?: boolean },
-): AkentrosPgSslOption {
+  options?: { env?: Pick<AutonomiaRuntimeEnv, "AUTONOMIA_PG_SSL">; viaHyperdrive?: boolean },
+): AutonomiaPgSslOption {
   if (options?.viaHyperdrive) {
     // Hyperdrive binding 的 connectionString 指向 runtime 內的本地通道,
     // 對外連線的 TLS 由 Hyperdrive 代管;client 端再開 TLS 會交涉失敗。
@@ -113,7 +113,7 @@ export function resolvePgSslOptions(
   }
 
   // 顯式環境變數優先:部署層的總開關。
-  const fromEnv = sslFromMode(String(options?.env?.AKENTROS_PG_SSL || ""));
+  const fromEnv = sslFromMode(String(options?.env?.AUTONOMIA_PG_SSL || ""));
   if (fromEnv !== null) return fromEnv;
 
   // 連線字串參數:URL 形式或 pg keyword/value 形式都支援。
@@ -163,8 +163,8 @@ export function isServerlessComputeEnv(env?: Record<string, unknown>): boolean {
 
 export function defaultPgPoolMax(env?: Record<string, unknown>): number {
   const raw = Number(
-    env?.AKENTROS_PG_POOL_MAX ??
-      (typeof process !== "undefined" ? process.env.AKENTROS_PG_POOL_MAX : undefined),
+    env?.AUTONOMIA_PG_POOL_MAX ??
+      (typeof process !== "undefined" ? process.env.AUTONOMIA_PG_POOL_MAX : undefined),
   );
   if (Number.isFinite(raw) && raw > 0) return Math.floor(raw);
   return isServerlessComputeEnv(env) ? 1 : 10;
@@ -174,11 +174,11 @@ export function defaultPgPoolMax(env?: Record<string, unknown>): number {
 export function pgPoolOptions(
   connectionString: string,
   options?: { env?: Record<string, unknown>; viaHyperdrive?: boolean },
-): { max: number; ssl: AkentrosPgSslOption; connectionTimeoutMillis: number } {
+): { max: number; ssl: AutonomiaPgSslOption; connectionTimeoutMillis: number } {
   return {
     max: defaultPgPoolMax(options?.env),
     ssl: resolvePgSslOptions(connectionString, {
-      env: options?.env as Pick<AkentrosRuntimeEnv, "AKENTROS_PG_SSL">,
+      env: options?.env as Pick<AutonomiaRuntimeEnv, "AUTONOMIA_PG_SSL">,
       viaHyperdrive: options?.viaHyperdrive,
     }),
     // 健康的 PG 握手 < 1s;無伺服器冷啟時卡死連線會吃掉整個請求預算,
@@ -191,17 +191,17 @@ export function pgPoolOptions(
 // Adapter 工廠:兩種驅動共用(交易語意釘死在測試裡,見 pgServerless.test.ts)。
 // ---------------------------------------------------------------------------
 
-export function createAkentrosPgAdapter(config: AkentrosPgAdapterConfig): {
-  dbQuery: (env: AkentrosRuntimeEnv, sql: string, params?: unknown[]) => Promise<{ rows: any[] }>;
-  dbGet: (env: AkentrosRuntimeEnv, sql: string, params?: unknown[]) => Promise<any | null>;
-  withAkentrosTransaction: <T>(env: AkentrosRuntimeEnv, fn: () => Promise<T>) => Promise<T>;
-  createAkentrosQuery: (env: AkentrosRuntimeEnv) => AkentrosQuery;
+export function createAutonomiaPgAdapter(config: AutonomiaPgAdapterConfig): {
+  dbQuery: (env: AutonomiaRuntimeEnv, sql: string, params?: unknown[]) => Promise<{ rows: any[] }>;
+  dbGet: (env: AutonomiaRuntimeEnv, sql: string, params?: unknown[]) => Promise<any | null>;
+  withAutonomiaTransaction: <T>(env: AutonomiaRuntimeEnv, fn: () => Promise<T>) => Promise<T>;
+  createAutonomiaQuery: (env: AutonomiaRuntimeEnv) => AutonomiaQuery;
   closePostgresClients: () => Promise<void>;
 } {
   const pools = config.pools;
-  const txStorage = new AsyncLocalStorage<{ client: AkentrosPgLikeClient }>();
+  const txStorage = new AsyncLocalStorage<{ client: AutonomiaPgLikeClient }>();
 
-  function poolFor(env: AkentrosRuntimeEnv): AkentrosPgLikePool {
+  function poolFor(env: AutonomiaRuntimeEnv): AutonomiaPgLikePool {
     const connectionString = String(config.resolveConnectionString(env) || "").trim();
     if (!connectionString) {
       throw new Error(
@@ -216,7 +216,7 @@ export function createAkentrosPgAdapter(config: AkentrosPgAdapterConfig): {
       // 變成未處理的 'error' 事件把程序/隔離區炸掉;記錄後由池自行重連。
       if (typeof pool.on === "function") {
         pool.on("error", (error) => {
-          logAkentrosEvent("warn", "akentros_pg_pool_client_error", {
+          logAutonomiaEvent("warn", "autonomia_pg_pool_client_error", {
             detail: String((error as { message?: string })?.message || error),
           });
         });
@@ -227,14 +227,14 @@ export function createAkentrosPgAdapter(config: AkentrosPgAdapterConfig): {
   }
 
   async function executeQuery(
-    client: AkentrosPgLikeClient | AkentrosPgLikePool,
+    client: AutonomiaPgLikeClient | AutonomiaPgLikePool,
     sql: string,
     params: unknown[],
   ): Promise<{ rows: any[] }> {
     // 交易外:優先以 pool.query(排隊取用間置連線);交易內:ALS 綁定的
     // 專屬 client。兩者的方法都以 .call 綁定原物件呼叫,避免 detach 後
     // 遺失 this。
-    const queryFn = (client as AkentrosPgLikePool).query ?? (client as AkentrosPgLikeClient).query;
+    const queryFn = (client as AutonomiaPgLikePool).query ?? (client as AutonomiaPgLikeClient).query;
     if (typeof queryFn !== "function") {
       throw new Error("The PostgreSQL pool/client does not expose query(text, params).");
     }
@@ -243,7 +243,7 @@ export function createAkentrosPgAdapter(config: AkentrosPgAdapterConfig): {
   }
 
   async function dbQuery(
-    env: AkentrosRuntimeEnv,
+    env: AutonomiaRuntimeEnv,
     sql: string,
     params: unknown[] = [],
   ): Promise<{ rows: any[] }> {
@@ -255,7 +255,7 @@ export function createAkentrosPgAdapter(config: AkentrosPgAdapterConfig): {
     return executeQuery(poolFor(env), sql, params);
   }
 
-  async function withAkentrosTransaction<T>(env: AkentrosRuntimeEnv, fn: () => Promise<T>): Promise<T> {
+  async function withAutonomiaTransaction<T>(env: AutonomiaRuntimeEnv, fn: () => Promise<T>): Promise<T> {
     if (txStorage.getStore()) {
       // 巢狀呼叫:沿用外層交易。
       return fn();
@@ -278,15 +278,15 @@ export function createAkentrosPgAdapter(config: AkentrosPgAdapterConfig): {
     }
   }
 
-  async function dbGet(env: AkentrosRuntimeEnv, sql: string, params: unknown[] = []): Promise<any | null> {
+  async function dbGet(env: AutonomiaRuntimeEnv, sql: string, params: unknown[] = []): Promise<any | null> {
     const { rows } = await dbQuery(env, sql, params);
     return rows[0] ?? null;
   }
 
-  function createAkentrosQuery(env: AkentrosRuntimeEnv): AkentrosQuery {
-    const query = ((sql: string, params: unknown[] = []) => dbQuery(env, sql, params)) as AkentrosQuery;
+  function createAutonomiaQuery(env: AutonomiaRuntimeEnv): AutonomiaQuery {
+    const query = ((sql: string, params: unknown[] = []) => dbQuery(env, sql, params)) as AutonomiaQuery;
     query.dialect = "postgres";
-    query.transaction = (fn: () => Promise<unknown>) => withAkentrosTransaction(env, fn);
+    query.transaction = (fn: () => Promise<unknown>) => withAutonomiaTransaction(env, fn);
     return query;
   }
 
@@ -301,5 +301,5 @@ export function createAkentrosPgAdapter(config: AkentrosPgAdapterConfig): {
     pools.clear();
   }
 
-  return { dbQuery, dbGet, withAkentrosTransaction, createAkentrosQuery, closePostgresClients };
+  return { dbQuery, dbGet, withAutonomiaTransaction, createAutonomiaQuery, closePostgresClients };
 }

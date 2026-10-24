@@ -1,15 +1,15 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { BACKEND_PRICING } from "@akentros/core/pricing";
-import { PROVIDER_POOLS } from "@akentros/core/providers";
-import { assertAkentrosConfigBundleAtStartup } from "../src/utils/configGuard.ts";
+import { BACKEND_PRICING } from "@autonomia/core/pricing";
+import { PROVIDER_POOLS } from "@autonomia/core/providers";
+import { assertAutonomiaConfigBundleAtStartup } from "../src/utils/configGuard.ts";
 
 // FN-7 fix:gateway 啟動時(nodeServer.ts 與 Worker DO 建構兩個拓撲)強制
 // 驗證凍結的設定常數;此前驗證只在 CI 測試執行,手改設定檔部署時
 // runtime 不會 fail-fast。
 
 test("startup config guard accepts the shipped config bundle", () => {
-  assert.equal(assertAkentrosConfigBundleAtStartup(), true);
+  assert.equal(assertAutonomiaConfigBundleAtStartup(), true);
 });
 
 test("startup config guard rejects a tampered route timeout beyond the 240s ceiling", () => {
@@ -19,7 +19,7 @@ test("startup config guard rejects a tampered route timeout beyond the 240s ceil
   const firstModel = Object.values(tampered.models)[0] as any;
   firstModel.routes[0].timeout_ms = 300000;
   assert.throws(
-    () => assertAkentrosConfigBundleAtStartup(tampered as any, PROVIDER_POOLS),
+    () => assertAutonomiaConfigBundleAtStartup(tampered as any, PROVIDER_POOLS),
     (error: any) => /timeout_ms/.test(String(error?.message || error)),
   );
 });
@@ -30,7 +30,7 @@ test("startup config guard rejects an http provider base_url", () => {
   const firstPool = Object.values(tamperedPools.pools)[0] as Record<string, unknown>;
   firstPool.base_url = "http://insecure-upstream.example.com/v1";
   assert.throws(
-    () => assertAkentrosConfigBundleAtStartup(BACKEND_PRICING, tamperedPools),
+    () => assertAutonomiaConfigBundleAtStartup(BACKEND_PRICING, tamperedPools),
     (error: any) => /base_url|https/i.test(String(error?.message || error)),
   );
 });

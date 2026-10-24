@@ -1,11 +1,11 @@
-import { AKENTROS_SCHEMA_VERSION, isAkentrosSchemaReady } from "./schemaReadiness.ts";
+import { AUTONOMIA_SCHEMA_VERSION, isAutonomiaSchemaReady } from "./schemaReadiness.ts";
 
 export {
-  AKENTROS_SCHEMA_VERSION,
-  assertAkentrosSchemaReady,
-  isAkentrosSchemaReady,
-  REQUIRED_AKENTROS_COLUMNS,
-  REQUIRED_AKENTROS_INDEXES,
+  AUTONOMIA_SCHEMA_VERSION,
+  assertAutonomiaSchemaReady,
+  isAutonomiaSchemaReady,
+  REQUIRED_AUTONOMIA_COLUMNS,
+  REQUIRED_AUTONOMIA_INDEXES,
 } from "./schemaReadiness.ts";
 
 // DDL 方言:時間戳一律 TEXT 存 UTC ISO-8601(含毫秒),兩種方言共用相同的
@@ -32,7 +32,7 @@ function idPrimary(dialect: "postgres" | "sqlite"): string {
 
 function migrationTableSql(dialect: "postgres" | "sqlite"): string {
   return `
-  CREATE TABLE IF NOT EXISTS akentros_ai_schema_migrations (
+  CREATE TABLE IF NOT EXISTS autonomia_ai_schema_migrations (
     version INTEGER PRIMARY KEY,
     name VARCHAR(120) NOT NULL,
     applied_at ${nowDefault(dialect)}
@@ -197,12 +197,12 @@ const CANONICAL_INDEXES = Object.freeze([
   `CREATE INDEX IF NOT EXISTS idx_ai_billing_state_expiry ON ai_billing_reservations (state, expires_at)`,
   `CREATE INDEX IF NOT EXISTS idx_ai_api_inflight_active
    ON ai_api_inflight_leases (api_key_id, expires_at) WHERE released_at IS NULL`,
-  `CREATE UNIQUE INDEX IF NOT EXISTS idx_ledger_entries_akentros_ai_reservation
+  `CREATE UNIQUE INDEX IF NOT EXISTS idx_ledger_entries_autonomia_ai_reservation
    ON ledger_entries (source_id, transaction_type)
-   WHERE source_type = 'akentros_ai' AND transaction_type = 'ai_usage_reservation'`,
-  `CREATE UNIQUE INDEX IF NOT EXISTS idx_ledger_entries_akentros_ai_refund
+   WHERE source_type = 'autonomia_ai' AND transaction_type = 'ai_usage_reservation'`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS idx_ledger_entries_autonomia_ai_refund
    ON ledger_entries (source_id, transaction_type)
-   WHERE source_type = 'akentros_ai' AND transaction_type = 'ai_usage_refund'`,
+   WHERE source_type = 'autonomia_ai' AND transaction_type = 'ai_usage_refund'`,
 ]);
 
 // 版本歷史:PostgreSQL 時代的 v1–v7(legacy 修復、計費指紋、免費額度桶、
@@ -211,7 +211,7 @@ const CANONICAL_INDEXES = Object.freeze([
 // v3 = 冪等重放儲存(金鑰 TTL 欄位 + 回應落地表),
 // v4 = 伺服端會話撤銷(users.session_epoch,SEC-01)。
 // PostgreSQL 並行版的歷史請參閱 Git 歷史。
-function buildAkentrosMigrations(dialect: "postgres" | "sqlite") {
+function buildAutonomiaMigrations(dialect: "postgres" | "sqlite") {
   return [
     Object.freeze({
       version: 1,
@@ -225,7 +225,7 @@ function buildAkentrosMigrations(dialect: "postgres" | "sqlite") {
         // 登入/金鑰管理端點的 IP 限流:固定窗口計數,跨請求全域生效。
         // 每個 identity 只保留當前窗口一列;窗口滾動由 upsert 歸零,舊列由
         // middleware 的 sweep 語句背景清理。
-        `CREATE TABLE IF NOT EXISTS akentros_ip_rate_limit_windows (
+        `CREATE TABLE IF NOT EXISTS autonomia_ip_rate_limit_windows (
         identity VARCHAR(160) PRIMARY KEY,
         window_start TEXT NOT NULL,
         hit_count INTEGER NOT NULL DEFAULT 0
@@ -270,11 +270,11 @@ function buildAkentrosMigrations(dialect: "postgres" | "sqlite") {
       name: "session-epoch-revocation",
       statements: Object.freeze([
         // SEC-01 fix:伺服端會話撤銷。users.session_epoch 是帳號級的會話
-        // epoch 計數:akentros_token JWT 於簽發時把當時的 epoch 簽入固定
+        // epoch 計數:autonomia_token JWT 於簽發時把當時的 epoch 簽入固定
         // claim epv(見 apps/gateway/src/utils/jwt.ts),authenticateToken
         // 比對不一致即 401。「撤銷全部會話」= UPDATE users SET
         // session_epoch = session_epoch + 1(apps/gateway/scripts/
-        // revokeAkentrosSessions.ts),不必輪替 JWT_SECRET(那會把全站
+        // revokeAutonomiaSessions.ts),不必輪替 JWT_SECRET(那會把全站
         // 用戶一起登出)。與 v3 同一手法:users 基礎 DDL(gateway 層
         // ensureUsersSchema)不含此欄位,統一由此遷移加入,讓 fresh/
         // upgrade 兩條路徑的 ALTER 行為一致;users 表由 bootstrap 在
@@ -287,32 +287,32 @@ function buildAkentrosMigrations(dialect: "postgres" | "sqlite") {
   ];
 }
 
-/** 指定方言的版本化遷移清單(結構與 AKENTROS_MIGRATIONS 相同)。 */
-export function akentrosMigrations(dialect: "postgres" | "sqlite") {
-  return buildAkentrosMigrations(dialect);
+/** 指定方言的版本化遷移清單(結構與 AUTONOMIA_MIGRATIONS 相同)。 */
+export function autonomiaMigrations(dialect: "postgres" | "sqlite") {
+  return buildAutonomiaMigrations(dialect);
 }
 
 // 預設(SQLite)方言的遷移清單:既有契約測試釘死此常數的形狀與內容。
-export const AKENTROS_MIGRATIONS = Object.freeze(buildAkentrosMigrations("sqlite"));
+export const AUTONOMIA_MIGRATIONS = Object.freeze(buildAutonomiaMigrations("sqlite"));
 
 function rows(result: any): any[] {
   return Array.isArray(result?.rows) ? result.rows : [];
 }
 
-export async function migrateAkentrosSchema(query: any) {
+export async function migrateAutonomiaSchema(query: any) {
   if (typeof query !== "function") {
-    throw new TypeError("migrateAkentrosSchema requires a database query function.");
+    throw new TypeError("migrateAutonomiaSchema requires a database query function.");
   }
   const dialect: "postgres" | "sqlite" = query?.dialect === "postgres" ? "postgres" : "sqlite";
 
-  if (await isAkentrosSchemaReady(query)) {
-    return { version: AKENTROS_SCHEMA_VERSION, migrated: false };
+  if (await isAutonomiaSchemaReady(query)) {
+    return { version: AUTONOMIA_SCHEMA_VERSION, migrated: false };
   }
 
   await query(migrationTableSql(dialect));
-  for (const migration of buildAkentrosMigrations(dialect)) {
+  for (const migration of buildAutonomiaMigrations(dialect)) {
     const alreadyRecorded = await query(
-      "SELECT version FROM akentros_ai_schema_migrations WHERE version = ?",
+      "SELECT version FROM autonomia_ai_schema_migrations WHERE version = ?",
       [migration.version],
     );
     if (rows(alreadyRecorded).length) continue;
@@ -320,19 +320,19 @@ export async function migrateAkentrosSchema(query: any) {
       await query(statement);
     }
     const recorded = await query(
-      "INSERT INTO akentros_ai_schema_migrations (version, name) VALUES (?, ?) " +
+      "INSERT INTO autonomia_ai_schema_migrations (version, name) VALUES (?, ?) " +
         "ON CONFLICT (version) DO UPDATE SET " +
         "name = EXCLUDED.name " +
         "RETURNING version",
       [migration.version, migration.name],
     );
     if (Number(rows(recorded)[0]?.version || 0) !== migration.version) {
-      throw new Error(`Akentros schema migration ${migration.version} was not recorded.`);
+      throw new Error(`Autonomia schema migration ${migration.version} was not recorded.`);
     }
   }
 
-  if (!(await isAkentrosSchemaReady(query))) {
-    throw new Error("Akentros schema migration did not produce the required columns and indexes.");
+  if (!(await isAutonomiaSchemaReady(query))) {
+    throw new Error("Autonomia schema migration did not produce the required columns and indexes.");
   }
-  return { version: AKENTROS_SCHEMA_VERSION, migrated: true };
+  return { version: AUTONOMIA_SCHEMA_VERSION, migrated: true };
 }

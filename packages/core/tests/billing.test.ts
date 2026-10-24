@@ -1,14 +1,14 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import type { AkentrosBillableBilling } from "../src/billing.ts";
+import type { AutonomiaBillableBilling } from "../src/billing.ts";
 import {
-  AKENTROS_BILLING_SQL,
-  createAkentrosBillingStore,
-  createAkentrosRequestFingerprint,
-  runBillableAkentrosRequest,
+  AUTONOMIA_BILLING_SQL,
+  createAutonomiaBillingStore,
+  createAutonomiaRequestFingerprint,
+  runBillableAutonomiaRequest,
 } from "../src/billing.ts";
-import { migrateAkentrosSchema } from "../src/schemaMigration.ts";
+import { migrateAutonomiaSchema } from "../src/schemaMigration.ts";
 import { createSqliteTestDb } from "./sqliteTestDb.ts";
 
 const fingerprint = "a".repeat(64);
@@ -20,7 +20,7 @@ function reservation(overrides: any = {}) {
     apiKeyId: "22",
     idempotencyKey: "idem-1",
     requestFingerprint: fingerprint,
-    publicModel: "akentros-test-model",
+    publicModel: "autonomia-test-model",
     pricingRevision: "pricing-v1",
     pricingSnapshot: { billing: { minimum_points: 1 } },
     reservedCostMicros: "8",
@@ -37,7 +37,7 @@ async function billingFixture({
   spendLimit?: number | null;
 } = {}) {
   const { query, insertUser } = createSqliteTestDb();
-  await migrateAkentrosSchema(query);
+  await migrateAutonomiaSchema(query);
   const user = insertUser({ balance_usd_micros: userBalance });
   const key = await query(
     `INSERT INTO ai_api_keys (user_id, name, key_prefix, key_suffix, key_digest, spend_limit_usd_micros)
@@ -48,15 +48,15 @@ async function billingFixture({
 }
 
 test("request fingerprints are canonical across object key order", async () => {
-  const left = await createAkentrosRequestFingerprint({
-    model: "akentros-test-model",
+  const left = await createAutonomiaRequestFingerprint({
+    model: "autonomia-test-model",
     messages: [{ role: "user", content: "hello" }],
     stream: false,
   });
-  const right = await createAkentrosRequestFingerprint({
+  const right = await createAutonomiaRequestFingerprint({
     stream: false,
     messages: [{ content: "hello", role: "user" }],
-    model: "akentros-test-model",
+    model: "autonomia-test-model",
   });
   assert.equal(left, right);
   assert.match(left, /^[a-f0-9]{64}$/);
@@ -64,19 +64,19 @@ test("request fingerprints are canonical across object key order", async () => {
 
 test("reservation contract: read/idempotency/dispatch SQL stays bound-parameter only", () => {
   assert.match(
-    AKENTROS_BILLING_SQL.readIdempotency,
+    AUTONOMIA_BILLING_SQL.readIdempotency,
     /requests\.api_key_id = \? AND requests\.idempotency_key = \?/,
   );
-  assert.match(AKENTROS_BILLING_SQL.dispatch, /WHERE request_id = \? AND status = 'reserved'/);
-  assert.match(AKENTROS_BILLING_SQL.stale, /reservations\.expires_at <= \?/);
-  assert.match(AKENTROS_BILLING_SQL.quarantinedStale, /reservations\.updated_at <= \?/);
-  assert.doesNotMatch(JSON.stringify(AKENTROS_BILLING_SQL), /1000000000/);
-  assert.doesNotMatch(JSON.stringify(AKENTROS_BILLING_SQL), /INTERVAL|CURRENT_TIMESTAMP/);
+  assert.match(AUTONOMIA_BILLING_SQL.dispatch, /WHERE request_id = \? AND status = 'reserved'/);
+  assert.match(AUTONOMIA_BILLING_SQL.stale, /reservations\.expires_at <= \?/);
+  assert.match(AUTONOMIA_BILLING_SQL.quarantinedStale, /reservations\.updated_at <= \?/);
+  assert.doesNotMatch(JSON.stringify(AUTONOMIA_BILLING_SQL), /1000000000/);
+  assert.doesNotMatch(JSON.stringify(AUTONOMIA_BILLING_SQL), /INTERVAL|CURRENT_TIMESTAMP/);
 });
 
 test("successful reservation inserts request, reservation and ledger atomically", async () => {
   const { query, user, apiKeyId } = await billingFixture();
-  const store = createAkentrosBillingStore(query);
+  const store = createAutonomiaBillingStore(query);
 
   const result = await store.reserve(reservation({ userId: user.id, apiKeyId }));
   assert.equal(result.status, "reserved");
@@ -97,7 +97,7 @@ test("successful reservation inserts request, reservation and ledger atomically"
 
 test("database insufficient-balance row remains a 402 billing error", async () => {
   const { query, user, apiKeyId } = await billingFixture({ userBalance: 0 });
-  const store = createAkentrosBillingStore(query);
+  const store = createAutonomiaBillingStore(query);
 
   await assert.rejects(
     store.reserve(reservation({ userId: user.id, apiKeyId, idempotencyKey: null })),
@@ -116,7 +116,7 @@ test("database insufficient-balance row remains a 402 billing error", async () =
 
 test("database spend-limit rejection remains a 402 key-budget error", async () => {
   const { query, user, apiKeyId } = await billingFixture({ spendLimit: 5 });
-  const store = createAkentrosBillingStore(query);
+  const store = createAutonomiaBillingStore(query);
 
   await assert.rejects(
     store.reserve(reservation({ userId: user.id, apiKeyId, idempotencyKey: null })),
@@ -126,7 +126,7 @@ test("database spend-limit rejection remains a 402 key-budget error", async () =
 
 test("same idempotency key with a different payload is rejected", async () => {
   const { query, user, apiKeyId } = await billingFixture();
-  const store = createAkentrosBillingStore(query);
+  const store = createAutonomiaBillingStore(query);
   await store.reserve(reservation({ userId: user.id, apiKeyId }));
   await assert.rejects(
     store.reserve(reservation({ userId: user.id, apiKeyId, requestFingerprint: "b".repeat(64) })),
@@ -136,7 +136,7 @@ test("same idempotency key with a different payload is rejected", async () => {
 
 test("same idempotency key replays the committed request without double charge", async () => {
   const { query, user, apiKeyId } = await billingFixture();
-  const store = createAkentrosBillingStore(query);
+  const store = createAutonomiaBillingStore(query);
   const first = await store.reserve(reservation({ userId: user.id, apiKeyId }));
   const replay = await store.reserve(reservation({ userId: user.id, apiKeyId }));
   assert.equal(replay.aiRequestId, first.aiRequestId);
@@ -152,7 +152,7 @@ test("same idempotency key replays the committed request without double charge",
 async function settledOptInFixture() {
   const { query, user, apiKeyId } = await billingFixture();
   await query(`UPDATE ai_api_keys SET idempotency_replay_ttl_seconds = 3600 WHERE id = ?`, [apiKeyId]);
-  const store = createAkentrosBillingStore(query);
+  const store = createAutonomiaBillingStore(query);
   const first = await store.reserve(reservation({ userId: user.id, apiKeyId }));
   await store.markDispatched(first.requestId);
   await store.settle({
@@ -231,7 +231,7 @@ test("opt-in key: live tombstone binding returns 409 idempotency_replay_not_stor
     `INSERT INTO ai_idempotency_replays (
        request_id, api_key_id, idempotency_key, request_fingerprint,
        endpoint, response_status, content_type, response_payload, payload_bytes, expires_at
-     ) VALUES (?, ?, 'idem-1', ?, 'chat.completions', 200, 'application/x-akentros-replay-tombstone', '', 0, '2030-01-01T00:00:00.000Z')`,
+     ) VALUES (?, ?, 'idem-1', ?, 'chat.completions', 200, 'application/x-autonomia-replay-tombstone', '', 0, '2030-01-01T00:00:00.000Z')`,
     [first.requestId, Number(apiKeyId), fingerprint],
   );
   await assert.rejects(
@@ -242,7 +242,7 @@ test("opt-in key: live tombstone binding returns 409 idempotency_replay_not_stor
 
 test("non-opt-in key: settled request keeps the permanent binding", async () => {
   const { query, user, apiKeyId } = await billingFixture();
-  const store = createAkentrosBillingStore(query);
+  const store = createAutonomiaBillingStore(query);
   const first = await store.reserve(reservation({ userId: user.id, apiKeyId }));
   await store.markDispatched(first.requestId);
   await store.settle({
@@ -264,7 +264,7 @@ test("non-opt-in key: settled request keeps the permanent binding", async () => 
 
 test("dispatch transitions reserved to dispatched", async () => {
   const { query, user, apiKeyId } = await billingFixture();
-  const store = createAkentrosBillingStore(query);
+  const store = createAutonomiaBillingStore(query);
   const reserved = await store.reserve(reservation({ userId: user.id, apiKeyId }));
   const dispatched: any = await store.markDispatched(reserved.requestId);
   assert.equal(dispatched.status, "dispatched");
@@ -272,7 +272,7 @@ test("dispatch transitions reserved to dispatched", async () => {
 
 test("settle charges the key and refunds the unused reservation", async () => {
   const { query, user, apiKeyId } = await billingFixture();
-  const store = createAkentrosBillingStore(query);
+  const store = createAutonomiaBillingStore(query);
   const reserved = await store.reserve(reservation({ userId: user.id, apiKeyId }));
   await store.markDispatched(reserved.requestId);
 
@@ -308,7 +308,7 @@ test("settle caps the charge at the reserved amount when reported usage exceeds 
   // 預留單授權的上限:charged 夾到 reserved、退款不得為負、餘額不得被
   // 扣破。此測試釘死「絕不多收」的 SQL 不變量。
   const { query, user, apiKeyId } = await billingFixture();
-  const store = createAkentrosBillingStore(query);
+  const store = createAutonomiaBillingStore(query);
   const reserved = await store.reserve(reservation({ userId: user.id, apiKeyId }));
   await store.markDispatched(reserved.requestId);
 
@@ -357,10 +357,10 @@ test("settle caps the charge at the reserved amount when reported usage exceeds 
 
 test("zero-point settle requests keep their reserved-zero path", async () => {
   const { query, user, apiKeyId } = await billingFixture();
-  const store = createAkentrosBillingStore(query);
+  const store = createAutonomiaBillingStore(query);
   await query(
     `INSERT INTO ai_requests (request_id, user_id, api_key_id, request_fingerprint, public_model, pricing_revision, pricing_snapshot)
-     VALUES ('req_zero', ?, ?, ?, 'akentros-test-model', 'pricing-v1', '{}')`,
+     VALUES ('req_zero', ?, ?, ?, 'autonomia-test-model', 'pricing-v1', '{}')`,
     [user.id, apiKeyId, fingerprint],
   );
   await query(
@@ -387,7 +387,7 @@ test("settle ledger entries track the real balance across the refund", async () 
   // debit 1000000→999992、credit 999992→999997。退款分錄若把 before 記成
   // 「讀值 − 退款」,整條 ledger 鏈會永久差一個退款量,對帳對不上。
   const { query, user, apiKeyId } = await billingFixture();
-  const store = createAkentrosBillingStore(query);
+  const store = createAutonomiaBillingStore(query);
   const reserved = await store.reserve(reservation({ userId: user.id, apiKeyId }));
   await store.markDispatched(reserved.requestId);
   await store.settle({
@@ -423,7 +423,7 @@ test("zero reported cost settles a non-zero reservation when the provider explic
   // 允許結算——charged=0、全額退款,不再以 invalid_billing_state 拒絕而
   // 隔離一小時。守衛的 CAST 綁定比較保持不變。
   const { query, user, apiKeyId } = await billingFixture();
-  const store = createAkentrosBillingStore(query);
+  const store = createAutonomiaBillingStore(query);
   const reserved = await store.reserve(reservation({ userId: user.id, apiKeyId }));
   await store.markDispatched(reserved.requestId);
 
@@ -448,7 +448,7 @@ test("zero reported cost from estimated sources still cannot settle a non-zero r
   // 守衛對 estimated 來源的 0 成本結算照舊拒絕:估計值本就不該為 0,
   // 該情境維持資料異常判定,交由對帳流程隔離處理。
   const { query, user, apiKeyId } = await billingFixture();
-  const store = createAkentrosBillingStore(query);
+  const store = createAutonomiaBillingStore(query);
   const reserved = await store.reserve(reservation({ userId: user.id, apiKeyId }));
   await store.markDispatched(reserved.requestId);
 
@@ -472,7 +472,7 @@ test("zero reported cost from estimated sources still cannot settle a non-zero r
 
 test("provider failure refunds the reservation before dispatch is refunded too", async () => {
   const { query, user, apiKeyId } = await billingFixture();
-  const store = createAkentrosBillingStore(query);
+  const store = createAutonomiaBillingStore(query);
   const reserved = await store.reserve(reservation({ userId: user.id, apiKeyId }));
 
   const refunded = await store.refund({
@@ -499,7 +499,7 @@ test("provider failure refunds the reservation before dispatch is refunded too",
 
 test("quarantined reservations are refunded by resolveQuarantined after the window", async () => {
   const { query, user, apiKeyId } = await billingFixture();
-  const store = createAkentrosBillingStore(query);
+  const store = createAutonomiaBillingStore(query);
   const reserved = await store.reserve(reservation({ userId: user.id, apiKeyId }));
   await store.markDispatched(reserved.requestId);
   await store.markNeedsReconciliation({ requestId: reserved.requestId, errorCode: "usage_unknown" });
@@ -520,7 +520,7 @@ test("quarantined reservations are refunded by resolveQuarantined after the wind
 
 test("resolveQuarantined clamps its inputs to safe bounds", async () => {
   const { query } = await billingFixture();
-  const store = createAkentrosBillingStore(query);
+  const store = createAutonomiaBillingStore(query);
   const outcomes = await store.resolveQuarantined({ limit: 10000, olderThanMs: 1 });
   assert.deepEqual(outcomes, []);
 });
@@ -530,7 +530,7 @@ test("stale reservations are found by expiry", async () => {
   // 用已過期的 expires_at 建立保留單。
   await query(
     `INSERT INTO ai_requests (request_id, user_id, api_key_id, request_fingerprint, public_model, pricing_revision, pricing_snapshot)
-     VALUES ('req_stale', ?, ?, ?, 'akentros-test-model', 'pricing-v1', '{}')`,
+     VALUES ('req_stale', ?, ?, ?, 'autonomia-test-model', 'pricing-v1', '{}')`,
     [user.id, apiKeyId, fingerprint],
   );
   await query(
@@ -539,7 +539,7 @@ test("stale reservations are found by expiry", async () => {
     [user.id],
   );
 
-  const stale = await query(AKENTROS_BILLING_SQL.stale, [new Date().toISOString(), 100]);
+  const stale = await query(AUTONOMIA_BILLING_SQL.stale, [new Date().toISOString(), 100]);
   assert.equal(stale.rows.length, 1);
   assert.equal(stale.rows[0].request_id, "req_stale");
 });
@@ -554,9 +554,9 @@ test("insufficient points stop before provider dispatch", async () => {
       error.code = "insufficient_balance";
       throw error;
     },
-  } as unknown as AkentrosBillableBilling;
+  } as unknown as AutonomiaBillableBilling;
   await assert.rejects(
-    runBillableAkentrosRequest({
+    runBillableAutonomiaRequest({
       billing,
       reservation: reservation(),
       providerCall: async () => {
@@ -582,7 +582,7 @@ test("idempotent replay skips provider and every billing mutation", async () => 
     refund: async () => calls.push("refund"),
     markNeedsReconciliation: async () => calls.push("reconcile"),
   };
-  const result = await runBillableAkentrosRequest({
+  const result = await runBillableAutonomiaRequest({
     billing,
     reservation: reservation(),
     providerCall: async () => {
@@ -606,7 +606,7 @@ test("fake provider success dispatches once and settles once", async () => {
     refund: async () => calls.push("refund"),
     markNeedsReconciliation: async () => calls.push("reconcile"),
   };
-  const result = await runBillableAkentrosRequest({
+  const result = await runBillableAutonomiaRequest({
     billing,
     reservation: reservation(),
     providerCall: async () => {
@@ -633,7 +633,7 @@ test("definitive fake-provider failure refunds, unknown usage reconciles", async
       usageUnknown,
     });
     await assert.rejects(
-      runBillableAkentrosRequest({
+      runBillableAutonomiaRequest({
         billing,
         reservation: reservation(),
         providerCall: async () => {
@@ -664,7 +664,7 @@ test("settlement failure is quarantined for reconciliation and never refunded", 
     markNeedsReconciliation: async () => calls.push("reconcile"),
   };
   await assert.rejects(
-    runBillableAkentrosRequest({
+    runBillableAutonomiaRequest({
       billing,
       reservation: reservation(),
       providerCall: async () => {
@@ -682,18 +682,18 @@ test("Hono billing adapter uses the shared billing core", () => {
     new URL("../../../apps/gateway/src/utils/aiBilling.ts", import.meta.url),
     "utf8",
   );
-  assert.match(worker, /createAkentrosBillingStore/);
+  assert.match(worker, /createAutonomiaBillingStore/);
   assert.match(worker, /ensureAiSchema/);
   assert.doesNotMatch(worker, /UPDATE users|INSERT INTO ledger_entries/);
 });
 
 test("reconcileStale quarantines stale reservations that already dispatched", async () => {
   const { query, user } = await billingFixture();
-  const store = createAkentrosBillingStore(query);
+  const store = createAutonomiaBillingStore(query);
   await query(
     `INSERT INTO ai_requests (request_id, user_id, api_key_id, request_fingerprint, public_model,
                               pricing_revision, pricing_snapshot, dispatched_at)
-     VALUES ('req_stale_dispatched', ?, ?, ?, 'akentros-test-model', 'pricing-v1', '{}', ?)`,
+     VALUES ('req_stale_dispatched', ?, ?, ?, 'autonomia-test-model', 'pricing-v1', '{}', ?)`,
     [user.id, "22", fingerprint, new Date().toISOString()],
   );
   await query(
@@ -720,11 +720,11 @@ test("reconcileStale quarantines stale reservations that already dispatched", as
 
 test("reconcileStale refunds stale reservations that never dispatched", async () => {
   const { query, user } = await billingFixture();
-  const store = createAkentrosBillingStore(query);
+  const store = createAutonomiaBillingStore(query);
   await query(
     `INSERT INTO ai_requests (request_id, user_id, api_key_id, request_fingerprint, public_model,
                               pricing_revision, pricing_snapshot)
-     VALUES ('req_stale_reserved', ?, ?, ?, 'akentros-test-model', 'pricing-v1', '{}')`,
+     VALUES ('req_stale_reserved', ?, ?, ?, 'autonomia-test-model', 'pricing-v1', '{}')`,
     [user.id, "22", fingerprint],
   );
   await query(

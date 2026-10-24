@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-// ECO-SUPPLY-1 — assemble the publishable @akentros/core artifact.
+// ECO-SUPPLY-1 — assemble the publishable @autonomia/core artifact.
 //
 // The in-repo manifest deliberately points `exports` at `./src/*.ts`:
 // development, tests, typecheck and the Docker image all run the TypeScript

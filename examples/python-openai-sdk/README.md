@@ -5,8 +5,8 @@
 ```bash
 python -m venv .venv && source .venv/bin/activate   # 或慣用的環境管理
 pip install -r requirements.txt
-export AKENTROS_API_KEY=sk-akentros-live_...        # 控制台建立
-export AKENTROS_BASE_URL=http://localhost:8787/api/ai/v1
+export AUTONOMIA_API_KEY=sk-autonomia-live_...        # 控制台建立
+export AUTONOMIA_BASE_URL=http://localhost:8787/api/ai/v1
 python chat.py        # 基本 chat/completions
 python stream.py      # SSE 串流(含終止 chunk 的 usage)
 ```
@@ -24,7 +24,7 @@ Python SDK 支援 per-request headers(與 Node 範例同語義):
 
 ```python
 completion = client.chat.completions.create(
-    model="akentros/gpt-5.2",
+    model="autonomia/gpt-5.2",
     messages=[...],
     extra_headers={"Idempotency-Key": f"demo-{uuid.uuid4()}"},
 )

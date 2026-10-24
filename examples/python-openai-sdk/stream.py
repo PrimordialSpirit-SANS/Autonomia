@@ -5,15 +5,15 @@ import os
 
 from openai import OpenAI
 
-base_url = os.environ.get("AKENTROS_BASE_URL", "http://localhost:8787/api/ai/v1")
-api_key = os.environ.get("AKENTROS_API_KEY")
+base_url = os.environ.get("AUTONOMIA_BASE_URL", "http://localhost:8787/api/ai/v1")
+api_key = os.environ.get("AUTONOMIA_API_KEY")
 if not api_key:
-    raise SystemExit("請先設定 AKENTROS_API_KEY(在控制台「金鑰」頁建立)")
+    raise SystemExit("請先設定 AUTONOMIA_API_KEY(在控制台「金鑰」頁建立)")
 
 client = OpenAI(base_url=base_url, api_key=api_key)
 
 stream = client.chat.completions.create(
-    model=os.environ.get("AKENTROS_MODEL", "akentros/gpt-5.2"),
+    model=os.environ.get("AUTONOMIA_MODEL", "autonomia/gpt-5.2"),
     messages=[{"role": "user", "content": "從 1 數到 10,每個數字一行。"}],
     stream=True,
     stream_options={"include_usage": True},

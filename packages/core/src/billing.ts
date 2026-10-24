@@ -1,6 +1,6 @@
-import { AkentrosError, invalidRequest } from "./openaiErrors.ts";
-import type { AkentrosQuery } from "./query.ts";
-import { akentrosQueryRows as rows } from "./query.ts";
+import { AutonomiaError, invalidRequest } from "./openaiErrors.ts";
+import type { AutonomiaQuery } from "./query.ts";
+import { autonomiaQueryRows as rows } from "./query.ts";
 import { sqlDialect } from "./sqlDialect.ts";
 
 // 計費對外的型別契約:reserve→settle→refund 狀態機的輸入/輸出與 store
@@ -9,10 +9,10 @@ import { sqlDialect } from "./sqlDialect.ts";
 // (requiredString/integerString/…)。
 
 /** 微美元整數的接受形狀:內部一律經 integerString 轉成十進位字串。 */
-export type AkentrosMicrosInput = string | number | bigint;
+export type AutonomiaMicrosInput = string | number | bigint;
 
 /** normalizeBillingRow 的輸出:計費狀態的權威呈現(所有 store 方法回傳它)。 */
-export interface AkentrosBillingRow {
+export interface AutonomiaBillingRow {
   requestId: string;
   aiRequestId: string;
   requestFingerprint: string;
@@ -26,7 +26,7 @@ export interface AkentrosBillingRow {
   idempotentReplay: boolean;
 }
 
-export interface AkentrosBillingReserveInput {
+export interface AutonomiaBillingReserveInput {
   requestId: string;
   userId: string | number | bigint;
   apiKeyId: string | number | bigint;
@@ -37,82 +37,82 @@ export interface AkentrosBillingReserveInput {
   publicModel: string;
   pricingRevision: string;
   pricingSnapshot?: unknown;
-  reservedCostMicros: AkentrosMicrosInput;
+  reservedCostMicros: AutonomiaMicrosInput;
   expiresAt: string;
 }
 
-export interface AkentrosBillingSettleInput {
+export interface AutonomiaBillingSettleInput {
   requestId: string;
-  actualCostMicros: AkentrosMicrosInput;
-  inputTokens: AkentrosMicrosInput;
-  outputTokens: AkentrosMicrosInput;
+  actualCostMicros: AutonomiaMicrosInput;
+  inputTokens: AutonomiaMicrosInput;
+  outputTokens: AutonomiaMicrosInput;
   usageSource?: string;
   status?: "succeeded" | "partially_succeeded";
   totalLatencyMs?: number | null;
 }
 
-export interface AkentrosBillingRefundInput {
+export interface AutonomiaBillingRefundInput {
   requestId: string;
   reason?: string;
   errorCode?: string;
   httpStatus?: number;
 }
 
-export interface AkentrosBillingRefundFromStateInput extends AkentrosBillingRefundInput {
+export interface AutonomiaBillingRefundFromStateInput extends AutonomiaBillingRefundInput {
   fromState: string;
   description: string;
 }
 
-export interface AkentrosBillingMarkNeedsReconciliationInput {
+export interface AutonomiaBillingMarkNeedsReconciliationInput {
   requestId: string;
   errorCode?: string;
 }
 
-export interface AkentrosBillingReconcileOptions {
+export interface AutonomiaBillingReconcileOptions {
   limit?: number;
 }
 
-export interface AkentrosBillingQuarantineOptions extends AkentrosBillingReconcileOptions {
+export interface AutonomiaBillingQuarantineOptions extends AutonomiaBillingReconcileOptions {
   olderThanMs?: number;
 }
 
 /** 對帳批次中單列的結果:成功是 BillingRow;併發衝突是標記物件。 */
-export type AkentrosReconciliationOutcome =
-  | AkentrosBillingRow
+export type AutonomiaReconciliationOutcome =
+  | AutonomiaBillingRow
   | { requestId: string; reservationState: "conflict_resolved_concurrently" };
 
-/** reserve 結果中消費端(inference runtime、runBillableAkentrosRequest)實際
- * 讀取的欄位;AkentrosBillingRow 為其超集,測試替身可只回傳此最小形狀。 */
-export interface AkentrosReservationResult {
+/** reserve 結果中消費端(inference runtime、runBillableAutonomiaRequest)實際
+ * 讀取的欄位;AutonomiaBillingRow 為其超集,測試替身可只回傳此最小形狀。 */
+export interface AutonomiaReservationResult {
   requestId: string;
   idempotentReplay: boolean;
   status?: string;
 }
 
 /**
- * 推論 runtime 與 runBillableAkentrosRequest 依賴的計費方法子集。完整的
- * AkentrosBillingStore 滿足此介面;測試可注入僅實作被觸發路徑的替身。
+ * 推論 runtime 與 runBillableAutonomiaRequest 依賴的計費方法子集。完整的
+ * AutonomiaBillingStore 滿足此介面;測試可注入僅實作被觸發路徑的替身。
  */
-export interface AkentrosBillableBilling {
-  reserve(input: AkentrosBillingReserveInput): Promise<AkentrosReservationResult>;
+export interface AutonomiaBillableBilling {
+  reserve(input: AutonomiaBillingReserveInput): Promise<AutonomiaReservationResult>;
   markDispatched(requestId: string): Promise<unknown>;
-  settle(input: AkentrosBillingSettleInput): Promise<unknown>;
-  refund(input: AkentrosBillingRefundInput): Promise<unknown>;
-  markNeedsReconciliation(input: AkentrosBillingMarkNeedsReconciliationInput): Promise<unknown>;
+  settle(input: AutonomiaBillingSettleInput): Promise<unknown>;
+  refund(input: AutonomiaBillingRefundInput): Promise<unknown>;
+  markNeedsReconciliation(input: AutonomiaBillingMarkNeedsReconciliationInput): Promise<unknown>;
 }
 
-export interface AkentrosBillingStore {
-  reserve(input: AkentrosBillingReserveInput): Promise<AkentrosBillingRow>;
-  read(requestId: string): Promise<AkentrosBillingRow | null>;
-  markDispatched(requestId: string): Promise<AkentrosBillingRow | null>;
-  settle(input: AkentrosBillingSettleInput): Promise<AkentrosBillingRow>;
-  refund(input: AkentrosBillingRefundInput): Promise<AkentrosBillingRow>;
-  refundFromState(input: AkentrosBillingRefundFromStateInput): Promise<AkentrosBillingRow>;
+export interface AutonomiaBillingStore {
+  reserve(input: AutonomiaBillingReserveInput): Promise<AutonomiaBillingRow>;
+  read(requestId: string): Promise<AutonomiaBillingRow | null>;
+  markDispatched(requestId: string): Promise<AutonomiaBillingRow | null>;
+  settle(input: AutonomiaBillingSettleInput): Promise<AutonomiaBillingRow>;
+  refund(input: AutonomiaBillingRefundInput): Promise<AutonomiaBillingRow>;
+  refundFromState(input: AutonomiaBillingRefundFromStateInput): Promise<AutonomiaBillingRow>;
   markNeedsReconciliation(
-    input: AkentrosBillingMarkNeedsReconciliationInput,
-  ): Promise<AkentrosBillingRow | null>;
-  reconcileStale(options?: AkentrosBillingReconcileOptions): Promise<AkentrosReconciliationOutcome[]>;
-  resolveQuarantined(options?: AkentrosBillingQuarantineOptions): Promise<AkentrosReconciliationOutcome[]>;
+    input: AutonomiaBillingMarkNeedsReconciliationInput,
+  ): Promise<AutonomiaBillingRow | null>;
+  reconcileStale(options?: AutonomiaBillingReconcileOptions): Promise<AutonomiaReconciliationOutcome[]>;
+  resolveQuarantined(options?: AutonomiaBillingQuarantineOptions): Promise<AutonomiaReconciliationOutcome[]>;
 }
 
 const DECIMAL_INTEGER = /^(0|[1-9][0-9]*)$/;
@@ -148,7 +148,7 @@ function safeNumber(value: unknown) {
 function normalizeBillingRow(
   row: any,
   idempotentReplay = Boolean(row?.idempotent_replay),
-): AkentrosBillingRow | null {
+): AutonomiaBillingRow | null {
   if (!row) return null;
   return {
     requestId: String(row.request_id),
@@ -180,7 +180,7 @@ function stableJson(value: any, depth = 0): string {
   return `{${keys.map((key) => `${JSON.stringify(key)}:${stableJson(value[key], depth + 1)}`).join(",")}}`;
 }
 
-export async function createAkentrosRequestFingerprint(value: any) {
+export async function createAutonomiaRequestFingerprint(value: any) {
   const bytes = new TextEncoder().encode(stableJson(value));
   const digest = await globalThis.crypto.subtle.digest("SHA-256", bytes);
   return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
@@ -189,7 +189,7 @@ export async function createAkentrosRequestFingerprint(value: any) {
 // SQLite 方言:時間戳以 UTC ISO 字串(含毫秒)存 TEXT,由呼叫端綁定;
 // 原子性由 transaction(fn)(BEGIN IMMEDIATE … COMMIT)保證,取代
 // PostgreSQL 時代的單語句資料修改 CTE。
-export const AKENTROS_BILLING_SQL = Object.freeze({
+export const AUTONOMIA_BILLING_SQL = Object.freeze({
   read: `
     SELECT requests.id AS ai_request_id, requests.request_id,
            requests.request_fingerprint, requests.status,
@@ -255,7 +255,7 @@ function nowIso() {
 }
 
 function idempotencyConflict() {
-  return new AkentrosError("The Idempotency-Key was already used with a different request.", {
+  return new AutonomiaError("The Idempotency-Key was already used with a different request.", {
     status: 409,
     type: "invalid_request_error",
     code: "idempotency_conflict",
@@ -268,10 +268,10 @@ function idempotencyConflict() {
 // idempotency_replay_not_stored（不重放、不重新執行、不雙重扣費）；TTL 過期
 // 後綁定隨 tombstone 一起釋放。gateway 的 ai_idempotency_replays 寫入端
 // 與此處的分類端共用同一常量，避免字面量漂移。
-export const AKENTROS_REPLAY_TOMBSTONE_CONTENT_TYPE = "application/x-akentros-replay-tombstone";
+export const AUTONOMIA_REPLAY_TOMBSTONE_CONTENT_TYPE = "application/x-autonomia-replay-tombstone";
 
 function replayNotStoredError() {
-  return new AkentrosError(
+  return new AutonomiaError(
     "The original response for this Idempotency-Key exceeded the replay storage limit and cannot be replayed; send a new Idempotency-Key to execute the request again.",
     {
       status: 409,
@@ -296,16 +296,16 @@ function replayNotStoredError() {
 //   清理後的空集）→ 綁定釋放、同鍵重送以全新請求重新執行（OpenAI 語意：
 //   TTL 只是重放窗口，不是金鑰的死刑）。執行失敗（failed）或當初被拒
 //   （rejected）的綁定同樣走此路——沒有落地回應可重放，鍵不應永久卡死。
-type AkentrosIdempotentBindingOutcome = "replay" | "not_stored" | "expired";
+type AutonomiaIdempotentBindingOutcome = "replay" | "not_stored" | "expired";
 
-function classifyIdempotentBinding(row: any, now: string): AkentrosIdempotentBindingOutcome {
+function classifyIdempotentBinding(row: any, now: string): AutonomiaIdempotentBindingOutcome {
   const ttlSeconds = Number(row?.replay_ttl_seconds) > 0 ? Number(row.replay_ttl_seconds) : 0;
   if (ttlSeconds <= 0) return "replay";
   const status = String(row?.status || "");
   if (status === "reserved" || status === "dispatched") return "replay";
   const replayExpiresAt = row?.replay_expires_at ? String(row.replay_expires_at) : null;
   if (replayExpiresAt !== null && replayExpiresAt > now) {
-    return String(row.replay_content_type) === AKENTROS_REPLAY_TOMBSTONE_CONTENT_TYPE
+    return String(row.replay_content_type) === AUTONOMIA_REPLAY_TOMBSTONE_CONTENT_TYPE
       ? "not_stored"
       : "replay";
   }
@@ -314,13 +314,13 @@ function classifyIdempotentBinding(row: any, now: string): AkentrosIdempotentBin
 
 // 分類結果的兌現：not_stored 拋出可分辨的 409；replay 回讀原列（呼叫端
 // inference.reserve 以 replayError 呈現進行中/已完成兩種 409）。
-function resolveIdempotentBinding(row: any, outcome: AkentrosIdempotentBindingOutcome) {
+function resolveIdempotentBinding(row: any, outcome: AutonomiaIdempotentBindingOutcome) {
   if (outcome === "not_stored") throw replayNotStoredError();
   return normalizeBillingRow(row, true)!;
 }
 
 function insufficientPoints(requestId: string) {
-  const error = new AkentrosError("The account does not have enough points for this request.", {
+  const error = new AutonomiaError("The account does not have enough points for this request.", {
     status: 402,
     type: "insufficient_funds_error",
     code: "insufficient_balance",
@@ -330,7 +330,7 @@ function insufficientPoints(requestId: string) {
 }
 
 function pointLimitExceeded(requestId: string) {
-  const error = new AkentrosError("This API key has reached its maximum point spend.", {
+  const error = new AutonomiaError("This API key has reached its maximum point spend.", {
     status: 402,
     type: "insufficient_funds_error",
     code: "spend_limit_exceeded",
@@ -340,7 +340,7 @@ function pointLimitExceeded(requestId: string) {
 }
 
 function invalidBillingState(message: string) {
-  return new AkentrosError(message, {
+  return new AutonomiaError(message, {
     status: 409,
     type: "invalid_request_error",
     code: "invalid_billing_state",
@@ -349,21 +349,21 @@ function invalidBillingState(message: string) {
 
 // 執行交易:query 介面可選提供 transaction(fn)(SQLite adapter 有提供;
 // 測試的假 query 沒有時,退回逐語句執行)。
-async function withTransaction<T>(query: AkentrosQuery, fn: () => Promise<T>): Promise<T> {
+async function withTransaction<T>(query: AutonomiaQuery, fn: () => Promise<T>): Promise<T> {
   if (typeof query?.transaction === "function") {
     return (await query.transaction(fn)) as T;
   }
   return fn();
 }
 
-export function createAkentrosBillingStore(query: AkentrosQuery): AkentrosBillingStore {
+export function createAutonomiaBillingStore(query: AutonomiaQuery): AutonomiaBillingStore {
   const dialect = sqlDialect(query);
   if (typeof query !== "function") {
-    throw new TypeError("createAkentrosBillingStore requires a database query function.");
+    throw new TypeError("createAutonomiaBillingStore requires a database query function.");
   }
 
   async function read(requestId: string) {
-    const result = await query(AKENTROS_BILLING_SQL.read, [requiredString(requestId, "requestId", 80)]);
+    const result = await query(AUTONOMIA_BILLING_SQL.read, [requiredString(requestId, "requestId", 80)]);
     return normalizeBillingRow(rows(result)[0], true);
   }
 
@@ -390,7 +390,7 @@ export function createAkentrosBillingStore(query: AkentrosQuery): AkentrosBillin
       // 處理,不建立新請求、不扣點。僅「過期綁定」不在這裡處理——釋放必須
       // 與新列寫入同一交易,否則釋放與重綁之間的空窗會讓第三方插隊奪鍵。
       if (idempotencyKey) {
-        const replayed = await query(AKENTROS_BILLING_SQL.readIdempotency, [apiKeyId, idempotencyKey]);
+        const replayed = await query(AUTONOMIA_BILLING_SQL.readIdempotency, [apiKeyId, idempotencyKey]);
         const replayRow: any = rows(replayed)[0];
         if (replayRow) {
           if (String(replayRow.request_fingerprint) !== fingerprint) throw idempotencyConflict();
@@ -460,7 +460,7 @@ export function createAkentrosBillingStore(query: AkentrosQuery): AkentrosBillin
         let insertedRow: any = null;
         for (let attempt = 0; attempt < 2 && !insertedRow; attempt += 1) {
           if (idempotencyKey) {
-            const replayed = await query(AKENTROS_BILLING_SQL.readIdempotency, [apiKeyId, idempotencyKey]);
+            const replayed = await query(AUTONOMIA_BILLING_SQL.readIdempotency, [apiKeyId, idempotencyKey]);
             const replayRow: any = rows(replayed)[0];
             if (replayRow) {
               if (String(replayRow.request_fingerprint) !== fingerprint) throw idempotencyConflict();
@@ -556,7 +556,7 @@ export function createAkentrosBillingStore(query: AkentrosQuery): AkentrosBillin
                 balance_before, balance_after, transaction_type,
                 source_type, source_id, idempotency_key, description, metadata
               )
-              VALUES (?, ?, ?, 'debit', ?, ?, ?, 'ai_usage_reservation', 'akentros_ai', ?, ?, 'Akentros usage reservation', ?)
+              VALUES (?, ?, ?, 'debit', ?, ?, ?, 'ai_usage_reservation', 'autonomia_ai', ?, ?, 'Autonomia usage reservation', ?)
             `,
               [
                 userId,
@@ -594,9 +594,9 @@ export function createAkentrosBillingStore(query: AkentrosQuery): AkentrosBillin
           false,
         )!;
         if (normalized.errorCode === "invalid_api_key") {
-          // 金鑰在 authenticateAkentrosApiKey 與 reserve 之間被撤銷/過期:
+          // 金鑰在 authenticateAutonomiaApiKey 與 reserve 之間被撤銷/過期:
           // 應回 401 invalid_api_key,而不是誤標成 402 spend_limit_exceeded。
-          const error = new AkentrosError("The Akentros API key is invalid, expired, or revoked.", {
+          const error = new AutonomiaError("The Autonomia API key is invalid, expired, or revoked.", {
             status: 401,
             type: "authentication_error",
             code: "invalid_api_key",
@@ -614,7 +614,7 @@ export function createAkentrosBillingStore(query: AkentrosQuery): AkentrosBillin
 
     async markDispatched(requestId: string) {
       const normalizedId = requiredString(requestId, "requestId", 80);
-      const result = await query(AKENTROS_BILLING_SQL.dispatch, [nowIso(), nowIso(), normalizedId]);
+      const result = await query(AUTONOMIA_BILLING_SQL.dispatch, [nowIso(), nowIso(), normalizedId]);
       return normalizeBillingRow(rows(result)[0], false) || (await read(normalizedId));
     },
 
@@ -724,7 +724,7 @@ export function createAkentrosBillingStore(query: AkentrosQuery): AkentrosBillin
               balance_before, balance_after, transaction_type,
               source_type, source_id, idempotency_key, description, metadata
             )
-            VALUES (?, ?, ?, 'credit', ?, ?, ?, 'ai_usage_refund', 'akentros_ai', ?, ?, 'Akentros unused reservation refund', ?)
+            VALUES (?, ?, ?, 'credit', ?, ?, ?, 'ai_usage_refund', 'autonomia_ai', ?, ?, 'Autonomia unused reservation refund', ?)
           `,
             [
               transition.user_id,
@@ -791,7 +791,7 @@ export function createAkentrosBillingStore(query: AkentrosQuery): AkentrosBillin
         reason,
         errorCode,
         httpStatus,
-        description: "Akentros reservation refund",
+        description: "Autonomia reservation refund",
       });
     },
 
@@ -856,7 +856,7 @@ export function createAkentrosBillingStore(query: AkentrosQuery): AkentrosBillin
               balance_before, balance_after, transaction_type,
               source_type, source_id, idempotency_key, description, metadata
             )
-            VALUES (?, ?, ?, 'credit', ?, ?, ?, 'ai_usage_refund', 'akentros_ai', ?, ?, ?, ?)
+            VALUES (?, ?, ?, 'credit', ?, ?, ?, 'ai_usage_refund', 'autonomia_ai', ?, ?, ?, ?)
           `,
             [
               transition.user_id,
@@ -932,7 +932,7 @@ export function createAkentrosBillingStore(query: AkentrosQuery): AkentrosBillin
 
     async reconcileStale({ limit = 100 }: { limit?: number } = {}) {
       const safeLimit = Math.min(Math.max(Number(limit) || 100, 1), 500);
-      const result = await query(AKENTROS_BILLING_SQL.stale, [nowIso(), safeLimit]);
+      const result = await query(AUTONOMIA_BILLING_SQL.stale, [nowIso(), safeLimit]);
       const bounded = rows(result);
       const outcomes: any[] = [];
       for (const stale of bounded) {
@@ -983,7 +983,7 @@ export function createAkentrosBillingStore(query: AkentrosQuery): AkentrosBillin
         reason: "quarantine_resolved",
         errorCode: "reservation_expired",
         httpStatus: 504,
-        description: "Akentros quarantined reservation refund",
+        description: "Autonomia quarantined reservation refund",
       });
     },
 
@@ -997,7 +997,7 @@ export function createAkentrosBillingStore(query: AkentrosQuery): AkentrosBillin
       const safeLimit = Math.min(Math.max(Number(limit) || 100, 1), 500);
       const safeAge = Math.min(Math.max(Number(olderThanMs) || 3_600_000, 60_000), 30 * 86_400_000);
       const cutoff = new Date(Date.now() - safeAge).toISOString();
-      const result = await query(AKENTROS_BILLING_SQL.quarantinedStale, [cutoff, safeLimit]);
+      const result = await query(AUTONOMIA_BILLING_SQL.quarantinedStale, [cutoff, safeLimit]);
       const outcomes: any[] = [];
       for (const quarantined of rows(result)) {
         // 同 reconcileStale:單列衝突不中斷整批隔離保留單的自動退款。
@@ -1024,33 +1024,33 @@ export function createAkentrosBillingStore(query: AkentrosQuery): AkentrosBillin
 }
 
 /** providerCall 的預期回傳:usage 來源與實際成本由 provider 端決定。 */
-export interface AkentrosBillableProviderResult {
-  actualCostMicros: AkentrosMicrosInput;
-  inputTokens: AkentrosMicrosInput;
-  outputTokens: AkentrosMicrosInput;
+export interface AutonomiaBillableProviderResult {
+  actualCostMicros: AutonomiaMicrosInput;
+  inputTokens: AutonomiaMicrosInput;
+  outputTokens: AutonomiaMicrosInput;
   usageSource?: string;
   status?: "succeeded" | "partially_succeeded";
   totalLatencyMs?: number | null;
 }
 
-export async function runBillableAkentrosRequest({
+export async function runBillableAutonomiaRequest({
   billing,
   reservation,
   providerCall,
 }: {
-  billing: AkentrosBillableBilling;
-  reservation: AkentrosBillingReserveInput;
-  providerCall: (input: { requestId: string }) => Promise<AkentrosBillableProviderResult>;
+  billing: AutonomiaBillableBilling;
+  reservation: AutonomiaBillingReserveInput;
+  providerCall: (input: { requestId: string }) => Promise<AutonomiaBillableProviderResult>;
 }): Promise<
-  | { kind: "idempotent_replay"; billing: AkentrosReservationResult }
+  | { kind: "idempotent_replay"; billing: AutonomiaReservationResult }
   | {
       kind: "succeeded";
       billing: unknown;
-      provider: AkentrosBillableProviderResult;
+      provider: AutonomiaBillableProviderResult;
     }
 > {
   if (!billing || typeof billing.reserve !== "function") {
-    throw new TypeError("A Akentros billing store is required.");
+    throw new TypeError("A Autonomia billing store is required.");
   }
   if (typeof providerCall !== "function") throw new TypeError("providerCall must be a function.");
 

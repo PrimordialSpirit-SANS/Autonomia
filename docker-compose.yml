@@ -2,38 +2,38 @@
 #
 #   cp apps/gateway/.dev.vars.example .env    # fill JWT_SECRET / pepper / provider keys
 #   docker compose up -d --build
-#   docker compose run --rm akentros-gateway npm run migrate   # first deploy only
+#   docker compose run --rm autonomia-gateway npm run migrate   # first deploy only
 #   open http://localhost:8080
 #
 # .env is read by the gateway service (env_file, optional so `up` works for a
 # demo even before you fill secrets — the gateway fails closed without
 # JWT_SECRET/pepper, which is the intended behavior, not a compose bug).
 
-name: akentros
+name: autonomia
 
 services:
-  akentros-gateway:
+  autonomia-gateway:
     build:
       context: .
       target: gateway
-    image: akentros/gateway:local
+    image: autonomia/gateway:local
     restart: unless-stopped
     environment:
-      AKENTROS_ENABLED: "true"
-      AKENTROS_HOST: "0.0.0.0"
-      AKENTROS_DB_PATH: /data/akentros.db
+      AUTONOMIA_ENABLED: "true"
+      AUTONOMIA_HOST: "0.0.0.0"
+      AUTONOMIA_DB_PATH: /data/autonomia.db
       # The compose nginx proxy overwrites identity headers (see
       # deploy/nginx-console.conf), so trusting it is required for
       # per-client login rate limiting instead of one shared bucket
-      # (README: AKENTROS_TRUST_PROXY).
-      AKENTROS_TRUST_PROXY: "true"
+      # (README: AUTONOMIA_TRUST_PROXY).
+      AUTONOMIA_TRUST_PROXY: "true"
       # The console is served from this compose network on port 8080.
       FRONTEND_ORIGINS: "http://localhost:8080"
     env_file:
       - path: .env
         required: false
     volumes:
-      - akentros-data:/data
+      - autonomia-data:/data
     # Gateway stays on the compose network only; publish it directly (e.g.
     # for SDK traffic without the console) by uncommenting:
     # ports:
@@ -45,17 +45,17 @@ services:
       start_period: 15s
       retries: 3
 
-  akentros-console:
+  autonomia-console:
     build:
       context: .
       target: console
-    image: akentros/console:local
+    image: autonomia/console:local
     restart: unless-stopped
     depends_on:
-      akentros-gateway:
+      autonomia-gateway:
         condition: service_healthy
     ports:
       - "8080:80"
 
 volumes:
-  akentros-data:
+  autonomia-data:

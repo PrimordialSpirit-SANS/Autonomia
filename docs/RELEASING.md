@@ -1,6 +1,6 @@
 # Release runbook
 
-This is the operational checklist for cutting an Akentros release. The
+This is the operational checklist for cutting an Autonomia release. The
 mechanical parts (verification, npm publish, GHCR images, GitHub Release)
 are automated by `.github/workflows/release.yml` and triggered by pushing an
 annotated `v*` tag; this document covers what the workflow cannot do by
@@ -16,7 +16,7 @@ These cannot be committed as files; do them once per repository.
 | **Repo topics** (ECO-COMM-4) | Repo → Settings → General → Topics | `ai-gateway`, `openai-compatible`, `llm`, `llm-gateway`, `api-gateway`, `self-hosted`, `hono`, `typescript`, `cloudflare-workers`, `sqlite` |
 | **Discussions** (ECO-COMM-5) | Repo → Settings → General → Features | Enable Discussions; create the categories `Q&A` (answered flag on), `Ideas`, `Show and tell`, `General`. `CONTRIBUTING.md` already promises this channel. |
 | **Community standards check** | Repo → Insights → Community standards | After the above plus `CODE_OF_CONDUCT.md` / `SUPPORT.md` / PR template land, every row should read green. |
-| **`NPM_TOKEN` secret** | Repo → Settings → Secrets and variables → Actions | An npm **Automation** access token with publish rights to the `@akentros` scope (npm → Access Tokens; Automation bypasses 2FA-at-publish prompts in CI). |
+| **`NPM_TOKEN` secret** | Repo → Settings → Secrets and variables → Actions | An npm **Automation** access token with publish rights to the `@autonomia` scope (npm → Access Tokens; Automation bypasses 2FA-at-publish prompts in CI). |
 
 The topics list is chosen for GitHub's topic search and the Explore feed:
 `ai-gateway` and `openai-compatible` are the two highest-traffic discovery
@@ -42,7 +42,7 @@ terms for this project category; the stack terms (`hono`, `typescript`,
 ## 2. Cut the release
 
 ```bash
-git tag -a vX.Y.Z -m "Akentros Gateway vX.Y.Z"
+git tag -a vX.Y.Z -m "Autonomia Gateway vX.Y.Z"
 git push origin main vX.Y.Z      # branch first if release-cut happens off main
 ```
 
@@ -51,7 +51,7 @@ The workflow then, in order:
 1. `verify` — lint, typecheck, tests, production build (the same gauntlet as
    CI).
 2. `guard-version-alignment` — every workspace version equals the tag.
-3. `publish-npm` — `npm run stage --workspace @akentros/core` assembles the
+3. `publish-npm` — `npm run stage --workspace @autonomia/core` assembles the
    artifact (dist build via the amaro type-stripper + a derived
    `exports`→dist manifest; see `packages/core/scripts/stage-publish.mjs`),
    then publishes `packages/core/.publish-stage` with `NPM_TOKEN`. The
@@ -66,7 +66,7 @@ The workflow then, in order:
 ## 3. Post-release verification
 
 - GitHub Releases page shows the tag with notes; the workflow run is green.
-- `npm view @akentros/core@X.Y.Z version` returns the version (the workflow
+- `npm view @autonomia/core@X.Y.Z version` returns the version (the workflow
   probes this itself and warns if the registry is slow to surface it).
 - `docker pull ghcr.io/<owner>/gateway:X.Y.Z` succeeds and
   `docker run --rm ghcr.io/<owner>/gateway:X.Y.Z node -e
@@ -82,9 +82,9 @@ actually moved the needle:
 
 - GitHub: stars, external forks, external issues/PRs (exclude the known
   internal accounts), Discussions activity.
-- npm: weekly downloads of `@akentros/core`
-  (`https://api.npmjs.org/downloads/point/last-week/@akentros/core`).
-- Search: external web mentions of "akentros gateway".
+- npm: weekly downloads of `@autonomia/core`
+  (`https://api.npmjs.org/downloads/point/last-week/@autonomia/core`).
+- Search: external web mentions of "autonomia gateway".
 
 Record the numbers in the tracking issue for the `ECO-*` series so trends
 are comparable across releases.

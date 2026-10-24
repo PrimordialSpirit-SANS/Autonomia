@@ -1,5 +1,5 @@
 {
-  "name": "akentros",
+  "name": "autonomia",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -16,12 +16,13 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "build": "npm run build --workspaces --if-present",
-    "dev:console": "npm run dev --workspace @akentros/console",
+    "dev:console": "npm run dev --workspace @autonomia/console",
     "dev:gateway": "node apps/gateway/src/nodeServer.ts",
-    "dev:worker": "npm run dev:worker --workspace @akentros/gateway",
-    "deploy:worker": "npm run deploy:worker --workspace @akentros/gateway",
-    "migrate": "npm run migrate --workspace @akentros/gateway",
-    "revoke-sessions": "npm run revoke:sessions --workspace @akentros/gateway",
+    "dev:worker": "npm run dev:worker --workspace @autonomia/gateway",
+    "deploy:worker": "npm run deploy:worker --workspace @autonomia/gateway",
+    "migrate": "npm run migrate --workspace @autonomia/gateway",
+    "revoke-sessions": "npm run revoke:sessions --workspace @autonomia/gateway",
+    "probe:autonomia-provider": "npm run probe:autonomia-provider --workspace @autonomia/gateway --",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "start:gateway": "node apps/gateway/src/nodeServer.ts"
@@ -34,5 +35,17 @@
   },
   "dependencies": {
     "@hono/node-server": "^2.1.3"
+  },
+  "overrides": {
+    "jsdom": {
+      "undici": "^8.12.2"
+    },
+    "miniflare": {
+      "undici": "^7.30.1"
+    }
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true,
+    "workerd@1.20261019.1": true
   }
 }

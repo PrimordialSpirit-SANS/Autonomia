@@ -1,4 +1,4 @@
-# Akentros Gateway 缺陷檢查報告
+# Autonomia Gateway 缺陷檢查報告
 
 - **日期**：2026-09-18
 - **範圍**：整個 monorepo（`packages/core`、`apps/gateway`、`apps/console`），含未提交的工作區變更
@@ -21,6 +21,19 @@
 | 6 | 低 | Anthropic 不支援 `tool_choice: "none"` | `packages/core/src/providers.ts:310-320` |
 | 7 | 低 | 關機流程可能被未斷開的 SSE 串流掛住 | `apps/gateway/src/nodeServer.ts:54-58` |
 | 8 | 低 | 冪等重放回 409 而非重播回應（與 OpenAI 語意不同） | `packages/core/src/inference.ts` `replayError` |
+
+> **狀態更新（2026-10-24）：以下 8 項已全數修復並以測試釘死。**
+> #1 `settle` 改以 `MIN(CAST(? AS BIGINT), reserved_usd_micros)` 夾制，
+> 「actual > reserved」案例由 `billing.test.ts` 以本報告的原始重現釘死；
+> #2 限流身份一律以 socket 位址為準，僅 `AUTONOMIA_TRUST_PROXY=true` 時採信
+> 代理標頭（偽造情境由 `gatewaySurface.test.ts` 覆蓋）；
+> #3 `db.node.ts` 以 per-database 序列化 chain 包裝交易（與 `doDb.ts` 同手法）；
+> #4 Hono app 於啟動時建立一次；
+> #5 註冊 race 捕捉 UNIQUE 約束改回 409 `email_taken`（anti-enumeration 模式下為同形 202）；
+> #6 `tool_choice: "none"` 映射為 `{"type":"none"}`，四種模式由 `providers.test.ts` 釘死；
+> #7 關機追蹤串流連線，`AUTONOMIA_SHUTDOWN_GRACE_MS` / `AUTONOMIA_SHUTDOWN_HARD_TIMEOUT_MS` 限期退出；
+> #8 金鑰級 opt-in 冪等重放（`idempotency_replay_ttl_seconds`，含 2MB tombstone），
+> 由 `idempotencyReplay.test.ts` 覆蓋。以下原文保留供審計軌跡。
 
 ---
 
@@ -81,7 +94,7 @@ keyGenerator: (c) => String(c.req.header("cf-connecting-ip") || "local"),
 
 **位置**：`apps/gateway/src/utils/db.node.ts:138-163`（對照 `apps/gateway/src/worker/doDb.ts:92-112`）
 
-**問題**：`withAkentrosTransaction` 在已有交易開啟時**不排隊**，直接執行 `BEGIN IMMEDIATE`。若兩筆交易真的重疊，第二筆會拋 SQLite「cannot start a transaction within a transaction」，對外變成 503。目前沒爆炸，只是因為所有交易體內恰好只有同步 DB 呼叫（純 microtask 鏈不會與其他請求的 macrotask 交錯）——這是一個**未被文件化、也未被程式碼強制的脆弱不變量**。對照組 DO adapter（`doDb.ts`）明確用 `txChain` promise chain 序列化交易，可見作者自己也認為需要這層防禦；`dbQuery` 的非交易路徑也有佇列，唯獨交易本身沒有。
+**問題**：`withAutonomiaTransaction` 在已有交易開啟時**不排隊**，直接執行 `BEGIN IMMEDIATE`。若兩筆交易真的重疊，第二筆會拋 SQLite「cannot start a transaction within a transaction」，對外變成 503。目前沒爆炸，只是因為所有交易體內恰好只有同步 DB 呼叫（純 microtask 鏈不會與其他請求的 macrotask 交錯）——這是一個**未被文件化、也未被程式碼強制的脆弱不變量**。對照組 DO adapter（`doDb.ts`）明確用 `txChain` promise chain 序列化交易，可見作者自己也認為需要這層防禦；`dbQuery` 的非交易路徑也有佇列，唯獨交易本身沒有。
 
 **風險**：未來任何人在任一交易 fn 內加一個真 I/O 的 `await`（例如呼叫外部服務、WebCrypto threadpool），此問題就會在併發負載下以隨機 503 的形式浮現，且極難回溯。
 
@@ -123,7 +136,7 @@ fetch: (request) => createApp(env).fetch(request, env as any),
 
 **位置**：`packages/core/src/inference.ts`（`replayError`）
 
-OpenAI 的 Idempotency-Key 語意是「重放回傳原始回應」；Akentros 對已完成的冪等鍵回 409 `idempotent_request_replayed`。此行為有專屬錯誤碼、屬刻意設計，但 README 標榜「任何 OpenAI SDK 指向 baseURL 即可使用」——重度依賴冪等重放的客戶端會觀察到行為差異。建議至少在 docs/openapi.yaml 與文件頁明確標註。
+OpenAI 的 Idempotency-Key 語意是「重放回傳原始回應」；Autonomia 對已完成的冪等鍵回 409 `idempotent_request_replayed`。此行為有專屬錯誤碼、屬刻意設計，但 README 標榜「任何 OpenAI SDK 指向 baseURL 即可使用」——重度依賴冪等重放的客戶端會觀察到行為差異。建議至少在 docs/openapi.yaml 與文件頁明確標註。
 
 ---
 

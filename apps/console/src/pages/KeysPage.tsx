@@ -1,13 +1,13 @@
 import React from "react";
 import { Alert, Dialog, PageHeader, StateBlock } from "../components/ui";
 import {
-  createAkentrosKey,
-  listAkentrosKeys,
-  revokeAkentrosKey,
-  rotateAkentrosKey,
-} from "../lib/akentros/api/akentrosDeveloperApi";
-import type { AkentrosApiKey } from "../lib/akentros/types";
-import { formatAkentrosTimestamp, formatUsd } from "../lib/akentros/utils/formatAkentros";
+  createAutonomiaKey,
+  listAutonomiaKeys,
+  revokeAutonomiaKey,
+  rotateAutonomiaKey,
+} from "../lib/autonomia/api/autonomiaDeveloperApi";
+import type { AutonomiaApiKey } from "../lib/autonomia/types";
+import { formatAutonomiaTimestamp, formatUsd } from "../lib/autonomia/utils/formatAutonomia";
 
 const MIN_KEY_TTL_MS = 60 * 60 * 1000;
 const MAX_REPLAY_TTL_HOURS = 168; // 7 天,與後端上限一致
@@ -25,7 +25,7 @@ function defaultKeyExpiryValue(): string {
 }
 
 function formatKeyExpiry(value: string | null): string {
-  return value ? formatAkentrosTimestamp(value) : "永不過期";
+  return value ? formatAutonomiaTimestamp(value) : "永不過期";
 }
 
 function formatReplayTtl(seconds: number | undefined): string {
@@ -36,7 +36,7 @@ function formatReplayTtl(seconds: number | undefined): string {
 }
 
 export function KeysPage() {
-  const [keys, setKeys] = React.useState<AkentrosApiKey[]>([]);
+  const [keys, setKeys] = React.useState<AutonomiaApiKey[]>([]);
   const loadAbortRef = React.useRef<AbortController | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState("");
@@ -49,7 +49,7 @@ export function KeysPage() {
   const [replayHours, setReplayHours] = React.useState("24");
   const [secret, setSecret] = React.useState("");
   const [busy, setBusy] = React.useState("");
-  const [pendingRevoke, setPendingRevoke] = React.useState<AkentrosApiKey | null>(null);
+  const [pendingRevoke, setPendingRevoke] = React.useState<AutonomiaApiKey | null>(null);
 
   const reload = React.useCallback(async () => {
     // FN-9 fix:載入更多/快速操作時舊回應後到會覆寫新結果;以 AbortController
@@ -60,7 +60,7 @@ export function KeysPage() {
     setLoading(true);
     setError("");
     try {
-      const loaded = await listAkentrosKeys(controller.signal);
+      const loaded = await listAutonomiaKeys(controller.signal);
       if (controller.signal.aborted) return;
       setKeys(loaded);
     } catch (cause) {
@@ -112,7 +112,7 @@ export function KeysPage() {
     setBusy("create");
     setError("");
     try {
-      const result = await createAkentrosKey({
+      const result = await createAutonomiaKey({
         name: name.trim(),
         expires_at: expiresAt,
         spend_limit_usd: spendLimitUsd,
@@ -127,11 +127,11 @@ export function KeysPage() {
     }
   };
 
-  const rotate = async (key: AkentrosApiKey) => {
+  const rotate = async (key: AutonomiaApiKey) => {
     setBusy(key.id);
     setError("");
     try {
-      const result = await rotateAkentrosKey(key.id);
+      const result = await rotateAutonomiaKey(key.id);
       setSecret(result.api_key);
       await reload();
     } catch (cause) {
@@ -145,7 +145,7 @@ export function KeysPage() {
     if (!pendingRevoke) return;
     setBusy(pendingRevoke.id);
     try {
-      await revokeAkentrosKey(pendingRevoke.id);
+      await revokeAutonomiaKey(pendingRevoke.id);
       setPendingRevoke(null);
       await reload();
     } catch (cause) {
@@ -352,8 +352,8 @@ export function KeysPage() {
                   )}
                 </div>
                 <div className="key-meta">
-                  <span>建立 {formatAkentrosTimestamp(key.created_at)}</span>
-                  <span>最後使用 {formatAkentrosTimestamp(key.last_used_at)}</span>
+                  <span>建立 {formatAutonomiaTimestamp(key.created_at)}</span>
+                  <span>最後使用 {formatAutonomiaTimestamp(key.last_used_at)}</span>
                   <span>到期 {formatKeyExpiry(key.expires_at)}</span>
                   <span>
                     消費 {formatUsd(key.spend_used_usd)} /{" "}

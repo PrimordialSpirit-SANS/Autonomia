@@ -4,8 +4,8 @@
 
 ```bash
 chmod +x chat.sh stream.sh          # 執行前設一次
-export AKENTROS_API_KEY=sk-akentros-live_...
-export AKENTROS_BASE_URL=http://localhost:8787/api/ai/v1
+export AUTONOMIA_API_KEY=sk-autonomia-live_...
+export AUTONOMIA_BASE_URL=http://localhost:8787/api/ai/v1
 
 ./chat.sh                            # JSON 回應
 ./stream.sh                          # SSE 串流(逐行輸出)
@@ -14,15 +14,15 @@ export AKENTROS_BASE_URL=http://localhost:8787/api/ai/v1
 ## 常用變體
 
 ```bash
-# 模型目錄(確認可用的 akentros/* 模型與免費額度)
-curl -sS "$AKENTROS_BASE_URL/models" -H "Authorization: Bearer $AKENTROS_API_KEY"
+# 模型目錄(確認可用的 autonomia/* 模型與免費額度)
+curl -sS "$AUTONOMIA_BASE_URL/models" -H "Authorization: Bearer $AUTONOMIA_API_KEY"
 
 # 冪等鍵(同鍵同體重送 → 409 idempotent_request_replayed,或 opt-in 後重播)
-curl -sS "$AKENTROS_BASE_URL/chat/completions" \
-  -H "Authorization: Bearer $AKENTROS_API_KEY" \
+curl -sS "$AUTONOMIA_BASE_URL/chat/completions" \
+  -H "Authorization: Bearer $AUTONOMIA_API_KEY" \
   -H "Idempotency-Key: demo-1" \
   -H "Content-Type: application/json" \
-  -d '{"model":"akentros/gpt-5.2","messages":[{"role":"user","content":"回覆「好的」"}]}'
+  -d '{"model":"autonomia/gpt-5.2","messages":[{"role":"user","content":"回覆「好的」"}]}'
 
 # 健康探針(部署煙霧測試;不需要金鑰)
 curl -sS http://localhost:8787/healthz

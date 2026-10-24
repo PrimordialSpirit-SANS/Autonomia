@@ -4,8 +4,8 @@
 
 ```bash
 npm install
-export AKENTROS_API_KEY=sk-akentros-live_...        # 控制台建立
-export AKENTROS_BASE_URL=http://localhost:8787/api/ai/v1
+export AUTONOMIA_API_KEY=sk-autonomia-live_...        # 控制台建立
+export AUTONOMIA_BASE_URL=http://localhost:8787/api/ai/v1
 npm run chat          # 基本 chat/completions
 npm run stream        # SSE 串流(含終止 chunk 的 usage)
 npm run idempotency   # Idempotency-Key 冪等重送與 409 語義

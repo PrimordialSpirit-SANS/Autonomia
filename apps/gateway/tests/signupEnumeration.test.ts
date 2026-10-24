@@ -2,12 +2,12 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { Hono } from "hono";
 import { createApp } from "../src/app.ts";
-import { ensureAkentrosSchemaReady } from "../src/utils/bootstrap.ts";
-import { installNodeAkentrosDbAdapter } from "../src/utils/db.ts";
+import { ensureAutonomiaSchemaReady } from "../src/utils/bootstrap.ts";
+import { installNodeAutonomiaDbAdapter } from "../src/utils/db.ts";
 
 // 註冊防帳號枚舉的真實 DB 行為(時序等化 + 重複信箱隱匿):
 // - 預設:重複信箱回 202 受理訊息,不發 session、不揭露 email_taken。
-// - AKENTROS_SIGNUP_ANTI_ENUMERATION=false:私有部署可還原明確 409 合約。
+// - AUTONOMIA_SIGNUP_ANTI_ENUMERATION=false:私有部署可還原明確 409 合約。
 // 搭配 node:sqlite :memory: DB,與 bootstrap.test.ts 同一拓撲。
 
 const SECRET = "x".repeat(32);
@@ -26,12 +26,12 @@ function createTestApp(env: any = {}) {
 
 async function createSchemaReadyEnv(extra: Record<string, unknown> = {}) {
   const env: any = {
-    AKENTROS_ENABLED: "true",
+    AUTONOMIA_ENABLED: "true",
     JWT_SECRET: SECRET,
-    AKENTROS_DB_PATH: ":memory:",
+    AUTONOMIA_DB_PATH: ":memory:",
     ...extra,
   };
-  await ensureAkentrosSchemaReady(env);
+  await ensureAutonomiaSchemaReady(env);
   return env;
 }
 
@@ -44,7 +44,7 @@ function registerRequest(email: string, username: string, password: string) {
 }
 
 test("anti-enumeration mode returns identical 202 responses for fresh and duplicate signups", async () => {
-  await installNodeAkentrosDbAdapter();
+  await installNodeAutonomiaDbAdapter();
   const env = await createSchemaReadyEnv();
   const app = createTestApp(env);
 
@@ -88,9 +88,9 @@ test("anti-enumeration mode returns identical 202 responses for fresh and duplic
   assert.equal(((await login.json()) as any).user.username, "alice");
 });
 
-test("AKENTROS_SIGNUP_ANTI_ENUMERATION=false restores the explicit 409 contract", async () => {
-  await installNodeAkentrosDbAdapter();
-  const env = await createSchemaReadyEnv({ AKENTROS_SIGNUP_ANTI_ENUMERATION: "false" });
+test("AUTONOMIA_SIGNUP_ANTI_ENUMERATION=false restores the explicit 409 contract", async () => {
+  await installNodeAutonomiaDbAdapter();
+  const env = await createSchemaReadyEnv({ AUTONOMIA_SIGNUP_ANTI_ENUMERATION: "false" });
   const app = createTestApp(env);
 
   const first = await app.request(
@@ -108,7 +108,7 @@ test("AKENTROS_SIGNUP_ANTI_ENUMERATION=false restores the explicit 409 contract"
 });
 
 test("concealed duplicate signup does not alter or take over the existing account", async () => {
-  await installNodeAkentrosDbAdapter();
+  await installNodeAutonomiaDbAdapter();
   const env = await createSchemaReadyEnv();
   const app = createTestApp(env);
 
@@ -144,10 +144,10 @@ test("concealed duplicate signup does not alter or take over the existing accoun
 
 // SN-5 fix:isSecureRequest 原本無條件信任 x-forwarded-proto,純 HTTP 下
 // 偽造 https 可翻轉 session cookie 的 Secure 屬性。修復後僅在
-// AKENTROS_TRUST_PROXY=true 時採信該標頭,與 requestOwnOrigin 的信任
+// AUTONOMIA_TRUST_PROXY=true 時採信該標頭,與 requestOwnOrigin 的信任
 // 邊界一致。
 test("session cookie Secure attribute follows the trust-proxy boundary (SN-5)", async () => {
-  await installNodeAkentrosDbAdapter();
+  await installNodeAutonomiaDbAdapter();
   const env = await createSchemaReadyEnv();
   const app = createTestApp(env);
 
@@ -171,7 +171,7 @@ test("session cookie Secure attribute follows the trust-proxy boundary (SN-5)", 
   // 未宣告信任代理:偽造的 x-forwarded-proto 不採信,cookie 不得帶 Secure。
   assert.equal(untrusted.headers.get("set-cookie")?.includes("Secure"), false);
 
-  const trusted = await createTestApp(await createSchemaReadyEnv({ AKENTROS_TRUST_PROXY: "true" })).request(
+  const trusted = await createTestApp(await createSchemaReadyEnv({ AUTONOMIA_TRUST_PROXY: "true" })).request(
     "/api/auth/login",
     login,
   );

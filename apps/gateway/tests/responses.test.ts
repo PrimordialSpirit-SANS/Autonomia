@@ -2,19 +2,19 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { Hono } from "hono";
 import { createApp } from "../src/app.ts";
-import { createAkentrosApiKey } from "../src/utils/aiApiKeys.ts";
-import { ensureAkentrosSchemaReady } from "../src/utils/bootstrap.ts";
-import { dbQuery, installNodeAkentrosDbAdapter } from "../src/utils/db.ts";
+import { createAutonomiaApiKey } from "../src/utils/aiApiKeys.ts";
+import { ensureAutonomiaSchemaReady } from "../src/utils/bootstrap.ts";
+import { dbQuery, installNodeAutonomiaDbAdapter } from "../src/utils/db.ts";
 
-await installNodeAkentrosDbAdapter();
+await installNodeAutonomiaDbAdapter();
 
 const env: any = {
-  AKENTROS_DB_PATH: ":memory:",
-  AKENTROS_API_KEY_PEPPER: "pepper-".repeat(8),
-  AKENTROS_ENABLED: "true",
+  AUTONOMIA_DB_PATH: ":memory:",
+  AUTONOMIA_API_KEY_PEPPER: "pepper-".repeat(8),
+  AUTONOMIA_ENABLED: "true",
   OPENAI_API_KEY_1: "test-openai-key",
 };
-await ensureAkentrosSchemaReady(env);
+await ensureAutonomiaSchemaReady(env);
 
 async function seedUser(email: string, balanceMicros = 100_000_000) {
   const inserted = await dbQuery(
@@ -54,7 +54,7 @@ function sseBody(events: string[]) {
 
 test("POST /api/ai/v1/responses bridges onto the chat pipeline end to end", async (t) => {
   const userId = await seedUser("responses-e2e@example.com");
-  const { secret } = await createAkentrosApiKey(env, userId, { name: "responses-key" });
+  const { secret } = await createAutonomiaApiKey(env, userId, { name: "responses-key" });
 
   const app = createTestApp(env);
   const originalFetch = globalThis.fetch;
@@ -87,7 +87,7 @@ test("POST /api/ai/v1/responses bridges onto the chat pipeline end to end", asyn
         method: "POST",
         headers: { authorization: `Bearer ${secret}`, "content-type": "application/json" },
         body: JSON.stringify({
-          model: "akentros/gpt-6-astra",
+          model: "autonomia/gpt-6-astra",
           instructions: "Answer concisely.",
           input: "Hello responses bridge",
           max_output_tokens: 128,
@@ -127,7 +127,7 @@ test("POST /api/ai/v1/responses bridges onto the chat pipeline end to end", asyn
         method: "POST",
         headers: { authorization: `Bearer ${secret}`, "content-type": "application/json" },
         body: JSON.stringify({
-          model: "akentros/gpt-6-astra",
+          model: "autonomia/gpt-6-astra",
           input: "Hello streaming bridge",
           stream: true,
         }),
@@ -174,7 +174,7 @@ test("POST /api/ai/v1/responses bridges onto the chat pipeline end to end", asyn
       const response = await app.request("/api/ai/v1/responses", {
         method: "POST",
         headers: { authorization: `Bearer ${secret}`, "content-type": "application/json" },
-        body: JSON.stringify({ model: "akentros/gpt-6-astra", input: "hi", ...extra }),
+        body: JSON.stringify({ model: "autonomia/gpt-6-astra", input: "hi", ...extra }),
       });
       assert.equal(response.status, 400);
       const body = (await response.json()) as any;
@@ -200,7 +200,7 @@ test("legacy chat keys without the responses scope stay backward compatible", as
   const userId = await seedUser("responses-legacy@example.com");
   // 僅有 chat:completions 的既有金鑰(模擬 responses 上線前建立):
   // 建立後直接改寫 scopes 欄位。
-  const created = await createAkentrosApiKey(env, userId, { name: "legacy-chat-key" });
+  const created = await createAutonomiaApiKey(env, userId, { name: "legacy-chat-key" });
   await dbQuery(env, `UPDATE ai_api_keys SET scopes = ? WHERE id = ?`, [
     JSON.stringify(["chat:completions", "models:read"]),
     created.id,
@@ -222,7 +222,7 @@ test("legacy chat keys without the responses scope stay backward compatible", as
     const response = await app.request("/api/ai/v1/responses", {
       method: "POST",
       headers: { authorization: `Bearer ${secret}`, "content-type": "application/json" },
-      body: JSON.stringify({ model: "akentros/gpt-5.2", input: "legacy key" }),
+      body: JSON.stringify({ model: "autonomia/gpt-5.2", input: "legacy key" }),
     });
     assert.equal(response.status, 200);
     const body = (await response.json()) as any;
@@ -231,7 +231,7 @@ test("legacy chat keys without the responses scope stay backward compatible", as
 
     // 無關 scope 的金鑰完全不能存取 /responses(403 insufficient_scope)。
     const otherUser = await seedUser("responses-noscope@example.com");
-    const embedOnlyKey = await createAkentrosApiKey(env, otherUser, { name: "embed-only-key" });
+    const embedOnlyKey = await createAutonomiaApiKey(env, otherUser, { name: "embed-only-key" });
     await dbQuery(env, `UPDATE ai_api_keys SET scopes = ? WHERE id = ?`, [
       JSON.stringify(["embeddings", "models:read"]),
       embedOnlyKey.id,
@@ -239,7 +239,7 @@ test("legacy chat keys without the responses scope stay backward compatible", as
     const denied = await app.request("/api/ai/v1/responses", {
       method: "POST",
       headers: { authorization: `Bearer ${embedOnlyKey.secret}`, "content-type": "application/json" },
-      body: JSON.stringify({ model: "akentros/gpt-5.2", input: "no" }),
+      body: JSON.stringify({ model: "autonomia/gpt-5.2", input: "no" }),
     });
     assert.equal(denied.status, 403);
     assert.equal(((await denied.json()) as any).error.code, "insufficient_scope");
@@ -247,9 +247,9 @@ test("legacy chat keys without the responses scope stay backward compatible", as
     globalThis.fetch = originalFetch;
   }
   await t.test("default scopes now include responses", async () => {
-    const { AKENTROS_DEFAULT_SCOPES } = await import("@akentros/core/apiKeys");
+    const { AUTONOMIA_DEFAULT_SCOPES } = await import("@autonomia/core/apiKeys");
     assert.deepEqual(
-      [...AKENTROS_DEFAULT_SCOPES],
+      [...AUTONOMIA_DEFAULT_SCOPES],
       ["chat:completions", "embeddings", "responses", "models:read"],
     );
   });

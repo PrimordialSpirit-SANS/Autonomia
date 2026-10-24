@@ -1,12 +1,11 @@
-# Akentros Gateway
+# Autonomia Gateway
 
-[![CI](https://github.com/PrimordialSpirit-SANS/akentros/actions/workflows/ci.yml/badge.svg)](https://github.com/PrimordialSpirit-SANS/akentros/actions/workflows/ci.yml)
+[![CI](https://github.com/PrimordialSpirit-SANS/autonomia/actions/workflows/ci.yml/badge.svg)](https://github.com/PrimordialSpirit-SANS/autonomia/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
-[![npm](https://img.shields.io/npm/v/@akentros/core)](https://www.npmjs.com/package/@akentros/core)
 
 **English** | [繁體中文](README.md)
 
-Akentros Gateway is a self-hosted, OpenAI-compatible AI gateway: USD-based billing with integer micro-dollar settlement, multi-provider pooling with automatic failover, `sk-akentros-*` API keys, and a built-in developer console. Core (`packages/core`) is a portable TypeScript library — also published to npm as [`@akentros/core`](https://www.npmjs.com/package/@akentros/core); the gateway runs as a plain Node.js server on SQLite (no external database), on PostgreSQL — from a long-lived VPS to serverless platforms (Neon's WebSocket driver, Cloudflare Hyperdrive) — or on Cloudflare Workers inside a Durable Object; the console is a React + Vite app deployable to Cloudflare Pages. A Docker/compose topology (`docker compose up -d --build`) is documented in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) as Topology D.
+Autonomia Gateway is a self-hosted, OpenAI-compatible AI gateway: USD-based billing with integer micro-dollar settlement, multi-provider pooling with automatic failover, `sk-autonomia-*` API keys, and a built-in developer console. Core (`packages/core`) is a portable TypeScript library, packaged for npm as [`@autonomia/core`](https://www.npmjs.com/package/@autonomia/core) (publish pipeline verified in CI; the package goes live with the first `v*` tag); the gateway runs as a plain Node.js server on SQLite (no external database), on PostgreSQL — from a long-lived VPS to serverless platforms (Neon's WebSocket driver, Cloudflare Hyperdrive) — or on Cloudflare Workers inside a Durable Object; the console is a React + Vite app deployable to Cloudflare Pages. A Docker/compose topology (`docker compose up -d --build`) is documented in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) as Topology D.
 
 ```bash
 cp apps/gateway/.dev.vars.example apps/gateway/.dev.vars   # fill in secrets
@@ -30,14 +29,14 @@ The system consists of three parts, all TypeScript:
 
 ## Features
 
-- **OpenAI-compatible API**: `GET /api/ai/v1/models`, `POST /api/ai/v1/chat/completions` (SSE streaming, `Idempotency-Key`), `POST /api/ai/v1/embeddings` (text vectors, input tokens only), `POST /api/ai/v1/responses` (a bridged subset of the new SDK default surface — see the compatibility matrix). Point any OpenAI SDK at the `baseURL` and it works. **Idempotency semantics**: OpenAI replays the original response for a completed idempotency key; Akentros by default does not persist prompt/completions and returns `409 idempotent_request_replayed` (with the original `X-Request-Id`). OpenAI-style replay is opt-in per key (`idempotency_replay_ttl_seconds`, up to 7 days): successful responses (JSON and SSE) are persisted for the TTL and replayed byte-for-byte (`X-Akentros-Idempotent-Replay: true`) without re-execution or double billing; in-progress keys return `409 idempotent_request_in_progress`, same-key-different-body returns `409 idempotent_request_conflict` (see `docs/openapi.yaml`).
+- **OpenAI-compatible API**: `GET /api/ai/v1/models`, `POST /api/ai/v1/chat/completions` (SSE streaming, `Idempotency-Key`), `POST /api/ai/v1/embeddings` (text vectors, input tokens only), `POST /api/ai/v1/responses` (a bridged subset of the new SDK default surface — see the compatibility matrix). Point any OpenAI SDK at the `baseURL` and it works. **Idempotency semantics**: OpenAI replays the original response for a completed idempotency key; Autonomia by default does not persist prompt/completions and returns `409 idempotent_request_replayed` (with the original `X-Request-Id`). OpenAI-style replay is opt-in per key (`idempotency_replay_ttl_seconds`, up to 7 days): successful responses (JSON and SSE) are persisted for the TTL and replayed byte-for-byte (`X-Autonomia-Idempotent-Replay: true`) without re-execution or double billing; in-progress keys return `409 idempotent_request_in_progress`, same-key-different-body returns `409 idempotent_request_conflict` (see `docs/openapi.yaml`).
 - **USD billing**: internally settled in integer micro-dollars (no floating-point drift). Every request reserves a spending cap up front, settles on actual usage, and refunds the difference automatically; the whole flow is idempotent, replayable, and reconcilable. Over-reported upstream usage is clamped at the reservation — never overcharged.
 - **Multi-provider pool**: 37 credential slots (openrouter, cloudflare-workers-ai, qwencloud, openai, anthropic, groq, …) with weighted rotation, health cooldown, in-flight leases, and automatic failover. Secrets exist only as environment variable names — the database stores opaque credential IDs.
-- **Serverless PostgreSQL**: point `DATABASE_URL` at PG and the driver auto-selects — TCP `pg` pooling (Node VPS, Render, Vercel/Netlify functions; automatic TLS to remote hosts) or the Neon-compatible WebSocket driver (`*.neon.tech` auto-detected; edge runtimes and Workers direct; self-hosted `AKENTROS_PG_WS_PROXY` gateways supported). Workers can also go through a Hyperdrive binding. Both drivers share the same interactive-transaction semantics (`FOR UPDATE` row locks, `pg_advisory_xact_lock`), so billing invariants hold regardless of topology. See Topology C in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
-- **API key management**: `sk-akentros-live_/sk-akentros-test_` keys, shown exactly once, stored as pepper-HMAC digests; per-key expiry, model allowlists, RPM, max concurrency, and USD spending caps. Key-level RPM/concurrency is enforced by atomic in-database counters; login and key-management rate limiting uses SQLite fixed windows (single-process global) with an in-memory fallback when the database is unavailable.
+- **Serverless PostgreSQL**: point `DATABASE_URL` at PG and the driver auto-selects — TCP `pg` pooling (Node VPS, Render, Vercel/Netlify functions; automatic TLS to remote hosts) or the Neon-compatible WebSocket driver (`*.neon.tech` auto-detected; edge runtimes and Workers direct; self-hosted `AUTONOMIA_PG_WS_PROXY` gateways supported). Workers can also go through a Hyperdrive binding. Both drivers share the same interactive-transaction semantics (`FOR UPDATE` row locks, `pg_advisory_xact_lock`), so billing invariants hold regardless of topology. See Topology C in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+- **API key management**: `sk-autonomia-live_/sk-autonomia-test_` keys, shown exactly once, stored as pepper-HMAC digests; per-key expiry, model allowlists, RPM, max concurrency, and USD spending caps. Key-level RPM/concurrency is enforced by atomic in-database counters; login and key-management rate limiting uses SQLite fixed windows (single-process global) with an in-memory fallback when the database is unavailable.
 - **Built-in accounts**: signup/login (JWT cookie + double-submit CSRF, Origin/Referer checks on pre-auth endpoints), admin seed at migrate time, signup bonus, public registration toggle, anti-enumeration by default.
 - **Developer console**: overview, keys, streaming playground (token-by-token rendering, usage stats), model catalog (free tiers included), request logs with per-request detail; `?demo=1` offline demo mode.
-- **Ops probes and structured logs**: `GET /healthz` reports process and database status (200 ok / 503 degraded) for load balancers and monitoring; the Node topology additionally serves `GET /metrics` (Prometheus text format: request counts, latency, token usage, spend; disable with `AKENTROS_METRICS_ENABLED=false`). Internal logs are single-line JSON, ready for Cloudflare observability, journald, etc.
+- **Ops probes and structured logs**: `GET /healthz` reports process and database status (200 ok / 503 degraded) for load balancers and monitoring; the Node topology additionally serves `GET /metrics` (Prometheus text format: request counts, latency, token usage, spend, plus per-upstream-provider attempt/failure/latency series for failover health at a glance; disable with `AUTONOMIA_METRICS_ENABLED=false`). Internal logs are single-line JSON, ready for Cloudflare observability, journald, etc.
 - **Contract-test guardrails**: openapi.yaml, the frontend/backend catalogs, routing and security invariants are all pinned by tests — drift fails the build. Biome lint/format and `npm audit` (high and above) are enforced in CI.
 
 ### OpenAI endpoint compatibility matrix
@@ -64,10 +63,10 @@ Parameter policy: SDK-default calls work as-is; gateway-neutral parameters (`use
 ```mermaid
 flowchart LR
     subgraph client["Your app / OpenAI SDK"]
-        A["Authorization: Bearer sk-akentros-live_…"]
+        A["Authorization: Bearer sk-autonomia-live_…"]
     end
     subgraph worker["apps/gateway (Node + Hono)"]
-        P["/api/ai/v1\npublic inference face\n(sk-akentros-* keys)"]
+        P["/api/ai/v1\npublic inference face\n(sk-autonomia-* keys)"]
         D["/api/ai/developer\nmanagement plane\n(login cookie + CSRF)"]
         S["scheduled cron\n*/30 * * * *"]
     end
@@ -99,8 +98,8 @@ Requirements: Node ≥ 22.18 (built-in `node:sqlite`, and the test suites run Ty
 ```bash
 # 1. Configure
 cp apps/gateway/.dev.vars.example apps/gateway/.dev.vars
-#   set AKENTROS_DB_PATH=./akentros.db (or leave the default)
-#   generate JWT_SECRET / AKENTROS_API_KEY_PEPPER (openssl rand -hex 32)
+#   set AUTONOMIA_DB_PATH=./autonomia.db (or leave the default)
+#   generate JWT_SECRET / AUTONOMIA_API_KEY_PEPPER (openssl rand -hex 32)
 #   set ADMIN_EMAIL / ADMIN_PASSWORD (admin seed)
 #   add at least one provider key (e.g. OPENROUTER_API_KEY_1)
 
@@ -112,7 +111,7 @@ npm run migrate
 npm run dev:gateway    # http://localhost:8787
 npm run dev:console    # http://localhost:5173
 #   for console development, set in apps/console/.env:
-#   VITE_AKENTROS_API_BASE=http://127.0.0.1:8787/api (gateway CORS already allows localhost:5173)
+#   VITE_AUTONOMIA_API_BASE=http://127.0.0.1:8787/api (gateway CORS already allows localhost:5173)
 ```
 
 Open http://localhost:5173, log in as the admin, create an API key, and test streaming.
@@ -125,12 +124,12 @@ exercises every feature (keys, streaming playground, usage) against simulated da
 import OpenAI from 'openai';
 
 const client = new OpenAI({
-  apiKey: 'sk-akentros-live_…',          // created in the console
+  apiKey: 'sk-autonomia-live_…',          // created in the console
   baseURL: 'http://localhost:8787/api/ai/v1',
 });
 
 const stream = await client.chat.completions.create({
-  model: 'akentros/gpt-5.2',  // model catalog: console "Models" page
+  model: 'autonomia/gpt-5.2',  // model catalog: console "Models" page
   messages: [{ role: 'user', content: 'Hello!' }],
   stream: true,
 });
@@ -165,32 +164,34 @@ npx wrangler deploy          # secrets via wrangler secret put
 ```bash
 cp apps/gateway/.dev.vars.example .env    # fill secrets
 docker compose up -d --build              # console on http://localhost:8080
-docker compose run --rm akentros-gateway npm run migrate
+docker compose run --rm autonomia-gateway npm run migrate
 ```
 
-Configuration, secrets and caveats: Topology D in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). Released images are published to GHCR on every `v*` tag.
+Configuration, secrets and caveats: Topology D in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). Release images publish to GHCR on every `v*` tag (pipeline verified; images appear with the first tag).
 
 ## Configuration
 
 | Environment variable | Required | Purpose |
 | --- | --- | --- |
-| `AKENTROS_DB_PATH` | recommended | SQLite database file path (default `./akentros.db`, anchored to `apps/gateway/`; relative paths always resolve against that directory) |
-| `AKENTROS_HOST` / `HOST` | optional | Bind address for the Node topology (default `127.0.0.1`, loopback only; set `0.0.0.0` or a specific interface explicitly when behind a reverse proxy or in a container) |
-| `DATABASE_URL` | optional | When set to `postgres://…`, switches to PostgreSQL (`npm run migrate` switches too). Driver auto-selection: `*.neon.tech` hosts or `AKENTROS_PG_WS_PROXY` use the Neon-compatible WebSocket serverless driver; everything else uses the TCP `pg` pool (Workers deployments can use a Hyperdrive binding instead — Topology B/C in the docs). Rate limiting and schema checks always prefer the installed database adapter, degrading only on connection failure |
-| `AKENTROS_PG_DRIVER` | optional | PG driver override: `auto` (default) \| `pg-pool` (TCP `pg`, incl. Hyperdrive) \| `neon` (WebSocket serverless; aliases `neon-ws`/`serverless`). Invalid values fail fast |
-| `AKENTROS_PG_SSL` | optional | TLS mode: `disable` \| `require` \| `verify-full`; default `auto` — honors the connection string's `sslmode`, remote hosts get automatic `require` (unverified), localhost/private/Unix sockets stay plaintext |
-| `AKENTROS_PG_WS_PROXY` | optional | Self-hosted pg-gateway/supavisor-compatible WebSocket proxy address (static `host[:port][/path]` or a `{host}` template); setting it selects the neon driver |
-| `AKENTROS_PG_WS_SECURE` | optional | Whether the WS gateway uses `wss` (default `true`; `false` only when the proxy sits behind a TLS terminator during local development) |
-| `AKENTROS_PG_POOL_MAX` | optional | PG pool cap (serverless functions default to 1 per instance; long-lived processes default to 10) |
+| `AUTONOMIA_DB_PATH` | recommended | SQLite database file path (default `./autonomia.db`, anchored to `apps/gateway/`; relative paths always resolve against that directory) |
+| `AUTONOMIA_HOST` / `HOST` | optional | Bind address for the Node topology (default `127.0.0.1`, loopback only; set `0.0.0.0` or a specific interface explicitly when behind a reverse proxy or in a container) |
+| `AUTONOMIA_SHUTDOWN_GRACE_MS` | optional | How long the Node topology waits for in-flight requests after SIGTERM/SIGINT before force-closing still-streaming connections (default 3000). Upstream streams can run up to `route.timeout_ms` (240s cap), so raise this (e.g. 60000) when rolling deploys should drain streams. The effective value is logged in `autonomia_gateway_listening` |
+| `AUTONOMIA_SHUTDOWN_HARD_TIMEOUT_MS` | optional | Hard exit cap for shutdown (default 10000; automatically kept ≥ GRACE + 2000) so the process can never hang |
+| `DATABASE_URL` | optional | When set to `postgres://…`, switches to PostgreSQL (`npm run migrate` switches too). Driver auto-selection: `*.neon.tech` hosts or `AUTONOMIA_PG_WS_PROXY` use the Neon-compatible WebSocket serverless driver; everything else uses the TCP `pg` pool (Workers deployments can use a Hyperdrive binding instead — Topology B/C in the docs). Rate limiting and schema checks always prefer the installed database adapter, degrading only on connection failure |
+| `AUTONOMIA_PG_DRIVER` | optional | PG driver override: `auto` (default) \| `pg-pool` (TCP `pg`, incl. Hyperdrive) \| `neon` (WebSocket serverless; aliases `neon-ws`/`serverless`). Invalid values fail fast |
+| `AUTONOMIA_PG_SSL` | optional | TLS mode: `disable` \| `require` \| `verify-full`; default `auto` — honors the connection string's `sslmode`, remote hosts get automatic `require` (unverified), localhost/private/Unix sockets stay plaintext |
+| `AUTONOMIA_PG_WS_PROXY` | optional | Self-hosted pg-gateway/supavisor-compatible WebSocket proxy address (static `host[:port][/path]` or a `{host}` template); setting it selects the neon driver |
+| `AUTONOMIA_PG_WS_SECURE` | optional | Whether the WS gateway uses `wss` (default `true`; `false` only when the proxy sits behind a TLS terminator during local development) |
+| `AUTONOMIA_PG_POOL_MAX` | optional | PG pool cap (serverless functions default to 1 per instance; long-lived processes default to 10) |
 | `JWT_SECRET` | ✅ | Session cookie signing key (≥ 32 bytes) |
-| `AKENTROS_API_KEY_PEPPER` | ✅ | API key HMAC pepper (≥ 32 bytes) |
-| `AKENTROS_ENABLED` | recommended | Fail-closed switch; `/api/ai/*` exists only when `true` |
+| `AUTONOMIA_API_KEY_PEPPER` | ✅ | API key HMAC pepper (≥ 32 bytes) |
+| `AUTONOMIA_ENABLED` | recommended | Fail-closed switch; `/api/ai/*` exists only when `true` |
 | `ADMIN_EMAIL` / `ADMIN_PASSWORD` | optional | Admin seed at migrate time |
-| `AKENTROS_SIGNUP_BONUS_USD` | optional | Signup starting balance (default $5.00) |
-| `AKENTROS_ADMIN_STARTING_CREDITS_USD` | optional | Admin starting balance (default $500.00) |
-| `AKENTROS_DISABLE_REGISTRATION` | optional | Set `true` to close public signup |
-| `AKENTROS_SIGNUP_ANTI_ENUMERATION` | optional | Anti-enumeration (default on): identical 202 acceptance for any email — same status, body, cookies, timing; no session, no user payload. Internal-only deployments may set `false` to restore the explicit 201/409 UX |
-| `AKENTROS_TRUST_PROXY` | optional | Trusted reverse proxy declaration: set `true` when a proxy that OVERWRITES identity headers (Cloudflare, nginx) sits in front. Login/signup rate limiting then uses `cf-connecting-ip`, falling back to the LAST `x-forwarded-for` value; pre-auth same-origin checks rebuild the origin from `x-forwarded-proto`/`x-forwarded-host`. Unset Node deployments use the unforgeable socket address only. A degraded identity logs `akentros_auth_rate_limit_identity_degraded`. **Proxy deployments MUST set this and require the proxy to overwrite identity headers** (nginx: `proxy_set_header cf-connecting-ip $remote_addr;`). Cloudflare Workers deployments always trust headers |
+| `AUTONOMIA_SIGNUP_BONUS_USD` | optional | Signup starting balance (default $5.00) |
+| `AUTONOMIA_ADMIN_STARTING_CREDITS_USD` | optional | Admin starting balance (default $500.00) |
+| `AUTONOMIA_DISABLE_REGISTRATION` | optional | Set `true` to close public signup |
+| `AUTONOMIA_SIGNUP_ANTI_ENUMERATION` | optional | Anti-enumeration (default on): identical 202 acceptance for any email — same status, body, cookies, timing; no session, no user payload. Internal-only deployments may set `false` to restore the explicit 201/409 UX |
+| `AUTONOMIA_TRUST_PROXY` | optional | Trusted reverse proxy declaration: set `true` when a proxy that OVERWRITES identity headers (Cloudflare, nginx) sits in front. Login/signup rate limiting then uses `cf-connecting-ip`, falling back to the LAST `x-forwarded-for` value; pre-auth same-origin checks rebuild the origin from `x-forwarded-proto`/`x-forwarded-host`. Unset Node deployments use the unforgeable socket address only. A degraded identity logs `autonomia_auth_rate_limit_identity_degraded`. **Proxy deployments MUST set this and require the proxy to overwrite identity headers** (nginx: `proxy_set_header cf-connecting-ip $remote_addr;`). Cloudflare Workers deployments always trust headers |
 | `FRONTEND_ORIGINS` | recommended | Console origins allowed to send cookies (CSV) |
 | `OPENROUTER_API_KEY_1` … | optional | Upstream provider keys, see [docs/PROVIDERS.md](docs/PROVIDERS.md) |
 
@@ -213,7 +214,7 @@ The complete list is in `apps/gateway/.dev.vars.example`.
 
 ## Community & support
 
-- **Bugs and feature requests**: [issues](https://github.com/PrimordialSpirit-SANS/akentros/issues) (templates provided).
+- **Bugs and feature requests**: [issues](https://github.com/PrimordialSpirit-SANS/autonomia/issues) (templates provided).
 - **Questions and discussion**: GitHub Discussions — the channel `CONTRIBUTING.md` promises; see [docs/RELEASING.md](docs/RELEASING.md) for the one-time enablement step. Until then, questions go through issues.
 - **Contributing**: read [CONTRIBUTING.md](CONTRIBUTING.md) (contract-first rules) and the [Code of Conduct](CODE_OF_CONDUCT.md).
 - **Support routing**: [SUPPORT.md](SUPPORT.md).

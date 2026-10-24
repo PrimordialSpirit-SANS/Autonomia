@@ -4,8 +4,8 @@
 
 | 情境 | 管道 |
 | --- | --- |
-| 疑似 bug(有重現步驟) | [開 issue](https://github.com/PrimordialSpirit-SANS/akentros/issues/new?template=bug_report.md),請用 bug 範本並附 Node 版本(≥ 22.18)與重現步驟 |
-| 功能提案 | [開 issue](https://github.com/PrimordialSpirit-SANS/akentros/issues/new?template=feature_request.md),或到 Discussions 的 Ideas 分類先討論 |
+| 疑似 bug(有重現步驟) | [開 issue](https://github.com/PrimordialSpirit-SANS/autonomia/issues/new?template=bug_report.md),請用 bug 範本並附 Node 版本(≥ 22.18)與重現步驟 |
+| 功能提案 | [開 issue](https://github.com/PrimordialSpirit-SANS/autonomia/issues/new?template=feature_request.md),或到 Discussions 的 Ideas 分類先討論 |
 | 使用問題 / 「這樣做對嗎」 | GitHub Discussions 的 Q&A 分類(見下方說明) |
 | **安全漏洞** | **不要開公開 issue**——依 [SECURITY.md](SECURITY.md) 以 GitHub Security Advisory 私下通報 |
 | 部署問題 | 先查 [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)(含各拓撲的煙霧測試與回滾程序),卡住再開 issue |

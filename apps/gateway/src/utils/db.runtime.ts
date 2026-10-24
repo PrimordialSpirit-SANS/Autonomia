@@ -1,10 +1,10 @@
-import type { AkentrosRuntimeEnv } from "../types.ts";
-import type { AkentrosDbAdapter } from "./db.ts";
-import { selectAkentrosPgDriver } from "./db.ts";
+import type { AutonomiaRuntimeEnv } from "../types.ts";
+import type { AutonomiaDbAdapter } from "./db.ts";
+import { selectAutonomiaPgDriver } from "./db.ts";
 
 // Cloudflare Workers PG 模式的 adapter 裝載點:僅由 worker/pgRuntime.ts
 // (經 worker.ts 以字面量動態 import)使用。Node 進入點不用本檔——
-// 繼續走 db.ts 的 installNodeAkentrosDbAdapter(非字面量 specifier 讓
+// 繼續走 db.ts 的 installNodeAutonomiaDbAdapter(非字面量 specifier 讓
 // DO-SQLite 部署的 bundle 完全不含 pg / @neondatabase/serverless)。
 //
 // 這裡的動態 import 刻意使用字面量:esbuild 會把兩個 PG adapter 各切成
@@ -17,8 +17,8 @@ import { selectAkentrosPgDriver } from "./db.ts";
  * (nodejs_compat 下 pg 走 Hyperdrive 的本地通道);neon 驅動則直接以
  * DATABASE_URL 建 WebSocket 連線(全域 WebSocket,Workers 原生提供)。
  */
-export async function loadWorkerPgDbAdapter(env: AkentrosRuntimeEnv): Promise<AkentrosDbAdapter> {
-  const driver = selectAkentrosPgDriver(env);
+export async function loadWorkerPgDbAdapter(env: AutonomiaRuntimeEnv): Promise<AutonomiaDbAdapter> {
+  const driver = selectAutonomiaPgDriver(env);
   const mod = driver === "neon" ? await import("./db.pg.serverless.ts") : await import("./db.pg.ts");
-  return mod as AkentrosDbAdapter;
+  return mod as AutonomiaDbAdapter;
 }

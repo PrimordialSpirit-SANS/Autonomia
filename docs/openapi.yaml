@@ -1,11 +1,11 @@
 openapi: 3.1.0
 info:
-  title: Akentros API
-  version: 0.6.0
+  title: Autonomia API
+  version: 0.1.0
   description: |
-    Akentros text-only OpenAI-compatible inference surface and signed-in developer
-    management surface. Public inference routes use Akentros API keys; developer
-    routes use the existing Akentros session and CSRF policy.
+    Autonomia text-only OpenAI-compatible inference surface and signed-in developer
+    management surface. Public inference routes use Autonomia API keys; developer
+    routes use the existing Autonomia session and CSRF policy.
 
     OpenAI API compatibility matrix (see README for the friendly version):
 
@@ -25,33 +25,33 @@ info:
     Requests to unsupported endpoints return 404 `route_not_found`; requests
     that use unsupported OpenAI parameters return 400 `unsupported_parameter`
     (or `unsupported_feature` when the parameter names a real OpenAI capability
-    Akentros does not expose), so callers can distinguish gaps from mistakes.
+    Autonomia does not expose), so callers can distinguish gaps from mistakes.
     Responses-API parameters that name capabilities beyond the bridged subset
     (`background`, `previous_response_id`, `tools`, `reasoning`, `text`,
     `truncation`, ...) are rejected with 400 `unsupported_feature`.
 servers:
   - url: /
-    description: Current Akentros API origin
+    description: Current Autonomia API origin
 tags:
   - name: Inference
-    description: OpenAI-compatible endpoints authenticated with a Akentros API key.
+    description: OpenAI-compatible endpoints authenticated with a Autonomia API key.
   - name: Developer
-    description: Management endpoints authenticated with the existing Akentros session.
+    description: Management endpoints authenticated with the existing Autonomia session.
 paths:
   /api/ai/v1/models:
     get:
       tags: [Inference]
-      operationId: listAkentrosModels
+      operationId: listAutonomiaModels
       summary: List enabled public models
       security:
-        - AkentrosKey: []
+        - AutonomiaKey: []
       responses:
         '200':
           description: Models enabled by the authoritative backend pricing revision.
           headers:
             X-Request-Id:
               $ref: '#/components/headers/XRequestId'
-            X-Akentros-Pricing-Revision:
+            X-Autonomia-Pricing-Revision:
               $ref: '#/components/headers/XPricingRevision'
           content:
             application/json:
@@ -69,7 +69,7 @@ paths:
   /api/ai/v1/chat/completions:
     post:
       tags: [Inference]
-      operationId: createAkentrosChatCompletion
+      operationId: createAutonomiaChatCompletion
       summary: Create a text chat completion
       description: |
         Returns JSON when `stream` is false and SSE when `stream` is true. A normal
@@ -77,7 +77,7 @@ paths:
         Once the first data frame is sent, an execution failure is reported in-band
         and the request is not executed again.
       security:
-        - AkentrosKey: []
+        - AutonomiaKey: []
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -92,7 +92,7 @@ paths:
           headers:
             X-Request-Id:
               $ref: '#/components/headers/XRequestId'
-            X-Akentros-Pricing-Revision:
+            X-Autonomia-Pricing-Revision:
               $ref: '#/components/headers/XPricingRevision'
           content:
             application/json:
@@ -129,17 +129,17 @@ paths:
   /api/ai/v1/embeddings:
     post:
       tags: [Inference]
-      operationId: createAkentrosEmbeddings
+      operationId: createAutonomiaEmbeddings
       summary: Create embeddings for text input
       description: |
-        OpenAI-compatible embeddings endpoint for Akentros models whose
+        OpenAI-compatible embeddings endpoint for Autonomia models whose
         capabilities declare `embeddings`. Returns one vector per input item.
         Billing charges input tokens only; usage omits completion tokens and
         reports `prompt_tokens`/`total_tokens`. Requires the `embeddings`
         scope; keys granted `chat:completions` before the embeddings release
         are also accepted for backward compatibility.
       security:
-        - AkentrosKey: []
+        - AutonomiaKey: []
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -154,7 +154,7 @@ paths:
           headers:
             X-Request-Id:
               $ref: '#/components/headers/XRequestId'
-            X-Akentros-Pricing-Revision:
+            X-Autonomia-Pricing-Revision:
               $ref: '#/components/headers/XPricingRevision'
           content:
             application/json:
@@ -184,10 +184,10 @@ paths:
   /api/ai/v1/responses:
     post:
       tags: [Inference]
-      operationId: createAkentrosResponse
+      operationId: createAutonomiaResponse
       summary: Create a response (chat-completions bridge)
       description: |
-        OpenAI Responses API surface bridged onto the Akentros chat pipeline.
+        OpenAI Responses API surface bridged onto the Autonomia chat pipeline.
         The bridged subset supports `model`, `input` (string or message items,
         including `input_text` / `input_image` parts on vision-capable
         models), `instructions` (prepended as a system message), `stream`,
@@ -206,7 +206,7 @@ paths:
         `responses` scope; keys granted `chat:completions` before the
         responses release are also accepted for backward compatibility.
       security:
-        - AkentrosKey: []
+        - AutonomiaKey: []
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -224,7 +224,7 @@ paths:
           headers:
             X-Request-Id:
               $ref: '#/components/headers/XRequestId'
-            X-Akentros-Pricing-Revision:
+            X-Autonomia-Pricing-Revision:
               $ref: '#/components/headers/XPricingRevision'
           content:
             application/json:
@@ -266,7 +266,7 @@ paths:
   /api/ai/developer/keys:
     get:
       tags: [Developer]
-      operationId: listAkentrosKeys
+      operationId: listAutonomiaKeys
       summary: List API key metadata
       security:
         - SessionCookie: []
@@ -283,7 +283,7 @@ paths:
           $ref: '#/components/responses/ManagementError'
     post:
       tags: [Developer]
-      operationId: createAkentrosKey
+      operationId: createAutonomiaKey
       summary: Create an API key
       description: The `api_key` secret appears in this response exactly once.
       security:
@@ -315,7 +315,7 @@ paths:
   /api/ai/developer/keys/{id}/rotate:
     post:
       tags: [Developer]
-      operationId: rotateAkentrosKey
+      operationId: rotateAutonomiaKey
       summary: Atomically rotate an API key
       description: The old secret is revoked immediately; the new secret appears once.
       security:
@@ -340,7 +340,7 @@ paths:
   /api/ai/developer/keys/{id}:
     delete:
       tags: [Developer]
-      operationId: revokeAkentrosKey
+      operationId: revokeAutonomiaKey
       summary: Revoke an API key
       security:
         - SessionCookie: []
@@ -358,7 +358,7 @@ paths:
   /api/ai/developer/chat/completions:
     post:
       tags: [Developer]
-      operationId: createAkentrosDeveloperChatCompletion
+      operationId: createAutonomiaDeveloperChatCompletion
       summary: Playground chat completion on the account session
       description: >-
         Console Playground (account mode) endpoint. Same pipeline and
@@ -391,7 +391,7 @@ paths:
   /api/ai/developer/usage/summary:
     get:
       tags: [Developer]
-      operationId: getAkentrosUsageSummary
+      operationId: getAutonomiaUsageSummary
       summary: Get balance, 30-day usage, and monthly free-model quotas
       security:
         - SessionCookie: []
@@ -410,13 +410,13 @@ paths:
   /api/ai/developer/logs:
     get:
       tags: [Developer]
-      operationId: listAkentrosRequestLogs
+      operationId: listAutonomiaRequestLogs
       summary: List sanitized request logs
       description: |
         Prompt and completion content, full keys, credential material, internal
         execution identities, internal model identifiers, attempt counts and
         internal request identifiers are never returned. Compatibility fields use
-        the Akentros service identity and requested public model only.
+        the Autonomia service identity and requested public model only.
       security:
         - SessionCookie: []
       parameters:
@@ -461,7 +461,7 @@ paths:
   /api/ai/developer/requests/{requestId}:
     get:
       tags: [Developer]
-      operationId: getAkentrosRequest
+      operationId: getAutonomiaRequest
       summary: Get sanitized request details
       security:
         - SessionCookie: []
@@ -476,7 +476,7 @@ paths:
         '200':
           description: |
             A request owned by the signed-in user. Content and internal execution
-            metadata are not exposed; compatibility fields contain neutral Akentros
+            metadata are not exposed; compatibility fields contain neutral Autonomia
             values only.
           content:
             application/json:
@@ -491,14 +491,14 @@ paths:
 
 components:
   securitySchemes:
-    AkentrosKey:
+    AutonomiaKey:
       type: http
       scheme: bearer
-      bearerFormat: sk-akentros-live_...
+      bearerFormat: sk-autonomia-live_...
     SessionCookie:
       type: apiKey
       in: cookie
-      name: akentros_token
+      name: autonomia_token
       description: >-
         Session authentication is cookie-only. The gateway never reads the
         Authorization header for management endpoints (SN-3 fix: the previously
@@ -507,7 +507,7 @@ components:
 
   headers:
     XRequestId:
-      description: Stable Akentros request identifier.
+      description: Stable Autonomia request identifier.
       schema:
         type: string
     XPricingRevision:
@@ -523,13 +523,13 @@ components:
       description: |
         Prevents a second model execution and double charge for the same API key and
         payload. Semantics depend on the key's opt-in replay window
-        (idempotency_replay_ttl_seconds). With the window at 0 (default), Akentros
+        (idempotency_replay_ttl_seconds). With the window at 0 (default), Autonomia
         never persists prompts or completions and cannot replay content: resending a
         key whose request already completed returns 409 with code
         `idempotent_request_replayed` plus the original X-Request-Id. With an
         opt-in window greater than zero, successful responses (JSON and SSE) are
         stored for that long, and resending a completed key with an identical body
-        replays the stored response (X-Akentros-Idempotent-Replay: true) without a
+        replays the stored response (X-Autonomia-Idempotent-Replay: true) without a
         second execution or charge. When the window expires the key binding is
         released and a retry with the same key and an identical body executes as a
         brand-new request (billed as a new request) with a fresh window — the
@@ -581,8 +581,8 @@ components:
   responses:
     PublicError:
       description: |
-        Akentros-owned OpenAI-shaped inference error. Internal execution failures and
-        infrastructure details are normalized to stable public Akentros error codes.
+        Autonomia-owned OpenAI-shaped inference error. Internal execution failures and
+        infrastructure details are normalized to stable public Autonomia error codes.
       content:
         application/json:
           schema:
@@ -613,7 +613,7 @@ components:
               type: [string, 'null']
             code:
               type: string
-              description: Stable public Akentros error code; internal execution codes are never returned.
+              description: Stable public Autonomia error code; internal execution codes are never returned.
 
     ManagementErrorEnvelope:
       type: object
@@ -636,7 +636,7 @@ components:
         created:
           type: integer
         owned_by:
-          const: akentros
+          const: autonomia
 
     ModelList:
       type: object
@@ -868,10 +868,10 @@ components:
               type: boolean
               const: true
               default: true
-              description: Akentros always includes final usage for streaming requests.
+              description: Autonomia always includes final usage for streaming requests.
         chat_template_kwargs:
           type: object
-          description: Optional public reasoning control for compatible Akentros models.
+          description: Optional public reasoning control for compatible Autonomia models.
           required: [thinking]
           additionalProperties: false
           properties:
@@ -1457,14 +1457,14 @@ components:
           type: [string, 'null']
         requested_model:
           type: string
-          description: Public Akentros model requested by the client.
+          description: Public Autonomia model requested by the client.
         actual_model:
           type: string
           description: Compatibility field that always mirrors requested_model.
         provider:
           type: string
-          const: akentros
-          description: Akentros service identity; internal execution identities are never returned.
+          const: autonomia
+          description: Autonomia service identity; internal execution identities are never returned.
         status:
           type: string
         input_tokens:
@@ -1488,7 +1488,7 @@ components:
           type: [integer, 'null']
         error_code:
           type: [string, 'null']
-          description: Stable public Akentros error code; internal execution codes are never returned.
+          description: Stable public Autonomia error code; internal execution codes are never returned.
         replay_of_request_id:
           type: [string, 'null']
           description: |

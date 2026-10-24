@@ -1,18 +1,18 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { AkentrosRuntimeEnv } from "../src/types.ts";
+import type { AutonomiaRuntimeEnv } from "../src/types.ts";
 import { resolveWsProxySetting } from "../src/utils/db.pg.serverless.ts";
 import {
-  type AkentrosPgLikeClient,
-  type AkentrosPgLikePool,
-  createAkentrosPgAdapter,
+  type AutonomiaPgLikeClient,
+  type AutonomiaPgLikePool,
+  createAutonomiaPgAdapter,
   defaultPgPoolMax,
   isPrivatePgHost,
   normalizePgParam,
   postgresPlaceholders,
   resolvePgSslOptions,
 } from "../src/utils/db.pg.shared.ts";
-import { isWorkerPgRuntime, selectAkentrosPgDriver } from "../src/utils/db.ts";
+import { isWorkerPgRuntime, selectAutonomiaPgDriver } from "../src/utils/db.ts";
 
 // 無伺服器 PostgreSQL 支援的契約測試:驅動選擇、SSL 推導、池尺寸與
 // 兩種驅動共用的 adapter 交易語意(以 fake pool 驅動,不觸網)。
@@ -20,68 +20,71 @@ import { isWorkerPgRuntime, selectAkentrosPgDriver } from "../src/utils/db.ts";
 // 以 pglite 端到端釘死,這裡不重複。
 
 // ---------------------------------------------------------------------------
-// 驅動選擇:AKENTROS_PG_DRIVER 明確指定 > HYPERDRIVE 綁定 > WS proxy /
+// 驅動選擇:AUTONOMIA_PG_DRIVER 明確指定 > HYPERDRIVE 綁定 > WS proxy /
 // *.neon.tech 特徵 > pg-pool。
 // ---------------------------------------------------------------------------
 
-test("selectAkentrosPgDriver honors explicit driver aliases and rejects unknown values", () => {
-  const env = { DATABASE_URL: "postgres://db.example.com:5432/akentros" } as AkentrosRuntimeEnv;
-  assert.equal(selectAkentrosPgDriver({ ...env, AKENTROS_PG_DRIVER: "pg-pool" }), "pg-pool");
-  assert.equal(selectAkentrosPgDriver({ ...env, AKENTROS_PG_DRIVER: "tcp" }), "pg-pool");
-  assert.equal(selectAkentrosPgDriver({ ...env, AKENTROS_PG_DRIVER: "neon" }), "neon");
-  assert.equal(selectAkentrosPgDriver({ ...env, AKENTROS_PG_DRIVER: "serverless" }), "neon");
-  assert.throws(() => selectAkentrosPgDriver({ ...env, AKENTROS_PG_DRIVER: "mysql" }), /AKENTROS_PG_DRIVER/);
+test("selectAutonomiaPgDriver honors explicit driver aliases and rejects unknown values", () => {
+  const env = { DATABASE_URL: "postgres://db.example.com:5432/autonomia" } as AutonomiaRuntimeEnv;
+  assert.equal(selectAutonomiaPgDriver({ ...env, AUTONOMIA_PG_DRIVER: "pg-pool" }), "pg-pool");
+  assert.equal(selectAutonomiaPgDriver({ ...env, AUTONOMIA_PG_DRIVER: "tcp" }), "pg-pool");
+  assert.equal(selectAutonomiaPgDriver({ ...env, AUTONOMIA_PG_DRIVER: "neon" }), "neon");
+  assert.equal(selectAutonomiaPgDriver({ ...env, AUTONOMIA_PG_DRIVER: "serverless" }), "neon");
+  assert.throws(
+    () => selectAutonomiaPgDriver({ ...env, AUTONOMIA_PG_DRIVER: "mysql" }),
+    /AUTONOMIA_PG_DRIVER/,
+  );
 });
 
-test("selectAkentrosPgDriver auto-detects Neon hosts and explicit WebSocket proxies", () => {
+test("selectAutonomiaPgDriver auto-detects Neon hosts and explicit WebSocket proxies", () => {
   const neon = { DATABASE_URL: "postgres://user@ep-cool-name-pooler.aws.region.aws.neon.tech/neondb" };
-  assert.equal(selectAkentrosPgDriver(neon as AkentrosRuntimeEnv), "neon");
+  assert.equal(selectAutonomiaPgDriver(neon as AutonomiaRuntimeEnv), "neon");
 
   const proxied = {
-    DATABASE_URL: "postgres://user@db.internal.example.com:5432/akentros",
-    AKENTROS_PG_WS_PROXY: "ws-proxy.internal.example.com:5432/v1",
+    DATABASE_URL: "postgres://user@db.internal.example.com:5432/autonomia",
+    AUTONOMIA_PG_WS_PROXY: "ws-proxy.internal.example.com:5432/v1",
   };
-  assert.equal(selectAkentrosPgDriver(proxied as AkentrosRuntimeEnv), "neon");
+  assert.equal(selectAutonomiaPgDriver(proxied as AutonomiaRuntimeEnv), "neon");
 
-  const plain = { DATABASE_URL: "postgres://user@db.internal.example.com:5432/akentros" };
-  assert.equal(selectAkentrosPgDriver(plain as AkentrosRuntimeEnv), "pg-pool");
+  const plain = { DATABASE_URL: "postgres://user@db.internal.example.com:5432/autonomia" };
+  assert.equal(selectAutonomiaPgDriver(plain as AutonomiaRuntimeEnv), "pg-pool");
 
   const empty = {};
-  assert.equal(selectAkentrosPgDriver(empty as AkentrosRuntimeEnv), "pg-pool");
+  assert.equal(selectAutonomiaPgDriver(empty as AutonomiaRuntimeEnv), "pg-pool");
 });
 
-test("selectAkentrosPgDriver prefers the Hyperdrive binding unless neon is forced", () => {
-  const hyperdrive = { connectionString: "postgres://user@hyperdrive.local:5432/akentros" };
+test("selectAutonomiaPgDriver prefers the Hyperdrive binding unless neon is forced", () => {
+  const hyperdrive = { connectionString: "postgres://user@hyperdrive.local:5432/autonomia" };
   const neonUrl = { DATABASE_URL: "postgres://user@ep-x.aws.neon.tech/neondb" };
   // 綁定存在 → TCP pg 驅動走 Hyperdrive 通道(即使 DATABASE_URL 是 Neon)。
   assert.equal(
-    selectAkentrosPgDriver({ ...neonUrl, HYPERDRIVE: hyperdrive } as AkentrosRuntimeEnv),
+    selectAutonomiaPgDriver({ ...neonUrl, HYPERDRIVE: hyperdrive } as AutonomiaRuntimeEnv),
     "pg-pool",
   );
   // 明確指定 neon 則尊重(直連 Neon WS,不經 Hyperdrive)。
   assert.equal(
-    selectAkentrosPgDriver({
+    selectAutonomiaPgDriver({
       ...neonUrl,
       HYPERDRIVE: hyperdrive,
-      AKENTROS_PG_DRIVER: "neon",
-    } as AkentrosRuntimeEnv),
+      AUTONOMIA_PG_DRIVER: "neon",
+    } as AutonomiaRuntimeEnv),
     "neon",
   );
   // 僅綁定、無 URL(auto 下 PG 模式仍成立,連線字串取自綁定)。
-  assert.equal(selectAkentrosPgDriver({ HYPERDRIVE: hyperdrive } as AkentrosRuntimeEnv), "pg-pool");
+  assert.equal(selectAutonomiaPgDriver({ HYPERDRIVE: hyperdrive } as AutonomiaRuntimeEnv), "pg-pool");
 });
 
 test("isWorkerPgRuntime switches the Workers entry off the Durable Object path", () => {
   assert.equal(
-    isWorkerPgRuntime({ DATABASE_URL: "postgres://db.example.com/db" } as AkentrosRuntimeEnv),
+    isWorkerPgRuntime({ DATABASE_URL: "postgres://db.example.com/db" } as AutonomiaRuntimeEnv),
     true,
   );
   assert.equal(
-    isWorkerPgRuntime({ HYPERDRIVE: { connectionString: "postgres://x/y" } } as AkentrosRuntimeEnv),
+    isWorkerPgRuntime({ HYPERDRIVE: { connectionString: "postgres://x/y" } } as AutonomiaRuntimeEnv),
     true,
   );
-  assert.equal(isWorkerPgRuntime({ DATABASE_URL: "sqlite://./akentros.db" } as AkentrosRuntimeEnv), false);
-  assert.equal(isWorkerPgRuntime({ AKENTROS_DB_PATH: "./akentros.db" } as AkentrosRuntimeEnv), false);
+  assert.equal(isWorkerPgRuntime({ DATABASE_URL: "sqlite://./autonomia.db" } as AutonomiaRuntimeEnv), false);
+  assert.equal(isWorkerPgRuntime({ AUTONOMIA_DB_PATH: "./autonomia.db" } as AutonomiaRuntimeEnv), false);
   assert.equal(isWorkerPgRuntime(undefined), false);
 });
 
@@ -90,7 +93,7 @@ test("isWorkerPgRuntime switches the Workers entry off the Durable Object path",
 // ---------------------------------------------------------------------------
 
 test("resolvePgSslOptions infers TLS from remote hosts and honors explicit modes", () => {
-  const remote = "postgres://user@db.managed.example.com:5432/akentros";
+  const remote = "postgres://user@db.managed.example.com:5432/autonomia";
   assert.deepEqual(resolvePgSslOptions(remote), { rejectUnauthorized: false });
   assert.deepEqual(resolvePgSslOptions(`${remote}?sslmode=require`), { rejectUnauthorized: false });
   assert.deepEqual(resolvePgSslOptions(`${remote}?sslmode=verify-full`), { rejectUnauthorized: true });
@@ -99,39 +102,39 @@ test("resolvePgSslOptions infers TLS from remote hosts and honors explicit modes
   assert.equal(resolvePgSslOptions(`${remote}?ssl=false`), false);
   // 環境變數優先於連線字串。
   assert.equal(
-    resolvePgSslOptions(`${remote}?sslmode=require`, { env: { AKENTROS_PG_SSL: "disable" } }),
+    resolvePgSslOptions(`${remote}?sslmode=require`, { env: { AUTONOMIA_PG_SSL: "disable" } }),
     false,
   );
-  assert.deepEqual(resolvePgSslOptions(remote, { env: { AKENTROS_PG_SSL: "verify-full" } }), {
+  assert.deepEqual(resolvePgSslOptions(remote, { env: { AUTONOMIA_PG_SSL: "verify-full" } }), {
     rejectUnauthorized: true,
   });
 });
 
 test("resolvePgSslOptions keeps local and private hosts plaintext", () => {
   for (const url of [
-    "postgres://user@localhost:5432/akentros",
-    "postgres://user@127.0.0.1:5432/akentros",
-    "postgres://user@10.1.2.3:5432/akentros",
-    "postgres://user@192.168.1.10:5432/akentros",
-    "postgres://user@172.20.0.5:5432/akentros",
-    "postgres://user@db.rinternal.internal:5432/akentros",
-    "postgres://user@akentros-db.local:5432/akentros",
-    "postgres://user@hyperdrive.local:5432/akentros",
-    "postgres:///var/run/postgresql/akentros", // unix socket:無 host
+    "postgres://user@localhost:5432/autonomia",
+    "postgres://user@127.0.0.1:5432/autonomia",
+    "postgres://user@10.1.2.3:5432/autonomia",
+    "postgres://user@192.168.1.10:5432/autonomia",
+    "postgres://user@172.20.0.5:5432/autonomia",
+    "postgres://user@db.rinternal.internal:5432/autonomia",
+    "postgres://user@autonomia-db.local:5432/autonomia",
+    "postgres://user@hyperdrive.local:5432/autonomia",
+    "postgres:///var/run/postgresql/autonomia", // unix socket:無 host
   ]) {
     assert.equal(resolvePgSslOptions(url), false, url);
   }
   // 明確要求加密時,內網也照辦(部署層總開關)。
   assert.deepEqual(
-    resolvePgSslOptions("postgres://user@10.1.2.3:5432/akentros", { env: { AKENTROS_PG_SSL: "require" } }),
+    resolvePgSslOptions("postgres://user@10.1.2.3:5432/autonomia", { env: { AUTONOMIA_PG_SSL: "require" } }),
     { rejectUnauthorized: false },
   );
 });
 
 test("resolvePgSslOptions parses pg keyword/value connection strings and Hyperdrive", () => {
-  const keyword = "host=db.managed.example.com port=5432 user=akentros sslmode=require";
+  const keyword = "host=db.managed.example.com port=5432 user=autonomia sslmode=require";
   assert.deepEqual(resolvePgSslOptions(keyword), { rejectUnauthorized: false });
-  const keywordRemote = "host=db.managed.example.com port=5432 user=akentros";
+  const keywordRemote = "host=db.managed.example.com port=5432 user=autonomia";
   assert.deepEqual(resolvePgSslOptions(keywordRemote), { rejectUnauthorized: false });
   // Hyperdrive 的本地通道:對外 TLS 由 Hyperdrive 代管,client 不加密。
   assert.equal(
@@ -151,19 +154,19 @@ test("isPrivatePgHost classifies loopback, private ranges and unix sockets", () 
 
 // ---------------------------------------------------------------------------
 // 池尺寸:無伺服器函式環境(Vercel/Netlify/Lambda)每實例一條連線,
-// 常駐程序(Node VPS / Render)維持 10;AKENTROS_PG_POOL_MAX 恆可覆寫。
+// 常駐程序(Node VPS / Render)維持 10;AUTONOMIA_PG_POOL_MAX 恆可覆寫。
 // ---------------------------------------------------------------------------
 
 test("defaultPgPoolMax shrinks pools in serverless compute environments", () => {
   assert.equal(defaultPgPoolMax({}), 10);
-  assert.equal(defaultPgPoolMax({ AKENTROS_PG_POOL_MAX: "4" }), 4);
-  assert.equal(defaultPgPoolMax({ AKENTROS_PG_POOL_MAX: "0" }), 10, "0 與負值視為未設定");
+  assert.equal(defaultPgPoolMax({ AUTONOMIA_PG_POOL_MAX: "4" }), 4);
+  assert.equal(defaultPgPoolMax({ AUTONOMIA_PG_POOL_MAX: "0" }), 10, "0 與負值視為未設定");
 
   const originalVercel = process.env.VERCEL;
   try {
     process.env.VERCEL = "1";
     assert.equal(defaultPgPoolMax({}), 1);
-    assert.equal(defaultPgPoolMax({ AKENTROS_PG_POOL_MAX: "3" }), 3);
+    assert.equal(defaultPgPoolMax({ AUTONOMIA_PG_POOL_MAX: "3" }), 3);
     delete process.env.VERCEL;
     const originalNetlify = process.env.NETLIFY;
     process.env.NETLIFY = "true";
@@ -183,7 +186,7 @@ test("defaultPgPoolMax shrinks pools in serverless compute environments", () => 
 // 交易內語句綁定同一 client、巢狀沿用、close 釋放。
 // ---------------------------------------------------------------------------
 
-class RecordingClient implements AkentrosPgLikeClient {
+class RecordingClient implements AutonomiaPgLikeClient {
   readonly queries: Array<{ text: string; params: unknown[] }> = [];
   id = 0;
   pool: RecordingPool | null = null;
@@ -196,7 +199,7 @@ class RecordingClient implements AkentrosPgLikeClient {
   }
 }
 
-class RecordingPool implements AkentrosPgLikePool {
+class RecordingPool implements AutonomiaPgLikePool {
   readonly clients: RecordingClient[] = [];
   readonly poolQueries: Array<{ text: string; params: unknown[] }> = [];
   readonly releasedClientIds: number[] = [];
@@ -228,10 +231,10 @@ class RecordingPool implements AkentrosPgLikePool {
   }
 }
 
-function fakeAdapter(connectionString = "postgres://fake.internal/akentros") {
-  const pools = new Map<string, AkentrosPgLikePool>();
+function fakeAdapter(connectionString = "postgres://fake.internal/autonomia") {
+  const pools = new Map<string, AutonomiaPgLikePool>();
   let created = 0;
-  const adapter = createAkentrosPgAdapter({
+  const adapter = createAutonomiaPgAdapter({
     pools,
     createPool(url) {
       created += 1;
@@ -244,14 +247,14 @@ function fakeAdapter(connectionString = "postgres://fake.internal/akentros") {
 
 test("pg adapter factory wraps transactions in BEGIN/COMMIT on one dedicated client", async () => {
   const { adapter, pools } = fakeAdapter();
-  const env = {} as AkentrosRuntimeEnv;
+  const env = {} as AutonomiaRuntimeEnv;
 
-  await adapter.withAkentrosTransaction(env, async () => {
+  await adapter.withAutonomiaTransaction(env, async () => {
     await adapter.dbQuery(env, "UPDATE ledger_entries SET amount = ? WHERE id = ?", ["5", 7]);
     await adapter.dbQuery(env, "SELECT balance_usd_micros FROM users WHERE id = ? FOR UPDATE", [7]);
   });
 
-  const pool = pools.get("postgres://fake.internal/akentros") as RecordingPool;
+  const pool = pools.get("postgres://fake.internal/autonomia") as RecordingPool;
   assert.equal(pool.clients.length, 1, "交易只借用一條專屬連線");
   const [client] = pool.clients;
   assert.deepEqual(
@@ -269,17 +272,17 @@ test("pg adapter factory wraps transactions in BEGIN/COMMIT on one dedicated cli
 
 test("pg adapter factory rolls back and releases on failure", async () => {
   const { adapter, pools } = fakeAdapter();
-  const env = {} as AkentrosRuntimeEnv;
+  const env = {} as AutonomiaRuntimeEnv;
 
   await assert.rejects(
-    adapter.withAkentrosTransaction(env, async () => {
+    adapter.withAutonomiaTransaction(env, async () => {
       await adapter.dbQuery(env, "UPDATE users SET balance_usd_micros = 0");
       throw new Error("boom");
     }),
     /boom/,
   );
 
-  const pool = pools.get("postgres://fake.internal/akentros") as RecordingPool;
+  const pool = pools.get("postgres://fake.internal/autonomia") as RecordingPool;
   const [client] = pool.clients;
   assert.deepEqual(
     client.queries.map((entry) => entry.text),
@@ -290,16 +293,16 @@ test("pg adapter factory rolls back and releases on failure", async () => {
 
 test("pg adapter factory reuses the outer transaction for nested calls", async () => {
   const { adapter, pools } = fakeAdapter();
-  const env = {} as AkentrosRuntimeEnv;
+  const env = {} as AutonomiaRuntimeEnv;
 
-  await adapter.withAkentrosTransaction(env, async () => {
+  await adapter.withAutonomiaTransaction(env, async () => {
     await adapter.dbQuery(env, "SELECT 1");
-    await adapter.withAkentrosTransaction(env, async () => {
+    await adapter.withAutonomiaTransaction(env, async () => {
       await adapter.dbQuery(env, "SELECT 2");
     });
   });
 
-  const pool = pools.get("postgres://fake.internal/akentros") as RecordingPool;
+  const pool = pools.get("postgres://fake.internal/autonomia") as RecordingPool;
   assert.equal(pool.clients.length, 1, "巢狀交易不得另開連線");
   assert.deepEqual(
     pool.clients[0].queries.map((entry) => entry.text),
@@ -309,11 +312,11 @@ test("pg adapter factory reuses the outer transaction for nested calls", async (
 
 test("pg adapter factory routes non-transactional queries through the pool and registers error handlers", async () => {
   const { adapter, pools, createdCount } = fakeAdapter();
-  const env = {} as AkentrosRuntimeEnv;
+  const env = {} as AutonomiaRuntimeEnv;
 
   await adapter.dbQuery(env, "SELECT * FROM models WHERE id = ?", ["m1"]);
 
-  const pool = pools.get("postgres://fake.internal/akentros") as RecordingPool;
+  const pool = pools.get("postgres://fake.internal/autonomia") as RecordingPool;
   assert.deepEqual(pool.poolQueries, [{ text: "SELECT * FROM models WHERE id = $1", params: ["m1"] }]);
   assert.equal(pool.clients.length, 0, "交易外查詢不借用專屬 client");
   assert.equal(pool.errorListeners.length, 1, "pool 背景錯誤必須有 handler,避免未處理事件");
@@ -329,8 +332,8 @@ test("pg adapter factory routes non-transactional queries through the pool and r
 
 test("pg adapter factory exposes the postgres dialect and query.transaction", async () => {
   const { adapter } = fakeAdapter();
-  const env = {} as AkentrosRuntimeEnv;
-  const query = adapter.createAkentrosQuery(env);
+  const env = {} as AutonomiaRuntimeEnv;
+  const query = adapter.createAutonomiaQuery(env);
   assert.equal(typeof query, "function");
   assert.equal(query.dialect, "postgres");
   assert.equal(typeof query.transaction, "function");
@@ -373,7 +376,7 @@ test("resolveWsProxySetting accepts static hosts and {host} templates", () => {
 
 // ---------------------------------------------------------------------------
 // 動態載入的 specifier 煙霧測試:兩個 PG adapter 模組必須存在且匯出完整
-// 契約(installNodeAkentrosDbAdapter / db.runtime.ts 以非字面量/字面量
+// 契約(installNodeAutonomiaDbAdapter / db.runtime.ts 以非字面量/字面量
 // specifier 引用,拼字錯誤要到運行期才會爆)。
 // ---------------------------------------------------------------------------
 
@@ -386,8 +389,8 @@ test("obfuscated adapter specifiers resolve to complete adapter modules", async 
   const expected = [
     "dbQuery",
     "dbGet",
-    "withAkentrosTransaction",
-    "createAkentrosQuery",
+    "withAutonomiaTransaction",
+    "createAutonomiaQuery",
     "closePostgresClients",
   ];
   for (const mod of [classic, serverless]) {

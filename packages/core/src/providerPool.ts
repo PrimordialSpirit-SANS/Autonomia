@@ -1,10 +1,10 @@
 import { PROVIDER_POOLS, resolveProviderCredential } from "./providers.ts";
-import type { AkentrosQuery } from "./query.ts";
-import { akentrosQueryRows as rows } from "./query.ts";
+import type { AutonomiaQuery } from "./query.ts";
+import { autonomiaQueryRows as rows } from "./query.ts";
 import { sqlDialect } from "./sqlDialect.ts";
 
 /** pool store 的 claim 在設定解析前的租約形狀(normalizeClaim 輸出)。 */
-export interface AkentrosCredentialLease {
+export interface AutonomiaCredentialLease {
   leaseId: string;
   requestId: string;
   credentialId: string;
@@ -13,9 +13,9 @@ export interface AkentrosCredentialLease {
   expiresAt: string;
 }
 
-/** claimConfiguredAkentrosProviderCredential 的輸出:租約 + 已解析的 secret
+/** claimConfiguredAutonomiaProviderCredential 的輸出:租約 + 已解析的 secret
  * 與 pool 設定文件。secrets 的值只存在記憶體,不落庫、不落 log。 */
-export interface AkentrosCredentialClaim extends AkentrosCredentialLease {
+export interface AutonomiaCredentialClaim extends AutonomiaCredentialLease {
   secrets: Readonly<Record<string, string>>;
   // pool 為 provider-pools 設定文件(含 selection 策略),形狀由
   // provider-pools.v1.json 決定,此處僅整體傳遞。
@@ -51,7 +51,7 @@ function normalizeExcludedCredentialIds(value: any): string[] {
   ];
 }
 
-function normalizeClaim(row: any): AkentrosCredentialLease | null {
+function normalizeClaim(row: any): AutonomiaCredentialLease | null {
   if (!row) return null;
   return {
     leaseId: String(row.lease_id),
@@ -196,9 +196,9 @@ function providerPoolSql(query: { dialect?: "postgres" | "sqlite" } = {}) {
   `,
   });
 }
-export const AKENTROS_PROVIDER_POOL_SQL = providerPoolSql();
+export const AUTONOMIA_PROVIDER_POOL_SQL = providerPoolSql();
 
-export async function syncAkentrosProviderCredentials(query: AkentrosQuery, config: any = PROVIDER_POOLS) {
+export async function syncAutonomiaProviderCredentials(query: AutonomiaQuery, config: any = PROVIDER_POOLS) {
   const sql = providerPoolSql(query);
   if (typeof query !== "function") throw new TypeError("A database query function is required.");
   const credentialIds: string[] = [];
@@ -223,19 +223,19 @@ export async function syncAkentrosProviderCredentials(query: AkentrosQuery, conf
 }
 
 // 執行交易:query 介面可選提供 transaction(fn)。
-async function withTransaction<T>(query: AkentrosQuery, fn: () => Promise<T>): Promise<T> {
+async function withTransaction<T>(query: AutonomiaQuery, fn: () => Promise<T>): Promise<T> {
   if (typeof query?.transaction === "function") {
     return (await query.transaction(fn)) as T;
   }
   return fn();
 }
 
-export function createAkentrosProviderPoolStore(query: AkentrosQuery) {
+export function createAutonomiaProviderPoolStore(query: AutonomiaQuery) {
   const sql = providerPoolSql(query);
   const dialect = sqlDialect(query);
   if (typeof query !== "function") throw new TypeError("A database query function is required.");
   return Object.freeze({
-    sync: (config: any) => syncAkentrosProviderCredentials(query, config),
+    sync: (config: any) => syncAutonomiaProviderCredentials(query, config),
 
     /** FUNC-02:以實際未過期且未釋放的租約重算全部 credential 的 in_flight,
      * 回傳被修正的列({ credentialId, inFlight })。觀測對帳用途:程序崩潰
@@ -262,7 +262,7 @@ export function createAkentrosProviderPoolStore(query: AkentrosQuery) {
       leaseTtlMs: number;
       excludedCredentialIds?: string[];
       leaseId?: string;
-    }): Promise<AkentrosCredentialLease | null> {
+    }): Promise<AutonomiaCredentialLease | null> {
       const normalizedPool = requiredString(poolId, "poolId", 120);
       const normalizedRequest = requiredString(requestId, "requestId", 80);
       const normalizedExcludedCredentialIds = normalizeExcludedCredentialIds(excludedCredentialIds);
@@ -393,15 +393,15 @@ export function createAkentrosProviderPoolStore(query: AkentrosQuery) {
   });
 }
 
-/** claimConfiguredAkentrosProviderCredential 需要的 pool store 子集
- * (完整的 createAkentrosProviderPoolStore 回傳值為其超集)。 */
-export interface AkentrosProviderPoolClaimStore {
+/** claimConfiguredAutonomiaProviderCredential 需要的 pool store 子集
+ * (完整的 createAutonomiaProviderPoolStore 回傳值為其超集)。 */
+export interface AutonomiaProviderPoolClaimStore {
   claim(input: {
     poolId: string;
     requestId: string;
     leaseTtlMs?: number;
     excludedCredentialIds?: string[];
-  }): Promise<AkentrosCredentialLease | null>;
+  }): Promise<AutonomiaCredentialLease | null>;
   release(input: {
     leaseId: string;
     success: boolean;
@@ -411,7 +411,7 @@ export interface AkentrosProviderPoolClaimStore {
   }): Promise<unknown>;
 }
 
-export async function claimConfiguredAkentrosProviderCredential({
+export async function claimConfiguredAutonomiaProviderCredential({
   store,
   pool,
   poolId,
@@ -421,7 +421,7 @@ export async function claimConfiguredAkentrosProviderCredential({
   leaseTtlMs = pool?.selection?.lease_ttl_ms,
   resolveSecrets = true,
 }: {
-  store: AkentrosProviderPoolClaimStore;
+  store: AutonomiaProviderPoolClaimStore;
   pool: any;
   poolId: string;
   requestId: string;
@@ -429,7 +429,7 @@ export async function claimConfiguredAkentrosProviderCredential({
   excludedCredentialIds?: string[] | Set<string>;
   leaseTtlMs?: number;
   resolveSecrets?: boolean;
-}): Promise<AkentrosCredentialClaim | null> {
+}): Promise<AutonomiaCredentialClaim | null> {
   if (!store || typeof store.claim !== "function" || typeof store.release !== "function") {
     throw new TypeError("A provider pool store with claim and release functions is required.");
   }

@@ -1,5 +1,5 @@
-import { AkentrosError } from "@akentros/core/openaiErrors";
-import type { AkentrosContext } from "../types.ts";
+import { AutonomiaError } from "@autonomia/core/openaiErrors";
+import type { AutonomiaContext } from "../types.ts";
 
 // 請求體大小上限的統一讀取路徑。Hono 的 c.req.json()/c.req.text() 會把整個
 // body 緩衝進記憶體之後才輪到驗證層;在單實例 SQLite 部署下,未認證的
@@ -11,13 +11,13 @@ import type { AkentrosContext } from "../types.ts";
 //    當下中止讀取,緩衝上限就是 maxBytes。
 // 上限值:公開推理面 32MB(模型目錄最大輸入約 2M token,合法請求體可達
 // 數 MB,再留 tools 餘量);auth 與管理面 16KB(登入/金鑰承載遠小於此)。
-export const AKENTROS_PUBLIC_BODY_MAX_BYTES = 32 * 1024 * 1024;
-export const AKENTROS_SMALL_BODY_MAX_BYTES = 16 * 1024;
+export const AUTONOMIA_PUBLIC_BODY_MAX_BYTES = 32 * 1024 * 1024;
+export const AUTONOMIA_SMALL_BODY_MAX_BYTES = 16 * 1024;
 
-export async function readCappedText(c: AkentrosContext, maxBytes: number): Promise<string> {
+export async function readCappedText(c: AutonomiaContext, maxBytes: number): Promise<string> {
   const declaredLength = Number(c.req.header("content-length"));
   if (Number.isFinite(declaredLength) && declaredLength > maxBytes) {
-    throw new AkentrosError("The request body is too large.", {
+    throw new AutonomiaError("The request body is too large.", {
       status: 413,
       type: "invalid_request_error",
       code: "request_too_large",
@@ -35,7 +35,7 @@ export async function readCappedText(c: AkentrosContext, maxBytes: number): Prom
       if (done) break;
       bytes += value.byteLength;
       if (bytes > maxBytes) {
-        throw new AkentrosError("The request body is too large.", {
+        throw new AutonomiaError("The request body is too large.", {
           status: 413,
           type: "invalid_request_error",
           code: "request_too_large",

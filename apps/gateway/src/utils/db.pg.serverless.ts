@@ -1,6 +1,6 @@
 import { Pool as NeonServerlessPool, neonConfig } from "@neondatabase/serverless";
-import type { AkentrosRuntimeEnv } from "../types.ts";
-import { type AkentrosPgLikePool, createAkentrosPgAdapter, defaultPgPoolMax } from "./db.pg.shared.ts";
+import type { AutonomiaRuntimeEnv } from "../types.ts";
+import { type AutonomiaPgLikePool, createAutonomiaPgAdapter, defaultPgPoolMax } from "./db.pg.shared.ts";
 
 // 無伺服器 PostgreSQL adapter(Neon 相容 WebSocket 驅動):以
 // @neondatabase/serverless 的 Pool 實作 (sql, params) => { rows },契約與
@@ -15,17 +15,17 @@ import { type AkentrosPgLikePool, createAkentrosPgAdapter, defaultPgPoolMax } fr
 //   Workers、Deno、Node ≥ 22 內建 WebSocket)。建議連 Neon 的 pooled
 //   endpoint(-pooler 主機名)降低每實例連線建立成本。
 // - 任何相容 pg-gateway / supavisor WebSocket 閘道的 PG:設
-//   AKENTROS_PG_WS_PROXY 指向閘道(如 "pooler.example.com:5432/v1"),
+//   AUTONOMIA_PG_WS_PROXY 指向閘道(如 "pooler.example.com:5432/v1"),
 //   閘道主機字串含 "{host}" 時視為模板。
 //
-// 選擇此驅動的方式(見 db.ts 的 selectAkentrosPgDriver):
-//   1. AKENTROS_PG_DRIVER=neon 明確指定;
-//   2. AKENTROS_PG_WS_PROXY 已設定(自架 WS 閘道);
+// 選擇此驅動的方式(見 db.ts 的 selectAutonomiaPgDriver):
+//   1. AUTONOMIA_PG_DRIVER=neon 明確指定;
+//   2. AUTONOMIA_PG_WS_PROXY 已設定(自架 WS 閘道);
 //   3. DATABASE_URL 主機為 *.neon.tech(自動)。
 // Workers 的 DO-SQLite 部署不會載入本檔;Workers 的 PG 模式經 db.runtime.ts
 // 以字面量動態 import 載入(esbuild 會切成獨立 chunk,不用就不載入)。
 
-/** 解析 AKENTROS_PG_WS_PROXY:靜態主機(可含 port/path)或 {host} 模板。 */
+/** 解析 AUTONOMIA_PG_WS_PROXY:靜態主機(可含 port/path)或 {host} 模板。 */
 export function resolveWsProxySetting(
   raw: string,
 ): string | ((host: string, port: number | string) => string) | null {
@@ -43,7 +43,7 @@ let neonConfigured = false;
 // neonConfig 是驅動的全域狀態;以第一次建池時的環境設定一次。不同請求
 // 帶不同 WS proxy 設定的場景不存在(單一部署 = 單一設定),若真發生,
 // 以第一個為準並留下警告。
-function configureNeonDriverOnce(env: AkentrosRuntimeEnv): void {
+function configureNeonDriverOnce(env: AutonomiaRuntimeEnv): void {
   if (neonConfigured) return;
   neonConfigured = true;
 
@@ -52,19 +52,19 @@ function configureNeonDriverOnce(env: AkentrosRuntimeEnv): void {
     throw new Error(
       "The serverless PostgreSQL driver requires a global WebSocket constructor " +
         "(Node >= 22, Cloudflare Workers, Vercel/Netlify Edge all provide one). " +
-        "On older Node runtimes use AKENTROS_PG_DRIVER=pg-pool instead.",
+        "On older Node runtimes use AUTONOMIA_PG_DRIVER=pg-pool instead.",
     );
   }
   neonConfig.webSocketConstructor = webSocketConstructor as typeof neonConfig.webSocketConstructor;
 
-  const proxy = resolveWsProxySetting(String(env?.AKENTROS_PG_WS_PROXY || ""));
+  const proxy = resolveWsProxySetting(String(env?.AUTONOMIA_PG_WS_PROXY || ""));
   if (proxy) {
     neonConfig.wsProxy = proxy;
   }
 
   // wss(加密)為預設;僅自架 WS 閘道於 TLS 終結之後時才需要
-  // AKENTROS_PG_WS_SECURE=false(本地開發的 pg-gateway 等)。
-  const secure = String(env?.AKENTROS_PG_WS_SECURE ?? "true")
+  // AUTONOMIA_PG_WS_SECURE=false(本地開發的 pg-gateway 等)。
+  const secure = String(env?.AUTONOMIA_PG_WS_SECURE ?? "true")
     .trim()
     .toLowerCase();
   neonConfig.useSecureWebSocket = secure !== "false";
@@ -72,7 +72,7 @@ function configureNeonDriverOnce(env: AkentrosRuntimeEnv): void {
 
 // 連線字串:此驅動不經 Hyperdrive(Hyperdrive 是給 TCP pg 驅動用的),
 // 一律 DATABASE_URL(Node 的 process.env 為後備)。
-export function neonConnectionString(env: AkentrosRuntimeEnv): string {
+export function neonConnectionString(env: AutonomiaRuntimeEnv): string {
   return String(
     env?.DATABASE_URL || (typeof process !== "undefined" ? process.env.DATABASE_URL : "") || "",
   ).trim();
@@ -80,12 +80,12 @@ export function neonConnectionString(env: AkentrosRuntimeEnv): string {
 
 // globalThis 快取(理由同 db.pg.ts:熱重載/隔離重複載入不得重複建池)。
 const globalCache = globalThis as typeof globalThis & {
-  __akentrosNeonPools?: Map<string, AkentrosPgLikePool>;
+  __autonomiaNeonPools?: Map<string, AutonomiaPgLikePool>;
 };
-globalCache.__akentrosNeonPools ??= new Map<string, AkentrosPgLikePool>();
+globalCache.__autonomiaNeonPools ??= new Map<string, AutonomiaPgLikePool>();
 
-const adapter = createAkentrosPgAdapter({
-  pools: globalCache.__akentrosNeonPools,
+const adapter = createAutonomiaPgAdapter({
+  pools: globalCache.__autonomiaNeonPools,
   createPool(connectionString, env) {
     configureNeonDriverOnce(env);
     const merged = {
@@ -96,13 +96,13 @@ const adapter = createAkentrosPgAdapter({
       connectionString,
       max: defaultPgPoolMax(merged),
       connectionTimeoutMillis: 10_000,
-    }) as unknown as AkentrosPgLikePool;
+    }) as unknown as AutonomiaPgLikePool;
   },
   resolveConnectionString: neonConnectionString,
 });
 
 export const dbQuery = adapter.dbQuery;
 export const dbGet = adapter.dbGet;
-export const withAkentrosTransaction = adapter.withAkentrosTransaction;
-export const createAkentrosQuery = adapter.createAkentrosQuery;
+export const withAutonomiaTransaction = adapter.withAutonomiaTransaction;
+export const createAutonomiaQuery = adapter.createAutonomiaQuery;
 export const closePostgresClients = adapter.closePostgresClients;

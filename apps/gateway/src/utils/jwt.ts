@@ -1,4 +1,4 @@
-// 極簡 HS256 JWT(簽/驗)。只用於 akentros_token cookie 的會話憑證,
+// 極簡 HS256 JWT(簽/驗)。只用於 autonomia_token cookie 的會話憑證,
 // payload 固定為 { sub: userId, exp, epv };不開放任意 claims。
 // epv(session epoch,SEC-01 fix):簽發時綁定的帳號會話 epoch 計數,
 // authenticateToken 與 users.session_epoch 比對,不一致即 401 ——
@@ -6,7 +6,7 @@
 
 const encoder = new TextEncoder();
 
-export interface AkentrosJwtPayload {
+export interface AutonomiaJwtPayload {
   sub: string;
   exp: number;
   /** 會話 epoch;舊 token 未簽入此欄位(undefined → 呼叫端視為 0)。 */
@@ -32,7 +32,7 @@ async function hmacKey(secret: string) {
   ]);
 }
 
-export async function signAkentrosJwt(
+export async function signAutonomiaJwt(
   payload: { sub: string; epv?: number },
   secret: string,
   expiresInSeconds: number,
@@ -51,7 +51,7 @@ export async function signAkentrosJwt(
   return `${signingInput}.${toBase64Url(new Uint8Array(signature))}`;
 }
 
-export async function verifyAkentrosJwt(token: string, secret: string): Promise<AkentrosJwtPayload | null> {
+export async function verifyAutonomiaJwt(token: string, secret: string): Promise<AutonomiaJwtPayload | null> {
   const parts = token.split(".");
   if (parts.length !== 3) return null;
   const [header, body, signature] = parts;
@@ -68,7 +68,7 @@ export async function verifyAkentrosJwt(token: string, secret: string): Promise<
   }
   if (!valid) return null;
 
-  let payload: AkentrosJwtPayload;
+  let payload: AutonomiaJwtPayload;
   try {
     const parsed = JSON.parse(new TextDecoder().decode(fromBase64Url(body)));
     if (!parsed || typeof parsed.sub !== "string" || !/^[1-9][0-9]*$/.test(parsed.sub)) return null;

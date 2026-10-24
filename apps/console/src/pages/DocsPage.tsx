@@ -1,14 +1,14 @@
 import React from "react";
 import { CopyButton, PageHeader } from "../components/ui";
 import {
-  getAkentrosChatCompletionsUrl,
-  getAkentrosPublicApiRoot,
-} from "../lib/akentros/api/akentrosDeveloperApi";
-import { buildCodeExamples, type CodeLanguage } from "../lib/akentros/utils/buildCodeExamples";
+  getAutonomiaChatCompletionsUrl,
+  getAutonomiaPublicApiRoot,
+} from "../lib/autonomia/api/autonomiaDeveloperApi";
+import { buildCodeExamples, type CodeLanguage } from "../lib/autonomia/utils/buildCodeExamples";
 
 export function DocsPage() {
   const [language, setLanguage] = React.useState<CodeLanguage>("curl");
-  const examples = buildCodeExamples(getAkentrosPublicApiRoot(), "YOUR_MODEL_ID");
+  const examples = buildCodeExamples(getAutonomiaPublicApiRoot(), "YOUR_MODEL_ID");
   const current = examples[language];
 
   return (
@@ -26,7 +26,7 @@ export function DocsPage() {
         <li className="card">
           <span>02</span>
           <strong>設定環境變數</strong>
-          <code>AKENTROS_API_KEY=sk-akentros-live_…</code>
+          <code>AUTONOMIA_API_KEY=sk-autonomia-live_…</code>
         </li>
         <li className="card">
           <span>03</span>
@@ -79,7 +79,7 @@ export function DocsPage() {
         <div>
           <strong style={{ fontSize: "0.84rem" }}>Endpoint</strong>
           <div>
-            <code>{getAkentrosChatCompletionsUrl()}</code>
+            <code>{getAutonomiaChatCompletionsUrl()}</code>
           </div>
         </div>
       </div>

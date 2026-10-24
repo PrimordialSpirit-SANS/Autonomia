@@ -44,7 +44,7 @@ jobs:
       - name: Publish artifact sanity (stage dry-run, no upload)
         run: |
           set -euo pipefail
-          npm run stage --workspace @akentros/core
+          npm run stage --workspace @autonomia/core
           TARBALL="$(npm pack --pack-destination "$RUNNER_TEMP" packages/core/.publish-stage | tail -n1)"
           tar -tzf "$RUNNER_TEMP/$TARBALL" > "$RUNNER_TEMP/tarball-listing.txt"
           grep -qx "package/dist/billing.js" "$RUNNER_TEMP/tarball-listing.txt" \

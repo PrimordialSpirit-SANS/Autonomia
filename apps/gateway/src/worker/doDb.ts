@@ -14,17 +14,17 @@ import { AsyncLocalStorage } from "node:async_hooks";
 // - 列預設以欄名為 key 的物件回傳(同 node:sqlite 的 .all())。
 // - 不需要 WAL/busy_timeout PRAGMA(workerd 自管 journaling)。
 
-export interface AkentrosDoSqlCursor {
+export interface AutonomiaDoSqlCursor {
   toArray(): any[];
 }
 
-export interface AkentrosDoSql {
-  exec(query: string, ...params: unknown[]): AkentrosDoSqlCursor;
+export interface AutonomiaDoSql {
+  exec(query: string, ...params: unknown[]): AutonomiaDoSqlCursor;
 }
 
-export interface AkentrosDoState {
+export interface AutonomiaDoState {
   storage: {
-    sql: AkentrosDoSql;
+    sql: AutonomiaDoSql;
     transaction<T>(fn: () => Promise<T>): Promise<T>;
   };
 }
@@ -42,7 +42,7 @@ function normalizeParam(value: any): string | number | null {
   return value;
 }
 
-export function createDoAkentrosDbAdapter(state: AkentrosDoState) {
+export function createDoAutonomiaDbAdapter(state: AutonomiaDoState) {
   const sql = state.storage.sql;
 
   const txStorage = new AsyncLocalStorage<{ depth: number }>();
@@ -89,7 +89,7 @@ export function createDoAkentrosDbAdapter(state: AkentrosDoState) {
   // Node adapter 的獨佔寫入交易。刻意不用 blockConcurrencyWhile:它會
   // 延遲事件交付,fn 一旦 await runtime I/O 即死鎖(交易 fn 依契約不會,
   // 但不作假設較安全)。以 promise chain 串行化,對齊 SQLite 單寫者語義。
-  function withAkentrosTransaction<T>(env: any, fn: () => Promise<T>): Promise<T> {
+  function withAutonomiaTransaction<T>(env: any, fn: () => Promise<T>): Promise<T> {
     void env;
     if (txStorage.getStore()) {
       // 巢狀呼叫:沿用外層交易。
@@ -116,9 +116,9 @@ export function createDoAkentrosDbAdapter(state: AkentrosDoState) {
     return rows[0] ?? null;
   }
 
-  function createAkentrosQuery(env: any) {
+  function createAutonomiaQuery(env: any) {
     const query = (statement: string, params: any[] = []) => dbQuery(env, statement, params);
-    (query as any).transaction = (fn: () => Promise<any>) => withAkentrosTransaction(env, fn);
+    (query as any).transaction = (fn: () => Promise<any>) => withAutonomiaTransaction(env, fn);
     return query;
   }
 
@@ -126,5 +126,5 @@ export function createDoAkentrosDbAdapter(state: AkentrosDoState) {
     // DO 的連線生命週期由 runtime 管理;保留匯出以對齊 adapter 契約。
   }
 
-  return { dbQuery, dbGet, withAkentrosTransaction, createAkentrosQuery, closePostgresClients };
+  return { dbQuery, dbGet, withAutonomiaTransaction, createAutonomiaQuery, closePostgresClients };
 }

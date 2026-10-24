@@ -4,7 +4,7 @@ import { stripTypeScriptTypes } from "node:module";
 import test from "node:test";
 
 const source = await readFile(
-  new URL("../../../apps/console/src/lib/akentros/api/sseEventParser.ts", import.meta.url),
+  new URL("../../../apps/console/src/lib/autonomia/api/sseEventParser.ts", import.meta.url),
   "utf8",
 );
 // 以 Node 內建的型別擦除取代 ts.transpileModule(TS7 移除了該 JS API);

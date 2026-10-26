@@ -53,6 +53,37 @@ versioning follows [SemVer](https://semver.org/).
   invisible to Prometheus — operators had to query the database to learn
   which upstream was failing and why.
 
+- **Console internationalization — six languages (#49).** The console,
+  the public pages and the login screen are now localized in English,
+  繁體中文, 简体中文, 日本語, Deutsch and Français via a new `I18nProvider`
+  context (`apps/console/src/i18n/`), with the language preference
+  persisted across browser sessions. A keyboard- and touch-accessible
+  `LanguageSwitcher` (native `select`) is placed in the console sidebar,
+  the public top bar and the login page, and `<html lang>`, the document
+  title and the meta description follow the active language (SEO and
+  accessibility). 13 unit tests (`i18n.test.ts`) pin dictionary
+  completeness and fallback behavior.
+
+### Changed
+
+- **Model catalog & pricing refresh — revision 2026-10-25.1 (#49).** The
+  authoritative `packages/core/config/backend-pricing.v1.json` (and the
+  console display copy under `apps/console/public/data/autonomia/`)
+  moves to the new lineup — GPT-6.1 Sol, GPT-5.3 Codex, Claude Fable 5.1
+  / Opus 5.5 / Sonnet 5.5 / Haiku 5.5, Gemini 4 Argon and Grok 4.7 —
+  with pricing and the provider pool revised accordingly. README, docs
+  and examples are aligned, and the front/back contract tests pin the
+  new catalog.
+
+### Removed
+
+- **Offline demo mode (#49).** The `demoApi` mock backend and the
+  three.js starfield/constellation visuals (`StarfieldCanvas`,
+  `hiveConstellation`) are gone, along with the `?demo=1` /
+  `VITE_AUTONOMIA_DEMO` entry points and the `three` dependency;
+  README, the console README and `.env.example` no longer mention the
+  demo. The console now requires a real gateway backend.
+
 ### Fixed
 
 - **Release pipeline workflow lands (ECO-SUPPLY-3 completion).**

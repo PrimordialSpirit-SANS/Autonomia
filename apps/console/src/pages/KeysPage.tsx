@@ -1,5 +1,6 @@
 import React from "react";
 import { Alert, Dialog, PageHeader, StateBlock } from "../components/ui";
+import { useI18n } from "../i18n";
 import {
   createAutonomiaKey,
   listAutonomiaKeys,
@@ -24,18 +25,8 @@ function defaultKeyExpiryValue(): string {
   return toDateTimeLocalValue(new Date(Date.now() + 30 * 24 * 60 * 60_000));
 }
 
-function formatKeyExpiry(value: string | null): string {
-  return value ? formatAutonomiaTimestamp(value) : "永不過期";
-}
-
-function formatReplayTtl(seconds: number | undefined): string {
-  const ttl = Number(seconds || 0);
-  if (ttl <= 0) return "關閉";
-  const hours = ttl / 3600;
-  return Number.isInteger(hours) ? `${hours} 小時` : `${hours.toFixed(1)} 小時`;
-}
-
 export function KeysPage() {
+  const { t } = useI18n();
   const [keys, setKeys] = React.useState<AutonomiaApiKey[]>([]);
   const loadAbortRef = React.useRef<AbortController | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -50,6 +41,13 @@ export function KeysPage() {
   const [secret, setSecret] = React.useState("");
   const [busy, setBusy] = React.useState("");
   const [pendingRevoke, setPendingRevoke] = React.useState<AutonomiaApiKey | null>(null);
+
+  const formatReplayTtl = (seconds: number | undefined) => {
+    const ttl = Number(seconds || 0);
+    if (ttl <= 0) return t("keys.replayOffShort");
+    const hours = ttl / 3600;
+    return t("keys.replayHours", { hours: Number.isInteger(hours) ? hours : hours.toFixed(1) });
+  };
 
   const reload = React.useCallback(async () => {
     // FN-9 fix:載入更多/快速操作時舊回應後到會覆寫新結果;以 AbortController
@@ -83,7 +81,7 @@ export function KeysPage() {
     if (expiryMode === "custom") {
       const parsedExpiry = new Date(expiryValue);
       if (Number.isNaN(parsedExpiry.getTime()) || parsedExpiry.getTime() < Date.now() + MIN_KEY_TTL_MS) {
-        setError("過期時間必須至少距現在 1 小時。");
+        setError(t("keys.errorExpiry"));
         return;
       }
       expiresAt = parsedExpiry.toISOString();
@@ -93,7 +91,7 @@ export function KeysPage() {
     if (pointLimitMode === "limited") {
       const amount = Number(pointLimitValue);
       if (!Number.isFinite(amount) || amount < 0 || pointLimitValue.trim() === "") {
-        setError("消費上限必須是 0 以上的金額(美元)。");
+        setError(t("keys.errorLimit"));
         return;
       }
       spendLimitUsd = amount.toFixed(2);
@@ -103,7 +101,7 @@ export function KeysPage() {
     if (replayMode === "on") {
       const hours = Number(replayHours);
       if (!Number.isFinite(hours) || hours <= 0 || hours > MAX_REPLAY_TTL_HOURS) {
-        setError(`冪等重放時限必須是 1 到 ${MAX_REPLAY_TTL_HOURS} 小時(7 天)。`);
+        setError(t("keys.errorReplayTtl", { max: MAX_REPLAY_TTL_HOURS }));
         return;
       }
       replayTtlSeconds = Math.round(hours * 3600);
@@ -157,17 +155,17 @@ export function KeysPage() {
 
   return (
     <>
-      <PageHeader title="API 金鑰" subtitle="金鑰只會在建立或輪替時顯示一次,請立即安全保存。" />
+      <PageHeader title={t("keys.title")} subtitle={t("keys.subtitle")} />
       <form className="card card-pad" onSubmit={create} style={{ marginBottom: 12 }}>
-        <h2>建立新金鑰</h2>
+        <h2>{t("keys.createTitle")}</h2>
         <p style={{ margin: "0 0 16px", color: "var(--text-dim)", fontSize: "0.8rem" }}>
-          為不同環境設定獨立的有效期限與消費預算(美元)。
+          {t("keys.createIntro")}
         </p>
         <div
           style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14 }}
         >
           <label className="field">
-            <span>金鑰名稱</span>
+            <span>{t("keys.nameLabel")}</span>
             <input
               className="input"
               value={name}
@@ -175,66 +173,66 @@ export function KeysPage() {
               onChange={(event) => setName(event.target.value)}
               placeholder="Production"
             />
-            <small>使用容易辨識的服務或環境名稱。</small>
+            <small>{t("keys.nameHint")}</small>
           </label>
           <div className="field">
-            <span>過期時間</span>
-            <fieldset className="choice" aria-label="金鑰過期方式">
+            <span>{t("keys.expiryLabel")}</span>
+            <fieldset className="choice" aria-label={t("keys.expiryChoiceAria")}>
               <button
                 type="button"
                 className={expiryMode === "never" ? "active" : ""}
                 onClick={() => setExpiryMode("never")}
               >
-                永不過期
+                {t("keys.neverExpires")}
               </button>
               <button
                 type="button"
                 className={expiryMode === "custom" ? "active" : ""}
                 onClick={() => setExpiryMode("custom")}
               >
-                自訂期限
+                {t("keys.expiryCustom")}
               </button>
             </fieldset>
             {expiryMode === "custom" ? (
               <>
                 <input
                   className="input"
-                  aria-label="金鑰過期時間"
+                  aria-label={t("keys.expiryInputAria")}
                   type="datetime-local"
                   min={toDateTimeLocalValue(new Date(Date.now() + MIN_KEY_TTL_MS + 60_000))}
                   value={expiryValue}
                   onChange={(event) => setExpiryValue(event.target.value)}
                   required
                 />
-                <small>最早可設定為目前時間的 1 小時後。</small>
+                <small>{t("keys.expiryMinHint")}</small>
               </>
             ) : (
-              <small>金鑰會持續有效,直到手動撤銷。</small>
+              <small>{t("keys.expiryDefaultHint")}</small>
             )}
           </div>
           <div className="field">
-            <span>消費上限(USD)</span>
-            <fieldset className="choice" aria-label="消費上限">
+            <span>{t("keys.limitLabel")}</span>
+            <fieldset className="choice" aria-label={t("keys.limitChoiceAria")}>
               <button
                 type="button"
                 className={pointLimitMode === "unlimited" ? "active" : ""}
                 onClick={() => setPointLimitMode("unlimited")}
               >
-                無限制
+                {t("keys.limitUnlimited")}
               </button>
               <button
                 type="button"
                 className={pointLimitMode === "limited" ? "active" : ""}
                 onClick={() => setPointLimitMode("limited")}
               >
-                設定上限
+                {t("keys.limitSet")}
               </button>
             </fieldset>
             {pointLimitMode === "limited" ? (
               <>
                 <input
                   className="input"
-                  aria-label="消費上限"
+                  aria-label={t("keys.limitChoiceAria")}
                   type="number"
                   min={0}
                   step="0.01"
@@ -243,50 +241,47 @@ export function KeysPage() {
                   onChange={(event) => setPointLimitValue(event.target.value)}
                   required
                 />
-                <small>此金鑰累積消費達上限後,新請求會被拒絕。</small>
+                <small>{t("keys.limitHint")}</small>
               </>
             ) : (
-              <small>不限制此金鑰可累積消費的金額。</small>
+              <small>{t("keys.limitDefaultHint")}</small>
             )}
           </div>
           <div className="field">
-            <span>冪等重放</span>
-            <fieldset className="choice" aria-label="冪等重放">
+            <span>{t("keys.replayLabel")}</span>
+            <fieldset className="choice" aria-label={t("keys.replayChoiceAria")}>
               <button
                 type="button"
                 className={replayMode === "off" ? "active" : ""}
                 onClick={() => setReplayMode("off")}
               >
-                關閉(預設)
+                {t("keys.replayOff")}
               </button>
               <button
                 type="button"
                 className={replayMode === "on" ? "active" : ""}
                 onClick={() => setReplayMode("on")}
               >
-                落地並重放
+                {t("keys.replayOn")}
               </button>
             </fieldset>
             {replayMode === "on" ? (
               <>
                 <input
                   className="input"
-                  aria-label="冪等重放時限(小時)"
+                  aria-label={t("keys.replayInputAria")}
                   type="number"
                   min={1}
                   max={MAX_REPLAY_TTL_HOURS}
-                  step="1"
+                  step={1}
                   value={replayHours}
                   onChange={(event) => setReplayHours(event.target.value)}
                   required
                 />
-                <small>
-                  成功回應會以此時限落地(最長 7 天),同金鑰的 Idempotency-Key
-                  重送且請求體一致時直接重放,不會重複計費。
-                </small>
+                <small>{t("keys.replayOnHint")}</small>
               </>
             ) : (
-              <small>不落地回應;完成鍵重送會回 409,請求內容不會被保存。</small>
+              <small>{t("keys.replayOffHint")}</small>
             )}
           </div>
         </div>
@@ -300,11 +295,9 @@ export function KeysPage() {
             flexWrap: "wrap",
           }}
         >
-          <small style={{ color: "var(--text-faint)", fontSize: "0.74rem" }}>
-            金鑰只會顯示一次,建立後請立即安全保存。
-          </small>
+          <small style={{ color: "var(--text-faint)", fontSize: "0.74rem" }}>{t("keys.footerHint")}</small>
           <button className="btn btn-primary" type="submit" disabled={busy === "create"}>
-            {busy === "create" ? "建立中…" : "建立金鑰"}
+            {busy === "create" ? t("keys.creating") : t("keys.createButton")}
           </button>
         </div>
       </form>
@@ -315,7 +308,7 @@ export function KeysPage() {
             tone="error"
             action={
               <button className="btn btn-sm" type="button" onClick={() => void reload()} disabled={loading}>
-                重新連線
+                {t("common.retry")}
               </button>
             }
           >
@@ -324,11 +317,11 @@ export function KeysPage() {
         </div>
       )}
 
-      <section className="card" aria-label="金鑰清單">
+      <section className="card" aria-label={t("keys.listAria")}>
         {loading ? (
-          <StateBlock spinner>正在讀取金鑰…</StateBlock>
+          <StateBlock spinner>{t("keys.loading")}</StateBlock>
         ) : !error && keys.length === 0 ? (
-          <StateBlock>尚未建立金鑰。建立第一把金鑰後即可呼叫 API。</StateBlock>
+          <StateBlock>{t("keys.empty")}</StateBlock>
         ) : (
           keys.map((key) => {
             const quotaPercent =
@@ -352,14 +345,23 @@ export function KeysPage() {
                   )}
                 </div>
                 <div className="key-meta">
-                  <span>建立 {formatAutonomiaTimestamp(key.created_at)}</span>
-                  <span>最後使用 {formatAutonomiaTimestamp(key.last_used_at)}</span>
-                  <span>到期 {formatKeyExpiry(key.expires_at)}</span>
+                  <span>{t("keys.metaCreated", { time: formatAutonomiaTimestamp(key.created_at) })}</span>
+                  <span>{t("keys.metaLastUsed", { time: formatAutonomiaTimestamp(key.last_used_at) })}</span>
                   <span>
-                    消費 {formatUsd(key.spend_used_usd)} /{" "}
-                    {key.spend_limit_usd == null ? "無限制" : formatUsd(key.spend_limit_usd)}
+                    {key.expires_at
+                      ? t("keys.metaExpires", { time: formatAutonomiaTimestamp(key.expires_at) })
+                      : t("keys.neverExpires")}
                   </span>
-                  <span>冪等重放 {formatReplayTtl(key.idempotency_replay_ttl_seconds)}</span>
+                  <span>
+                    {t("keys.metaSpend", {
+                      used: formatUsd(key.spend_used_usd),
+                      limit:
+                        key.spend_limit_usd == null ? t("common.unlimited") : formatUsd(key.spend_limit_usd),
+                    })}
+                  </span>
+                  <span>
+                    {t("keys.metaReplay", { value: formatReplayTtl(key.idempotency_replay_ttl_seconds) })}
+                  </span>
                 </div>
                 <div className="key-actions">
                   <button
@@ -368,7 +370,7 @@ export function KeysPage() {
                     onClick={() => void rotate(key)}
                     disabled={busy === key.id}
                   >
-                    輪替
+                    {t("keys.rotate")}
                   </button>
                   <button
                     type="button"
@@ -376,7 +378,7 @@ export function KeysPage() {
                     onClick={() => setPendingRevoke(key)}
                     disabled={busy === key.id}
                   >
-                    撤銷
+                    {t("keys.revoke")}
                   </button>
                 </div>
               </article>
@@ -387,7 +389,7 @@ export function KeysPage() {
 
       {secret && (
         <Dialog
-          title="現在複製這把金鑰"
+          title={t("keys.secretTitle")}
           actions={
             <>
               <button
@@ -401,34 +403,34 @@ export function KeysPage() {
                   }
                 }}
               >
-                複製金鑰
+                {t("keys.copyKey")}
               </button>
               <button type="button" className="btn" onClick={() => setSecret("")}>
-                我已安全保存
+                {t("keys.savedIt")}
               </button>
             </>
           }
         >
-          <p>關閉後就無法再次查看。請存入密碼管理器或伺服器環境變數。</p>
+          <p>{t("keys.secretBody")}</p>
           <code className="secret-box">{secret}</code>
         </Dialog>
       )}
 
       {pendingRevoke && (
         <Dialog
-          title={`撤銷「${pendingRevoke.name}」?`}
+          title={t("keys.revokeTitle", { name: pendingRevoke.name })}
           actions={
             <>
               <button type="button" className="btn btn-danger" onClick={() => void revoke()}>
-                確認撤銷
+                {t("keys.revokeConfirm")}
               </button>
               <button type="button" className="btn" onClick={() => setPendingRevoke(null)}>
-                取消
+                {t("common.cancel")}
               </button>
             </>
           }
         >
-          <p>使用這把金鑰的請求會立即失敗。此動作無法復原。</p>
+          <p>{t("keys.revokeBody")}</p>
         </Dialog>
       )}
     </>

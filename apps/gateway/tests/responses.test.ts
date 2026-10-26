@@ -222,7 +222,7 @@ test("legacy chat keys without the responses scope stay backward compatible", as
     const response = await app.request("/api/ai/v1/responses", {
       method: "POST",
       headers: { authorization: `Bearer ${secret}`, "content-type": "application/json" },
-      body: JSON.stringify({ model: "autonomia/gpt-5.2", input: "legacy key" }),
+      body: JSON.stringify({ model: "autonomia/gpt-6.1-sol", input: "legacy key" }),
     });
     assert.equal(response.status, 200);
     const body = (await response.json()) as any;
@@ -239,7 +239,7 @@ test("legacy chat keys without the responses scope stay backward compatible", as
     const denied = await app.request("/api/ai/v1/responses", {
       method: "POST",
       headers: { authorization: `Bearer ${embedOnlyKey.secret}`, "content-type": "application/json" },
-      body: JSON.stringify({ model: "autonomia/gpt-5.2", input: "no" }),
+      body: JSON.stringify({ model: "autonomia/gpt-6.1-sol", input: "no" }),
     });
     assert.equal(denied.status, 403);
     assert.equal(((await denied.json()) as any).error.code, "insufficient_scope");

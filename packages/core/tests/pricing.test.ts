@@ -15,9 +15,10 @@ import {
 } from "../src/pricing.ts";
 
 const GPT_6_ASTRA = "autonomia/gpt-6-astra";
-const GPT_52 = "autonomia/gpt-5.2";
-const GPT_52_CODEX = "autonomia/gpt-5.2-codex";
-const CLAUDE_OPUS_48 = "autonomia/claude-opus-4-8";
+const GPT_61_SOL = "autonomia/gpt-6.1-sol";
+const GPT_53_CODEX = "autonomia/gpt-5.3-codex";
+const CLAUDE_FABLE_51 = "autonomia/claude-fable-5-1";
+const CLAUDE_OPUS_55 = "autonomia/claude-opus-5-5";
 const QWEN_38_27B = "autonomia/qwen-3.8-27b";
 const QWEN_38_FLASH = "autonomia/qwen-3.8-flash";
 
@@ -38,16 +39,17 @@ test("canonical pricing exposes only enabled public models", () => {
     listEnabledModels().map((model) => model.id),
     [
       GPT_6_ASTRA,
-      GPT_52,
-      GPT_52_CODEX,
-      CLAUDE_OPUS_48,
-      "autonomia/claude-sonnet-5",
-      "autonomia/claude-haiku-4-5",
-      "autonomia/gemini-3.5-pro",
+      GPT_61_SOL,
+      GPT_53_CODEX,
+      CLAUDE_FABLE_51,
+      CLAUDE_OPUS_55,
+      "autonomia/claude-sonnet-5-5",
+      "autonomia/claude-haiku-5-5",
+      "autonomia/gemini-4-argon",
       "autonomia/gemini-3.8-flash",
       "autonomia/gemini-3.5-flash-lite",
-      "autonomia/grok-4.6",
-      "autonomia/grok-4.1-fast",
+      "autonomia/grok-4.7",
+      "autonomia/grok-4.3",
       "autonomia/deepseek-v4-pro",
       "autonomia/deepseek-v4.1-flash",
       "autonomia/kimi-k3",
@@ -61,9 +63,9 @@ test("canonical pricing exposes only enabled public models", () => {
     ],
   );
   assert.equal(getModelPricing(GPT_6_ASTRA), BACKEND_PRICING.models[GPT_6_ASTRA]);
-  assert.equal(getModelPricing(GPT_52), BACKEND_PRICING.models[GPT_52]);
-  assert.equal(getModelPricing(GPT_52_CODEX), BACKEND_PRICING.models[GPT_52_CODEX]);
-  assert.equal(getModelPricing(CLAUDE_OPUS_48), BACKEND_PRICING.models[CLAUDE_OPUS_48]);
+  assert.equal(getModelPricing(GPT_61_SOL), BACKEND_PRICING.models[GPT_61_SOL]);
+  assert.equal(getModelPricing(GPT_53_CODEX), BACKEND_PRICING.models[GPT_53_CODEX]);
+  assert.equal(getModelPricing(CLAUDE_FABLE_51), BACKEND_PRICING.models[CLAUDE_FABLE_51]);
   assert.equal(getModelPricing(QWEN_38_27B), BACKEND_PRICING.models[QWEN_38_27B]);
   assert.equal(getModelPricing("autonomia/unknown"), null);
   assert.throws(() => requireModelPricing("autonomia/unknown"), {
@@ -169,35 +171,43 @@ test("GPT-6 Astra bills its documented USD rate via the OpenAI route", () => {
   );
 });
 
-test("GPT-5.2 Codex exposes its dedicated OpenAI coding route", () => {
-  assert.equal(calculateActualCostMicros(GPT_52_CODEX, 1_000_000, 1_000_000), 11280000);
+test("GPT-6.1 Sol bills its documented USD rate via the OpenAI route", () => {
+  assert.equal(calculateActualCostMicros(GPT_61_SOL, 1_000_000, 1_000_000), 12010000);
   assert.deepEqual(
-    listCandidateRoutes(GPT_52_CODEX).map((route) => route.upstream_model),
-    ["gpt-5.2-codex"],
+    listCandidateRoutes(GPT_61_SOL).map((route) => route.upstream_model),
+    ["gpt-6.1-sol"],
   );
 });
 
-test("Claude Opus 4.8 keeps its official Anthropic route", () => {
-  assert.equal(calculateActualCostMicros(CLAUDE_OPUS_48, 1_000_000, 1_000_000), 30010000);
+test("GPT-5.3 Codex exposes its dedicated OpenAI coding route", () => {
+  assert.equal(calculateActualCostMicros(GPT_53_CODEX, 1_000_000, 1_000_000), 15760000);
   assert.deepEqual(
-    listCandidateRoutes(CLAUDE_OPUS_48).map((route) => route.upstream_model),
-    ["claude-opus-4-8"],
+    listCandidateRoutes(GPT_53_CODEX).map((route) => route.upstream_model),
+    ["gpt-5.3-codex"],
   );
 });
 
-test("Gemini 3.5 Pro bills through the official Gemini API route", () => {
-  assert.equal(calculateActualCostMicros("autonomia/gemini-3.5-pro", 1_000_000, 1_000_000), 14030000);
+test("Claude Fable 5.1 keeps its official Anthropic route", () => {
+  assert.equal(calculateActualCostMicros(CLAUDE_FABLE_51, 1_000_000, 1_000_000), 60010000);
   assert.deepEqual(
-    listCandidateRoutes("autonomia/gemini-3.5-pro").map((route) => route.upstream_model),
-    ["gemini-3.5-pro"],
+    listCandidateRoutes(CLAUDE_FABLE_51).map((route) => route.upstream_model),
+    ["claude-fable-5-1"],
   );
 });
 
-test("Grok 4.6 bills through the official xAI route", () => {
-  assert.equal(calculateActualCostMicros("autonomia/grok-4.6", 1_000_000, 1_000_000), 8010000);
+test("Gemini 4 Argon bills through the official Gemini API route", () => {
+  assert.equal(calculateActualCostMicros("autonomia/gemini-4-argon", 1_000_000, 1_000_000), 12010000);
   assert.deepEqual(
-    listCandidateRoutes("autonomia/grok-4.6").map((route) => route.upstream_model),
-    ["grok-4.6"],
+    listCandidateRoutes("autonomia/gemini-4-argon").map((route) => route.upstream_model),
+    ["gemini-4-argon"],
+  );
+});
+
+test("Grok 4.7 bills through the official xAI route", () => {
+  assert.equal(calculateActualCostMicros("autonomia/grok-4.7", 1_000_000, 1_000_000), 8010000);
+  assert.deepEqual(
+    listCandidateRoutes("autonomia/grok-4.7").map((route) => route.upstream_model),
+    ["grok-4.7"],
   );
 });
 

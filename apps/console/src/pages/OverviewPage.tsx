@@ -1,6 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { Alert, PageHeader, StateBlock } from "../components/ui";
+import { useI18n } from "../i18n";
 import {
   getAutonomiaPublicApiRoot,
   getAutonomiaUsageSummary,
@@ -9,6 +10,7 @@ import type { AutonomiaUsageSummary } from "../lib/autonomia/types";
 import { formatTokens, formatUsd } from "../lib/autonomia/utils/formatAutonomia";
 
 export function OverviewPage() {
+  const { t } = useI18n();
   const [usage, setUsage] = React.useState<AutonomiaUsageSummary | null>(null);
   const [error, setError] = React.useState("");
 
@@ -22,14 +24,21 @@ export function OverviewPage() {
     return () => controller.abort();
   }, []);
 
+  const metrics: Array<[string, string | null]> = [
+    [t("overview.metricBalance"), usage ? formatUsd(usage.balance_usd) : null],
+    [t("overview.metricRequests"), usage ? formatTokens(Number(usage.requests)) : null],
+    [t("overview.metricTokens"), usage ? formatTokens(Number(usage.total_tokens)) : null],
+    [t("overview.metricSpend"), usage ? formatUsd(usage.charged_usd) : null],
+  ];
+
   return (
     <>
       <PageHeader
-        title="總覽"
-        subtitle="近 30 天的帳戶與用量摘要"
+        title={t("overview.title")}
+        subtitle={t("overview.subtitle")}
         action={
           <Link className="btn btn-primary" to="/keys">
-            建立 API 金鑰
+            {t("overview.createKey")}
           </Link>
         }
       />
@@ -37,34 +46,27 @@ export function OverviewPage() {
         <Alert tone="error">
           {error}
           <Link className="btn btn-sm" to="/">
-            重新連線
+            {t("common.retry")}
           </Link>
         </Alert>
       )}
-      <section className="metric-grid" aria-label="近 30 天使用摘要">
-        {(
-          [
-            ["可用餘額", usage ? formatUsd(usage.balance_usd) : null],
-            ["近 30 天請求", usage ? formatTokens(Number(usage.requests)) : null],
-            ["近 30 天 Token", usage ? formatTokens(Number(usage.total_tokens)) : null],
-            ["近 30 天消費", usage ? formatUsd(usage.charged_usd) : null],
-          ] as const
-        ).map(([label, value]) => (
+      <section className="metric-grid" aria-label={t("overview.metricsAria")}>
+        {metrics.map(([label, value]) => (
           <article className="card metric" key={label}>
             <span>{label}</span>
             <strong>{value ?? "—"}</strong>
           </article>
         ))}
       </section>
-      {!usage && !error && <StateBlock spinner>正在讀取用量摘要…</StateBlock>}
+      {!usage && !error && <StateBlock spinner>{t("overview.loading")}</StateBlock>}
       <div className="two-col">
         <article className="card card-pad">
-          <h2>API 端點</h2>
+          <h2>{t("overview.endpointTitle")}</h2>
           <p style={{ margin: "0 0 12px", color: "var(--text-dim)", fontSize: "0.8rem" }}>
-            與 OpenAI Chat Completions 相容,任何 OpenAI SDK 指向以下 Base URL 即可使用。
+            {t("overview.endpointIntro")}
           </p>
           <label className="field">
-            <span>Base URL</span>
+            <span>{t("overview.baseUrlLabel")}</span>
             <input
               className="input input-mono"
               readOnly
@@ -87,23 +89,23 @@ export function OverviewPage() {
           </small>
         </article>
         <article className="card card-pad">
-          <h2>常用操作</h2>
+          <h2>{t("overview.quickTitle")}</h2>
           <div style={{ marginTop: 8 }}>
             <Link className="link-row" to="/playground">
-              <span>串流測試</span>
-              <small>即時查看回應</small>
+              <span>{t("nav.playground")}</span>
+              <small>{t("overview.quickPlaygroundHint")}</small>
             </Link>
             <Link className="link-row" to="/docs">
-              <span>快速開始</span>
-              <small>查看呼叫範例</small>
+              <span>{t("nav.quickstart")}</span>
+              <small>{t("overview.quickDocsHint")}</small>
             </Link>
             <Link className="link-row" to="/models">
-              <span>模型</span>
-              <small>查看模型與計費</small>
+              <span>{t("nav.models")}</span>
+              <small>{t("overview.quickModelsHint")}</small>
             </Link>
             <Link className="link-row" to="/logs">
-              <span>請求紀錄</span>
-              <small>查看用量與狀態</small>
+              <span>{t("nav.logs")}</span>
+              <small>{t("overview.quickLogsHint")}</small>
             </Link>
           </div>
         </article>

@@ -1,9 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { setCurrentLanguage } from "../../../i18n/core";
 import {
   loadAutonomiaBrandManifest,
   loadAutonomiaModels,
   loadAutonomiaProviderOfferings,
 } from "./loadAutonomiaCatalog";
+
+// 載入失敗訊息由 i18n 產生;固定 zh-TW 讓既有斷言確定。
+setCurrentLanguage("zh-TW");
 
 function jsonResponse(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {

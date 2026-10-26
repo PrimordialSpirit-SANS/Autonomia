@@ -1,5 +1,6 @@
 import React from "react";
 import { Alert, BrandMark, CopyButton, PageHeader, StateBlock } from "../components/ui";
+import { modelDescription, useI18n } from "../i18n";
 import {
   loadAutonomiaBrandManifest,
   loadAutonomiaModels,
@@ -11,10 +12,9 @@ import { formatModelLimit, formatUsd } from "../lib/autonomia/utils/formatAutono
 // 計費卡片顯示每百萬 Token 的輸入/輸出美元價。
 
 function InputModalityBadge({ modalities }: { modalities: string[] }) {
+  const { t } = useI18n();
   const supported = modalities.includes("image");
-  const description = supported
-    ? "模型原生支援多模態輸入;Autonomia API 目前仍提供文字介面。"
-    : "此模型不支援多模態圖片輸入。";
+  const description = supported ? t("models.modalityVisionDesc") : t("models.modalityTextDesc");
   return (
     <span
       className={`tag${supported ? " badge-warn" : ""}`}
@@ -29,6 +29,7 @@ function InputModalityBadge({ modalities }: { modalities: string[] }) {
 }
 
 export function ModelsPage() {
+  const { t } = useI18n();
   const [catalog, setCatalog] = React.useState<Awaited<ReturnType<typeof loadAutonomiaModels>> | null>(null);
   const [brandAssets, setBrandAssets] = React.useState<
     Map<string, { display_asset_url: string | null; name: string; fallback_label: string }>
@@ -55,8 +56,11 @@ export function ModelsPage() {
   return (
     <>
       <PageHeader
-        title="模型"
-        subtitle={`${catalog?.models.length ?? "…"} 個模型・定價版本 ${catalog?.pricing_revision ?? "—"}`}
+        title={t("models.title")}
+        subtitle={t("models.subtitle", {
+          count: catalog?.models.length ?? "…",
+          revision: catalog?.pricing_revision ?? "—",
+        })}
       />
       {error && (
         <div style={{ marginBottom: 12 }}>
@@ -65,7 +69,7 @@ export function ModelsPage() {
       )}
       {!catalog && !error && (
         <div className="card">
-          <StateBlock spinner>正在載入模型目錄…</StateBlock>
+          <StateBlock spinner>{t("models.loading")}</StateBlock>
         </div>
       )}
       {catalog && (
@@ -75,7 +79,9 @@ export function ModelsPage() {
             return (
               <article className="card model-card" key={model.id}>
                 <div className="model-card-top">
-                  <span>上下文 {formatModelLimit(model.context_window_tokens)}</span>
+                  <span>
+                    {t("models.contextLabel", { value: formatModelLimit(model.context_window_tokens) })}
+                  </span>
                   {model.status !== "available" && <span className="badge badge-warn">{model.status}</span>}
                 </div>
                 <div className="model-identity">
@@ -87,12 +93,12 @@ export function ModelsPage() {
                   <div style={{ minWidth: 0 }}>
                     <h2>{model.display_name}</h2>
                     <div className="model-route">
-                      <code title={`型號路由 ${model.id}`}>{model.id}</code>
-                      <CopyButton value={model.id} label="複製型號路由" compact />
+                      <code title={t("models.routeTitle", { id: model.id })}>{model.id}</code>
+                      <CopyButton value={model.id} label={t("models.routeCopyLabel")} compact />
                     </div>
                   </div>
                 </div>
-                <p className="model-desc">{model.description}</p>
+                <p className="model-desc">{modelDescription(model.id) || model.description}</p>
                 <div className="model-tags">
                   {model.capabilities.map((capability) => (
                     <span className="tag" key={capability}>
@@ -103,11 +109,11 @@ export function ModelsPage() {
                 </div>
                 <dl className="model-billing" style={{ margin: 0 }}>
                   <div>
-                    <dt>輸入 / 1M Token</dt>
+                    <dt>{t("models.billingInput")}</dt>
                     <dd>{formatUsd(model.billing.input_usd_per_million_tokens)}</dd>
                   </div>
                   <div>
-                    <dt>輸出 / 1M Token</dt>
+                    <dt>{t("models.billingOutput")}</dt>
                     <dd>{formatUsd(model.billing.output_usd_per_million_tokens)}</dd>
                   </div>
                 </dl>

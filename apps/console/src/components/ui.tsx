@@ -1,4 +1,6 @@
 import React from "react";
+import { useI18n } from "../i18n";
+import { intlLocaleFor } from "../i18n/core";
 
 // 控制台共用的小型 UI 元件。樣式全部對應 index.css 的設計系統類別。
 
@@ -71,15 +73,9 @@ export function Dialog({
   );
 }
 
-export function CopyButton({
-  value,
-  label = "複製",
-  compact,
-}: {
-  value: string;
-  label?: string;
-  compact?: boolean;
-}) {
+export function CopyButton({ value, label, compact }: { value: string; label?: string; compact?: boolean }) {
+  const { t } = useI18n();
+  const effectiveLabel = label ?? t("common.copy");
   const [copied, setCopied] = React.useState(false);
   const copy = async () => {
     try {
@@ -96,8 +92,8 @@ export function CopyButton({
         type="button"
         className={`icon-btn${copied ? " copied" : ""}`}
         onClick={() => void copy()}
-        aria-label={copied ? "已複製" : label}
-        title={copied ? "已複製" : label}
+        aria-label={copied ? t("common.copied") : effectiveLabel}
+        title={copied ? t("common.copied") : effectiveLabel}
       >
         {copied ? (
           <svg
@@ -130,7 +126,7 @@ export function CopyButton({
   }
   return (
     <button type="button" className="btn btn-sm" onClick={() => void copy()}>
-      {copied ? "已複製" : label}
+      {copied ? t("common.copied") : effectiveLabel}
     </button>
   );
 }
@@ -160,6 +156,6 @@ export function BrandMark({
 
 export function formatDuration(value: number | null): string {
   if (value === null) return "—";
-  if (value < 1000) return `${Math.round(value).toLocaleString("zh-TW")} ms`;
+  if (value < 1000) return `${Math.round(value).toLocaleString(intlLocaleFor())} ms`;
   return `${(value / 1000).toFixed(2)} s`;
 }

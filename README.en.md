@@ -25,7 +25,7 @@ The system consists of three parts, all TypeScript:
 | --- | --- |
 | `packages/core` | Portable behavior core: pricing authority, USD billing (reserve/settle/refund, integer micro-dollars), API keys (HMAC + pepper), provider pool routing, SSE parsing, versioned schema migrations. Published to npm. |
 | `apps/gateway` | The gateway (Hono): a Node server (`@hono/node-server` + `node:sqlite`) or Cloudflare Workers (single Durable Object + `storage.sql`). Exposes the OpenAI-compatible API, the developer management plane, a built-in account system, and scheduled reconciliation. |
-| `apps/console` | Developer console (React + Vite): key management, streaming playground, model catalog, usage logs — with an offline demo mode. |
+| `apps/console` | Developer console (React + Vite): key management, streaming playground, model catalog, usage logs. |
 
 ## Features
 
@@ -35,7 +35,7 @@ The system consists of three parts, all TypeScript:
 - **Serverless PostgreSQL**: point `DATABASE_URL` at PG and the driver auto-selects — TCP `pg` pooling (Node VPS, Render, Vercel/Netlify functions; automatic TLS to remote hosts) or the Neon-compatible WebSocket driver (`*.neon.tech` auto-detected; edge runtimes and Workers direct; self-hosted `AUTONOMIA_PG_WS_PROXY` gateways supported). Workers can also go through a Hyperdrive binding. Both drivers share the same interactive-transaction semantics (`FOR UPDATE` row locks, `pg_advisory_xact_lock`), so billing invariants hold regardless of topology. See Topology C in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 - **API key management**: `sk-autonomia-live_/sk-autonomia-test_` keys, shown exactly once, stored as pepper-HMAC digests; per-key expiry, model allowlists, RPM, max concurrency, and USD spending caps. Key-level RPM/concurrency is enforced by atomic in-database counters; login and key-management rate limiting uses SQLite fixed windows (single-process global) with an in-memory fallback when the database is unavailable.
 - **Built-in accounts**: signup/login (JWT cookie + double-submit CSRF, Origin/Referer checks on pre-auth endpoints), admin seed at migrate time, signup bonus, public registration toggle, anti-enumeration by default.
-- **Developer console**: overview, keys, streaming playground (token-by-token rendering, usage stats), model catalog (free tiers included), request logs with per-request detail; `?demo=1` offline demo mode.
+- **Developer console**: overview, keys, streaming playground (token-by-token rendering, usage stats), model catalog (free tiers included), request logs with per-request detail.
 - **Ops probes and structured logs**: `GET /healthz` reports process and database status (200 ok / 503 degraded) for load balancers and monitoring; the Node topology additionally serves `GET /metrics` (Prometheus text format: request counts, latency, token usage, spend, plus per-upstream-provider attempt/failure/latency series for failover health at a glance; disable with `AUTONOMIA_METRICS_ENABLED=false`). Internal logs are single-line JSON, ready for Cloudflare observability, journald, etc.
 - **Contract-test guardrails**: openapi.yaml, the frontend/backend catalogs, routing and security invariants are all pinned by tests — drift fails the build. Biome lint/format and `npm audit` (high and above) are enforced in CI.
 
@@ -115,8 +115,6 @@ npm run dev:console    # http://localhost:5173
 ```
 
 Open http://localhost:5173, log in as the admin, create an API key, and test streaming.
-No provider keys yet? The console's **`http://localhost:5173/?demo=1`** offline demo mode
-exercises every feature (keys, streaming playground, usage) against simulated data.
 
 ### Call it with the OpenAI SDK
 
@@ -129,7 +127,7 @@ const client = new OpenAI({
 });
 
 const stream = await client.chat.completions.create({
-  model: 'autonomia/gpt-5.2',  // model catalog: console "Models" page
+  model: 'autonomia/gpt-6.1-sol',  // model catalog: console "Models" page
   messages: [{ role: 'user', content: 'Hello!' }],
   stream: true,
 });

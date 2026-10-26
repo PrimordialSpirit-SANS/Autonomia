@@ -314,6 +314,18 @@ code {
   font-size: 0.76rem;
 }
 
+/* 按鈕內圖示:固定小尺寸,避免 SVG 以預設 300×150 撐開按鈕。 */
+.btn svg {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+}
+
+.btn-sm svg {
+  width: 12px;
+  height: 12px;
+}
+
 .card {
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
@@ -378,6 +390,49 @@ code {
 .input-mono {
   font-family: var(--mono);
   font-size: 0.82rem;
+}
+
+/* ---------- 語言切換器 ---------- */
+
+.lang-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-faint);
+}
+
+.lang-switch svg {
+  width: 15px;
+  height: 15px;
+  flex: none;
+  opacity: 0.85;
+}
+
+.lang-switch .select {
+  width: auto;
+  padding: 6px 10px;
+  font-size: 0.8rem;
+}
+
+/* 側欄內滿寬,與上方導覽區塊對齊 */
+.sidebar-lang {
+  margin-top: 12px;
+}
+
+.sidebar-lang .lang-switch {
+  display: flex;
+  width: 100%;
+}
+
+.sidebar-lang .select {
+  flex: 1;
+  min-width: 0;
+}
+
+/* 登入頁置中呈現 */
+.auth-lang {
+  display: flex;
+  justify-content: center;
 }
 
 .choice {
@@ -481,7 +536,7 @@ fieldset.choice {
   display: grid;
   place-items: center;
   padding: 24px;
-  background: radial-gradient(600px 320px at 50% 8%, rgba(255, 255, 255, 0.04), transparent 70%), var(--bg);
+  background: var(--bg);
 }
 
 .auth-card {
@@ -545,54 +600,276 @@ fieldset.choice {
   color: var(--text);
 }
 
-/* ---------- 總覽 ---------- */
+/* ---------- 總覽:Hero + KPI + Bento ---------- */
 
-.metric-grid {
+/* Hero 橫幅:問候 + 主要 CTA,右側帳戶餘額。 */
+.overview-hero {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 22px;
+  padding: 20px 22px;
+  margin-bottom: 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(ellipse 70% 130% at 100% 0%, rgba(255, 255, 255, 0.08), transparent),
+    radial-gradient(ellipse 60% 110% at 0% 100%, rgba(255, 255, 255, 0.04), transparent), var(--surface);
+  flex-wrap: wrap;
+}
+
+.overview-hero-main {
+  min-width: min(300px, 100%);
+}
+
+.overview-eyebrow {
+  margin: 0 0 8px;
+  color: var(--text-faint);
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+}
+
+.overview-greeting {
+  margin: 0;
+  font-size: clamp(1.2rem, 2.4vw, 1.45rem);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+
+.overview-hero-sub {
+  margin: 6px 0 0;
+  color: var(--text-dim);
+  font-size: 0.8rem;
+}
+
+.overview-hero-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+
+.overview-hero-stat {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  min-width: 180px;
+  padding-left: 22px;
+  border-left: 1px solid var(--line);
+}
+
+.overview-hero-label {
+  color: var(--text-dim);
+  font-size: 0.74rem;
+  font-weight: 600;
+}
+
+.overview-hero-value {
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+}
+
+.overview-hero-note {
+  color: var(--text-faint);
+  font-size: 0.7rem;
+}
+
+/* KPI 橫排:三張橫式卡(圖示在左)。 */
+.kpi-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 12px;
 }
 
-.metric {
-  padding: 16px 18px;
+.kpi-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
 }
 
-.metric span {
+.kpi-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+.kpi-icon svg {
+  width: 15px;
+  height: 15px;
+}
+
+.kpi-body {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.kpi-label {
   color: var(--text-dim);
-  font-size: 0.78rem;
+  font-size: 0.74rem;
+  font-weight: 600;
 }
 
-.metric strong {
-  display: block;
-  margin-top: 4px;
-  font-size: 1.5rem;
+.kpi-value {
+  font-size: 1.2rem;
   font-weight: 650;
   letter-spacing: -0.01em;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
 }
 
-.two-col {
+.kpi-foot {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 4px;
+  color: var(--text-faint);
+  font-size: 0.7rem;
+}
+
+.mini-bar {
+  display: block;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--surface-3);
+  overflow: hidden;
+}
+
+.mini-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
+/* 輸入/輸出雙段比例條(單色:亮 = 輸入、暗 = 輸出)。 */
+.split-bar {
+  display: flex;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--surface-3);
+  overflow: hidden;
+}
+
+.split-bar i {
+  height: 100%;
+  background: var(--accent);
+}
+
+.split-bar i.out {
+  background: var(--text-faint);
+  opacity: 0.5;
+}
+
+/* 內容列:API 面板(較寬)+ 常用操作。 */
+.overview-content {
   display: grid;
-  grid-template-columns: 1.4fr 1fr;
+  grid-template-columns: 3fr 2fr;
   gap: 12px;
   margin-top: 12px;
 }
 
-@media (max-width: 860px) {
-  .two-col {
-    grid-template-columns: 1fr;
-  }
+/* 總覽內容卡採緊湊內距(覆蓋 card-pad 的 20px)。 */
+.overview-content .card-pad,
+.overview-free {
+  padding: 16px;
+}
+
+.card-intro {
+  margin: 2px 0 10px;
+  color: var(--text-dim);
+  font-size: 0.78rem;
+  line-height: 1.6;
+}
+
+/* API 面板:工具列頭 + 內文,Base URL 以等寬列呈現。 */
+.api-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.api-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-2);
+}
+
+.api-panel-head h2 {
+  margin: 0;
+  font-size: 0.86rem;
+}
+
+.api-panel-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px;
+}
+
+.api-label {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--text-dim);
+  font-size: 0.74rem;
+  font-weight: 600;
+}
+
+.api-url-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+
+.api-url-row code {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.84rem;
+  color: var(--accent-strong);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.endpoint-list {
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
 }
 
 .endpoint-row {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 9px 0;
+  padding: 8px 0;
   border-top: 1px solid var(--line);
-  font-size: 0.84rem;
+  font-size: 0.8rem;
 }
 
-.endpoint-row:first-of-type {
+.endpoint-row:first-child {
   border-top: 0;
 }
 
@@ -613,28 +890,212 @@ fieldset.choice {
   color: var(--blue);
 }
 
-.link-row {
+.endpoint-desc {
+  margin-left: auto;
+  color: var(--text-faint);
+  font-size: 0.72rem;
+  text-align: right;
+}
+
+.auth-hint {
+  display: block;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  color: var(--text-faint);
+  font-family: var(--mono);
+  font-size: 0.7rem;
+}
+
+/* 常用操作:縱向圖示列。 */
+.quick-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.quick-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 10px;
-  padding: 10px 0;
-  border-top: 1px solid var(--line);
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.quick-row:hover {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+}
+
+.quick-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-3);
   color: var(--text-dim);
-  font-size: 0.86rem;
 }
 
-.link-row:first-of-type {
-  border-top: 0;
+.quick-row:hover .quick-icon {
+  color: var(--accent-strong);
 }
 
-.link-row:hover {
+.quick-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.quick-body {
+  min-width: 0;
+  flex: 1;
+}
+
+.quick-body strong {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.quick-body small {
+  display: block;
+  color: var(--text-faint);
+  font-size: 0.7rem;
+}
+
+.quick-arrow {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  color: var(--text-faint);
+  transition:
+    transform 0.15s ease,
+    color 0.15s ease;
+}
+
+.quick-row:hover .quick-arrow {
+  transform: translateX(2px);
   color: var(--text);
 }
 
-.link-row small {
+/* 免費模型額度(有資料才會渲染)。 */
+.overview-free {
+  margin-top: 12px;
+}
+
+.fq-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 12px 20px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fq-item {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.fq-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.fq-head code {
+  min-width: 0;
+  font-size: 0.76rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fq-head span {
+  flex: none;
   color: var(--text-faint);
   font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 載入骨架:與最終內容同高,避免版面跳動。 */
+.skeleton {
+  display: inline-block;
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--surface-3) 25%, #2e2e2e 50%, var(--surface-3) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+.skeleton.value {
+  height: 1.15em;
+  width: 45%;
+}
+
+.skeleton.hero-value {
+  height: 1em;
+  width: 65%;
+  margin: 3px 0;
+}
+
+.skeleton.text {
+  height: 0.75em;
+  width: 65%;
+}
+
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* 螢幕閱讀器專用文字(骨架載入狀態的 role=status 內容)。 */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 980px) {
+  .kpi-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 860px) {
+  .overview-content {
+    grid-template-columns: 1fr;
+  }
+
+  .overview-hero-stat {
+    min-width: 100%;
+    padding-left: 0;
+    border-left: 0;
+    border-top: 1px solid var(--line);
+    padding-top: 18px;
+  }
+}
+
+@media (max-width: 560px) {
+  .endpoint-desc {
+    display: none;
+  }
 }
 
 /* ---------- 金鑰 ---------- */
@@ -753,7 +1214,8 @@ fieldset.choice {
   display: grid;
   grid-template-columns: minmax(320px, 5fr) minmax(340px, 6fr);
   gap: 12px;
-  align-items: start;
+  margin-top: 12px;
+  align-items: stretch;
 }
 
 @media (max-width: 980px) {
@@ -762,10 +1224,59 @@ fieldset.choice {
   }
 }
 
+.pg-alert {
+  margin: 0 0 10px;
+}
+
+/* 面板:工具列頭 + 內文,與總覽 api-panel 同語彙。 */
+.pg-panel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.pg-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-2);
+}
+
+.pg-head h2 {
+  margin: 0;
+  font-size: 0.86rem;
+}
+
+.pg-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px;
+}
+
+.pg-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.pg-actions .btn-primary {
+  flex: 1;
+}
+
+.char-count {
+  text-align: right;
+  color: var(--text-faint);
+  font-size: 0.72rem;
+}
+
 .form-grid {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
 }
 
 .form-row {
@@ -859,85 +1370,111 @@ fieldset.choice {
   color: var(--accent-strong);
 }
 
-.metrics-strip {
+/* 回應指標頁腳:字元/Token/首 byte/總耗時。 */
+.pg-metrics {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 1px;
-  border-bottom: 1px solid var(--line);
+  border-top: 1px solid var(--line);
   background: var(--line);
+  margin-top: auto;
 }
 
 @media (max-width: 560px) {
-  .metrics-strip {
+  .pg-metrics {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
-.metric-cell {
+.pg-metric {
   background: var(--surface);
-  padding: 12px 16px;
+  padding: 9px 14px;
 }
 
-.metric-cell span {
+.pg-metric span {
   display: block;
   color: var(--text-faint);
-  font-size: 0.7rem;
+  font-size: 0.68rem;
 }
 
-.metric-cell strong {
-  font-size: 0.95rem;
+.pg-metric strong {
+  font-size: 0.86rem;
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 .output-pane {
+  flex: 1;
   margin: 0;
-  padding: 16px 18px;
-  min-height: 300px;
-  max-height: 480px;
+  padding: 12px 14px;
+  min-height: 200px;
   overflow-y: auto;
   white-space: pre-wrap;
   word-break: break-word;
   font-family: var(--mono);
-  font-size: 0.82rem;
-  line-height: 1.7;
+  font-size: 0.8rem;
+  line-height: 1.65;
   color: var(--text);
 }
 
-.output-pane.empty {
+/* 串流輸出中的閃爍游標方塊。 */
+.stream-caret {
+  display: inline-block;
+  width: 7px;
+  height: 1em;
+  margin-left: 2px;
+  background: var(--accent);
+  vertical-align: -0.15em;
+  animation: blink 1s steps(1) infinite;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* 空狀態:置中圖示 + 提示文字。 */
+.pg-empty {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  min-height: 200px;
+  padding: 18px;
   color: var(--text-faint);
-  font-family: var(--font);
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.pg-empty-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.pg-empty svg {
+  width: 22px;
+  height: 22px;
+  opacity: 0.7;
 }
 
 .reasoning-note {
-  margin: 10px 18px 0;
-  padding: 7px 11px;
+  margin: 8px 14px 0;
+  padding: 6px 10px;
   border-radius: 7px;
   background: var(--blue-soft);
   color: var(--blue);
-  font-size: 0.74rem;
+  font-size: 0.72rem;
 }
 
 .output-error {
-  margin: 12px 18px 16px;
+  margin: 10px 14px 12px;
   padding: 9px 12px;
   border-radius: 7px;
   background: var(--red-soft);
   color: #f2f2f2;
-  font-size: 0.8rem;
-}
-
-.pane-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 13px 18px;
-  border-bottom: 1px solid var(--line);
-}
-
-.pane-header h2 {
-  margin: 0;
-  font-size: 0.9rem;
+  font-size: 0.78rem;
 }
 
 .pane-actions {
@@ -1337,24 +1874,6 @@ button.drawer-backdrop {
   word-break: break-all;
 }
 
-/* ---------- 示範模式標籤 ---------- */
-
-.demo-badge {
-  position: fixed;
-  right: 16px;
-  bottom: 16px;
-  z-index: 70;
-  padding: 6px 12px;
-  border: 1px solid var(--accent-line);
-  border-radius: 999px;
-  background: rgba(10, 10, 10, 0.92);
-  color: var(--accent-strong);
-  font-size: 0.7rem;
-  font-weight: 600;
-  pointer-events: none;
-  backdrop-filter: blur(8px);
-}
-
 /* ---------- 狀態區塊 ---------- */
 
 .state-block {
@@ -1448,7 +1967,7 @@ button.drawer-backdrop {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: radial-gradient(ellipse 70% 45% at 50% -8%, rgba(255, 255, 255, 0.055), transparent), var(--bg);
+  background: radial-gradient(ellipse 70% 45% at 50% -8%, rgba(255, 255, 255, 0.05), transparent), var(--bg);
 }
 
 .home-topbar {
@@ -1497,19 +2016,6 @@ button.drawer-backdrop {
   color: var(--text);
 }
 
-.home-topnav > a.btn {
-  color: #0a0a0a;
-}
-
-.starfield-canvas {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-}
-
 .home-main {
   position: relative;
   z-index: 1;
@@ -1521,8 +2027,9 @@ button.drawer-backdrop {
 }
 
 .home-hero {
+  position: relative;
   text-align: center;
-  padding: 48px 0 56px;
+  padding: clamp(56px, 10vh, 104px) 0 64px;
 }
 
 .home-badge {
@@ -1542,6 +2049,8 @@ button.drawer-backdrop {
   font-weight: 700;
   line-height: 1.14;
   letter-spacing: -0.015em;
+  text-wrap: balance;
+  color: var(--text-dim);
 }
 
 .home-hero p {
@@ -1550,6 +2059,7 @@ button.drawer-backdrop {
   color: var(--text-dim);
   font-size: 0.98rem;
   line-height: 1.75;
+  text-wrap: pretty;
 }
 
 .home-cta {
@@ -1566,7 +2076,7 @@ button.drawer-backdrop {
 
 .home-features {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
   gap: 14px;
 }
 
@@ -1574,7 +2084,7 @@ button.drawer-backdrop {
   padding: 22px;
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
-  background: rgba(17, 18, 21, 0.72);
+  background: var(--surface);
 }
 
 .home-feature svg {
@@ -1717,7 +2227,7 @@ button.drawer-backdrop {
 
 .home-hero-em {
   color: var(--accent-strong);
-  text-shadow: 0 0 34px rgba(140, 170, 255, 0.45);
+  font-style: normal;
 }
 
 .home-metrics {
@@ -1804,7 +2314,7 @@ button.drawer-backdrop {
   padding: 18px;
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
-  background: rgba(17, 18, 21, 0.72);
+  background: var(--surface);
 }
 
 .home-model-head {
@@ -1865,7 +2375,7 @@ button.drawer-backdrop {
   padding: 6px 11px;
   border: 1px solid var(--line);
   border-radius: 999px;
-  background: rgba(17, 18, 21, 0.6);
+  background: var(--surface);
   color: var(--text-dim);
   font-size: 0.76rem;
 }
@@ -1894,7 +2404,7 @@ button.drawer-backdrop {
   padding: 20px;
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
-  background: rgba(17, 18, 21, 0.72);
+  background: var(--surface);
 }
 
 .home-step-index {
@@ -1922,7 +2432,7 @@ button.drawer-backdrop {
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   background:
-    radial-gradient(ellipse 60% 90% at 50% 0%, rgba(255, 255, 255, 0.07), transparent), rgba(17, 18, 21, 0.78);
+    radial-gradient(ellipse 60% 90% at 50% 0%, rgba(255, 255, 255, 0.07), transparent), var(--surface);
   text-align: center;
 }
 

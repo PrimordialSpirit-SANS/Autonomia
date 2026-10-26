@@ -1,8 +1,8 @@
 {
   "schema_version": "1.0.0",
-  "revision": "2026-10-11.1",
-  "published_at": "2026-10-11T00:00:00Z",
-  "effective_at": "2026-10-11T00:00:00Z",
+  "revision": "2026-10-25.1",
+  "published_at": "2026-10-25T00:00:00Z",
+  "effective_at": "2026-10-25T00:00:00Z",
   "currency": {
     "code": "USD",
     "settlement_unit": "usd_micros",
@@ -45,10 +45,10 @@
         }
       ]
     },
-    "autonomia/gpt-5.2": {
+    "autonomia/gpt-6.1-sol": {
       "object": "model",
       "enabled": true,
-      "display_name": "GPT-5.2",
+      "display_name": "GPT-6.1 Sol",
       "owned_by": "autonomia",
       "capabilities": {
         "chat_completions": true,
@@ -59,8 +59,8 @@
         "vision": true
       },
       "billing": {
-        "input_usd_per_million_tokens": "1.26",
-        "output_usd_per_million_tokens": "10.02",
+        "input_usd_per_million_tokens": "2.00",
+        "output_usd_per_million_tokens": "10.01",
         "minimum_charge_usd": "0.0001"
       },
       "limits": {
@@ -71,20 +71,20 @@
       },
       "routes": [
         {
-          "route_id": "gpt-5.2-openai",
+          "route_id": "gpt-6.1-sol-openai",
           "provider": "openai",
           "credential_pool": "openai-production",
-          "upstream_model": "gpt-5.2",
+          "upstream_model": "gpt-6.1-sol",
           "priority": 10,
           "timeout_ms": 120000,
           "enabled": true
         }
       ]
     },
-    "autonomia/gpt-5.2-codex": {
+    "autonomia/gpt-5.3-codex": {
       "object": "model",
       "enabled": true,
-      "display_name": "GPT-5.2 Codex",
+      "display_name": "GPT-5.3 Codex",
       "owned_by": "autonomia",
       "capabilities": {
         "chat_completions": true,
@@ -95,8 +95,8 @@
         "vision": false
       },
       "billing": {
-        "input_usd_per_million_tokens": "1.26",
-        "output_usd_per_million_tokens": "10.02",
+        "input_usd_per_million_tokens": "1.75",
+        "output_usd_per_million_tokens": "14.01",
         "minimum_charge_usd": "0.0001"
       },
       "limits": {
@@ -107,20 +107,20 @@
       },
       "routes": [
         {
-          "route_id": "gpt-5.2-codex-openai",
+          "route_id": "gpt-5.3-codex-openai",
           "provider": "openai",
           "credential_pool": "openai-production",
-          "upstream_model": "gpt-5.2-codex",
+          "upstream_model": "gpt-5.3-codex",
           "priority": 10,
           "timeout_ms": 120000,
           "enabled": true
         }
       ]
     },
-    "autonomia/claude-opus-4-8": {
+    "autonomia/claude-fable-5-1": {
       "object": "model",
       "enabled": true,
-      "display_name": "Claude Opus 4.8",
+      "display_name": "Claude Fable 5.1",
       "owned_by": "autonomia",
       "capabilities": {
         "chat_completions": true,
@@ -131,32 +131,68 @@
         "vision": true
       },
       "billing": {
-        "input_usd_per_million_tokens": "5.00",
-        "output_usd_per_million_tokens": "25.01",
+        "input_usd_per_million_tokens": "10.00",
+        "output_usd_per_million_tokens": "50.01",
         "minimum_charge_usd": "0.0001"
       },
       "limits": {
-        "context_tokens": 200000,
-        "max_input_tokens": 191808,
+        "context_tokens": 1000000,
+        "max_input_tokens": 991808,
         "default_max_completion_tokens": 4096,
         "max_completion_tokens": 8192
       },
       "routes": [
         {
-          "route_id": "claude-opus-4-8-anthropic",
+          "route_id": "claude-fable-5-1-anthropic",
           "provider": "anthropic",
           "credential_pool": "anthropic-production",
-          "upstream_model": "claude-opus-4-8",
+          "upstream_model": "claude-fable-5-1",
           "priority": 10,
           "timeout_ms": 120000,
           "enabled": true
         }
       ]
     },
-    "autonomia/claude-sonnet-5": {
+    "autonomia/claude-opus-5-5": {
       "object": "model",
       "enabled": true,
-      "display_name": "Claude Sonnet 5",
+      "display_name": "Claude Opus 5.5",
+      "owned_by": "autonomia",
+      "capabilities": {
+        "chat_completions": true,
+        "streaming": true,
+        "tools": true,
+        "json_mode": false,
+        "structured_outputs": false,
+        "vision": true
+      },
+      "billing": {
+        "input_usd_per_million_tokens": "4.00",
+        "output_usd_per_million_tokens": "20.01",
+        "minimum_charge_usd": "0.0001"
+      },
+      "limits": {
+        "context_tokens": 1000000,
+        "max_input_tokens": 991808,
+        "default_max_completion_tokens": 4096,
+        "max_completion_tokens": 8192
+      },
+      "routes": [
+        {
+          "route_id": "claude-opus-5-5-anthropic",
+          "provider": "anthropic",
+          "credential_pool": "anthropic-production",
+          "upstream_model": "claude-opus-5-5",
+          "priority": 10,
+          "timeout_ms": 120000,
+          "enabled": true
+        }
+      ]
+    },
+    "autonomia/claude-sonnet-5-5": {
+      "object": "model",
+      "enabled": true,
+      "display_name": "Claude Sonnet 5.5",
       "owned_by": "autonomia",
       "capabilities": {
         "chat_completions": true,
@@ -172,27 +208,27 @@
         "minimum_charge_usd": "0.0001"
       },
       "limits": {
-        "context_tokens": 200000,
-        "max_input_tokens": 191808,
+        "context_tokens": 1000000,
+        "max_input_tokens": 991808,
         "default_max_completion_tokens": 4096,
         "max_completion_tokens": 8192
       },
       "routes": [
         {
-          "route_id": "claude-sonnet-5-anthropic",
+          "route_id": "claude-sonnet-5-5-anthropic",
           "provider": "anthropic",
           "credential_pool": "anthropic-production",
-          "upstream_model": "claude-sonnet-5",
+          "upstream_model": "claude-sonnet-5-5",
           "priority": 10,
           "timeout_ms": 120000,
           "enabled": true
         }
       ]
     },
-    "autonomia/claude-haiku-4-5": {
+    "autonomia/claude-haiku-5-5": {
       "object": "model",
       "enabled": true,
-      "display_name": "Claude Haiku 4.5",
+      "display_name": "Claude Haiku 5.5",
       "owned_by": "autonomia",
       "capabilities": {
         "chat_completions": true,
@@ -203,32 +239,32 @@
         "vision": true
       },
       "billing": {
-        "input_usd_per_million_tokens": "1.02",
-        "output_usd_per_million_tokens": "5.01",
+        "input_usd_per_million_tokens": "0.11",
+        "output_usd_per_million_tokens": "0.51",
         "minimum_charge_usd": "0.0001"
       },
       "limits": {
-        "context_tokens": 200000,
-        "max_input_tokens": 191808,
+        "context_tokens": 1000000,
+        "max_input_tokens": 991808,
         "default_max_completion_tokens": 4096,
         "max_completion_tokens": 8192
       },
       "routes": [
         {
-          "route_id": "claude-haiku-4-5-anthropic",
+          "route_id": "claude-haiku-5-5-anthropic",
           "provider": "anthropic",
           "credential_pool": "anthropic-production",
-          "upstream_model": "claude-haiku-4-5",
+          "upstream_model": "claude-haiku-5-5",
           "priority": 10,
           "timeout_ms": 120000,
           "enabled": true
         }
       ]
     },
-    "autonomia/gemini-3.5-pro": {
+    "autonomia/gemini-4-argon": {
       "object": "model",
       "enabled": true,
-      "display_name": "Gemini 3.5 Pro",
+      "display_name": "Gemini 4 Argon",
       "owned_by": "autonomia",
       "capabilities": {
         "chat_completions": true,
@@ -239,8 +275,8 @@
         "vision": true
       },
       "billing": {
-        "input_usd_per_million_tokens": "2.01",
-        "output_usd_per_million_tokens": "12.02",
+        "input_usd_per_million_tokens": "2.00",
+        "output_usd_per_million_tokens": "10.01",
         "minimum_charge_usd": "0.0001"
       },
       "limits": {
@@ -251,10 +287,10 @@
       },
       "routes": [
         {
-          "route_id": "gemini-3.5-pro-google",
+          "route_id": "gemini-4-argon-google",
           "provider": "google",
           "credential_pool": "google-production",
-          "upstream_model": "gemini-3.5-pro",
+          "upstream_model": "gemini-4-argon",
           "priority": 10,
           "timeout_ms": 120000,
           "enabled": true
@@ -275,8 +311,8 @@
         "vision": true
       },
       "billing": {
-        "input_usd_per_million_tokens": "0.30",
-        "output_usd_per_million_tokens": "2.52",
+        "input_usd_per_million_tokens": "0.75",
+        "output_usd_per_million_tokens": "3.76",
         "minimum_charge_usd": "0.0001"
       },
       "limits": {
@@ -311,8 +347,8 @@
         "vision": true
       },
       "billing": {
-        "input_usd_per_million_tokens": "0.12",
-        "output_usd_per_million_tokens": "0.42",
+        "input_usd_per_million_tokens": "0.30",
+        "output_usd_per_million_tokens": "2.51",
         "minimum_charge_usd": "0.0001"
       },
       "limits": {
@@ -333,10 +369,10 @@
         }
       ]
     },
-    "autonomia/grok-4.6": {
+    "autonomia/grok-4.7": {
       "object": "model",
       "enabled": true,
-      "display_name": "Grok 4.6",
+      "display_name": "Grok 4.7",
       "owned_by": "autonomia",
       "capabilities": {
         "chat_completions": true,
@@ -352,27 +388,27 @@
         "minimum_charge_usd": "0.0001"
       },
       "limits": {
-        "context_tokens": 2000000,
-        "max_input_tokens": 1991808,
+        "context_tokens": 500000,
+        "max_input_tokens": 491808,
         "default_max_completion_tokens": 4096,
         "max_completion_tokens": 8192
       },
       "routes": [
         {
-          "route_id": "grok-4.6-xai",
+          "route_id": "grok-4.7-xai",
           "provider": "xai",
           "credential_pool": "xai-production",
-          "upstream_model": "grok-4.6",
+          "upstream_model": "grok-4.7",
           "priority": 10,
           "timeout_ms": 120000,
           "enabled": true
         }
       ]
     },
-    "autonomia/grok-4.1-fast": {
+    "autonomia/grok-4.3": {
       "object": "model",
       "enabled": true,
-      "display_name": "Grok 4.1 Fast",
+      "display_name": "Grok 4.3",
       "owned_by": "autonomia",
       "capabilities": {
         "chat_completions": true,
@@ -383,22 +419,22 @@
         "vision": false
       },
       "billing": {
-        "input_usd_per_million_tokens": "0.21",
-        "output_usd_per_million_tokens": "0.51",
+        "input_usd_per_million_tokens": "1.25",
+        "output_usd_per_million_tokens": "2.51",
         "minimum_charge_usd": "0.0001"
       },
       "limits": {
-        "context_tokens": 2000000,
-        "max_input_tokens": 1991808,
+        "context_tokens": 1000000,
+        "max_input_tokens": 991808,
         "default_max_completion_tokens": 4096,
         "max_completion_tokens": 8192
       },
       "routes": [
         {
-          "route_id": "grok-4.1-fast-xai",
+          "route_id": "grok-4.3-xai",
           "provider": "xai",
           "credential_pool": "xai-production",
-          "upstream_model": "grok-4.1-fast",
+          "upstream_model": "grok-4.3",
           "priority": 10,
           "timeout_ms": 120000,
           "enabled": true
@@ -713,7 +749,7 @@
         "tools": false,
         "json_mode": false,
         "structured_outputs": false,
-        "vision": false
+        "vision": true
       },
       "billing": {
         "input_usd_per_million_tokens": "0.42",

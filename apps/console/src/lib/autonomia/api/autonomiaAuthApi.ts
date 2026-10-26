@@ -1,3 +1,4 @@
+import { t } from "../../../i18n/core";
 import { apiFetch } from "../../../services/api";
 import type { AutonomiaConsoleUser } from "../types";
 
@@ -18,7 +19,7 @@ async function readAuthError(response: Response): Promise<AuthError> {
   }
   return {
     code: String(payload?.error?.code || "request_failed"),
-    message: String(payload?.error || "") || "操作失敗,請稍後再試。",
+    message: String(payload?.error || "") || t("errors.authRequestFailed"),
   };
 }
 
@@ -40,7 +41,7 @@ export async function fetchAutonomiaSession(signal?: AbortSignal): Promise<Auton
     if (cause instanceof Error && cause.name === "AbortError") throw cause;
     throw new AutonomiaAuthError({
       code: "connection_error",
-      message: "無法連線至伺服器,請確認 gateway 狀態。",
+      message: t("errors.authConnectionFailed"),
     });
   }
   if (response.status === 401) return null;

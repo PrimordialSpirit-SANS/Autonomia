@@ -12,23 +12,12 @@ npm run build      # 型別檢查 + 生產建置到 dist/
 npm run preview    # 預覽生產建置
 ```
 
-### 離線示範模式(不需後端)
-
-開發或部署後,用網址參數直接進入示範模式:
-
-```
-http://localhost:5173/?demo=1
-```
-
-或在 `.env` 設 `VITE_AUTONOMIA_DEMO=1`。示範模式會以 fetch 攔截器(`src/services/demoApi.ts`)提供記憶體內的假資料與模擬 SSE 串流:金鑰建立/輪替/撤銷、用量摘要、請求紀錄、串流測試(帳戶與 API Key 兩種認證)都可以完整操作,資料在重新整理後重置,畫面右下角會顯示「示範模式」標籤。
-
 ## 環境變數(見 `.env.example`)
 
 | 變數 | 說明 |
 | --- | --- |
 | `VITE_AUTONOMIA_API_BASE` | `apiFetch` 的目標前綴,預設 `/api`。後端 Worker 跑在本機時設 `http://127.0.0.1:8787/api` |
 | `VITE_AUTONOMIA_PUBLIC_API_BASE` | 對外展示的公開 API 根位址(總覽/快速開始頁顯示、API Key 模式串流的端點),預設 `window.location.origin` |
-| `VITE_AUTONOMIA_DEMO` | `1` 時啟用離線示範模式 |
 
 ## 接上真實後端
 

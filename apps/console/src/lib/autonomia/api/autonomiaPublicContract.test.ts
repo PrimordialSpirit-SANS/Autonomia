@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { setCurrentLanguage } from "../../../i18n/core";
 import {
   hasAutonomiaErrorEnvelope,
   normalizeAutonomiaError,
@@ -9,6 +10,9 @@ import {
   normalizeAutonomiaUsageSummary,
 } from "./autonomiaPublicContract";
 
+// 錯誤訊息由 i18n 產生;明確固定語言讓斷言確定(預設為英文)。
+setCurrentLanguage("en");
+
 describe("normalizeAutonomiaError", () => {
   it("prefers a known code from an OpenAI-style error envelope", () => {
     const error = normalizeAutonomiaError(
@@ -16,7 +20,7 @@ describe("normalizeAutonomiaError", () => {
       { status: 500 },
     );
     expect(error.code).toBe("insufficient_balance");
-    expect(error.message).toContain("餘額不足");
+    expect(error.message).toContain("Insufficient Autonomia balance");
   });
 
   it("reads a flat code field as well", () => {

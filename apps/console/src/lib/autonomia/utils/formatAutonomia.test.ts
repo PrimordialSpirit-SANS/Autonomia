@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { setCurrentLanguage } from "../../../i18n/core";
 import {
   formatAutonomiaTimestamp,
   formatLatency,
@@ -6,6 +7,9 @@ import {
   formatPoints,
   formatTokens,
 } from "./formatAutonomia";
+
+// 數字/日期格式與「尚未使用」佔位由 i18n 語系決定;固定 zh-TW 讓既有斷言確定。
+setCurrentLanguage("zh-TW");
 
 describe("formatPoints", () => {
   it("formats integers with thousand separators", () => {

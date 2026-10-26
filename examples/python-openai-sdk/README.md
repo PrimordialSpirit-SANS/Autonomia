@@ -24,7 +24,7 @@ Python SDK 支援 per-request headers(與 Node 範例同語義):
 
 ```python
 completion = client.chat.completions.create(
-    model="autonomia/gpt-5.2",
+    model="autonomia/gpt-6.1-sol",
     messages=[...],
     extra_headers={"Idempotency-Key": f"demo-{uuid.uuid4()}"},
 )

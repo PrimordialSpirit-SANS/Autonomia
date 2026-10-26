@@ -1,3 +1,4 @@
+import { type TranslationKey, t } from "../../../i18n/core";
 import type {
   AutonomiaLogsPage,
   AutonomiaPublicErrorCode,
@@ -22,42 +23,43 @@ export interface NormalizedAutonomiaError {
   message: string;
 }
 
-const ERROR_MESSAGES = Object.freeze({
-  invalid_request: "Autonomia 請求內容無效，請檢查後再試。",
-  unsupported_parameter: "請求包含 Autonomia 不支援的參數。",
-  unsupported_feature: "指定的 Autonomia 功能目前不受支援。",
-  invalid_api_key: "Autonomia API 金鑰無效或已失效。",
-  authentication_required: "請先登入以使用 Autonomia。",
-  insufficient_scope: "此 API 金鑰尚未取得所需的 Autonomia 權限。",
-  access_denied: "目前無法使用此 Autonomia 功能。",
-  model_not_found: "找不到指定的 Autonomia 模型。",
-  model_not_allowed: "此 API 金鑰未開放指定的 Autonomia 模型。",
-  spend_limit_exceeded: "此 API 金鑰已達消費上限。",
-  insufficient_balance: "Autonomia 餘額不足，無法完成此請求。",
-  free_quota_exceeded: "此 Autonomia 免費額度已用完。",
-  rate_limit_exceeded: "Autonomia 請求過於頻繁，請稍後再試。",
-  max_in_flight_exceeded: "同時進行的 Autonomia 請求已達上限，請稍後再試。",
-  request_cancelled: "Autonomia 請求已取消。",
-  service_unavailable: "Autonomia 暫時無法完成此請求，請稍後再試。",
-  request_failed: "Autonomia 無法完成此請求，請稍後再試。",
-  not_found: "找不到指定的 Autonomia 資料。",
-  conflict: "Autonomia 無法套用此項變更，請重新整理後再試。",
-  connection_error: "目前無法連線至 Autonomia，請稍後再試。",
-  invalid_response: "Autonomia 傳回了無法處理的回應。",
-  invalid_stream_payload: "Autonomia 傳回了無法解析的串流資料。",
-  invalid_stream_response: "Autonomia 未傳回有效的串流資料。",
-  stream_interrupted: "Autonomia 串流已中斷，請稍後再試。",
-  stream_truncated: "Autonomia 串流在完成前中斷。",
-  AI_KEY_LIMIT: "Autonomia 金鑰數量已達上限。",
-  INVALID_AI_KEY_OPTIONS: "Autonomia 金鑰設定無效。",
-  AI_KEY_UNAVAILABLE: "Autonomia 金鑰管理暫時無法使用。",
-  INVALID_AI_KEY_ID: "Autonomia 金鑰識別碼無效。",
-  AI_KEY_NOT_FOUND: "找不到指定的 Autonomia 金鑰。",
-  INVALID_AI_USAGE_QUERY: "Autonomia 用量查詢條件無效。",
-  AI_USAGE_UNAVAILABLE: "Autonomia 用量資料暫時無法使用。",
-  USER_NOT_FOUND: "找不到 Autonomia 帳號資料。",
-  AI_REQUEST_NOT_FOUND: "找不到指定的 Autonomia 請求。",
-} satisfies Record<AutonomiaPublicErrorCode, string>);
+// 錯誤代碼 → i18n 鍵:顯示文字由 t() 依當前語系產生(見 src/i18n)。
+const ERROR_MESSAGE_KEYS = Object.freeze({
+  invalid_request: "errors.invalid_request",
+  unsupported_parameter: "errors.unsupported_parameter",
+  unsupported_feature: "errors.unsupported_feature",
+  invalid_api_key: "errors.invalid_api_key",
+  authentication_required: "errors.authentication_required",
+  insufficient_scope: "errors.insufficient_scope",
+  access_denied: "errors.access_denied",
+  model_not_found: "errors.model_not_found",
+  model_not_allowed: "errors.model_not_allowed",
+  spend_limit_exceeded: "errors.spend_limit_exceeded",
+  insufficient_balance: "errors.insufficient_balance",
+  free_quota_exceeded: "errors.free_quota_exceeded",
+  rate_limit_exceeded: "errors.rate_limit_exceeded",
+  max_in_flight_exceeded: "errors.max_in_flight_exceeded",
+  request_cancelled: "errors.request_cancelled",
+  service_unavailable: "errors.service_unavailable",
+  request_failed: "errors.request_failed",
+  not_found: "errors.not_found",
+  conflict: "errors.conflict",
+  connection_error: "errors.connection_error",
+  invalid_response: "errors.invalid_response",
+  invalid_stream_payload: "errors.invalid_stream_payload",
+  invalid_stream_response: "errors.invalid_stream_response",
+  stream_interrupted: "errors.stream_interrupted",
+  stream_truncated: "errors.stream_truncated",
+  AI_KEY_LIMIT: "errors.AI_KEY_LIMIT",
+  INVALID_AI_KEY_OPTIONS: "errors.INVALID_AI_KEY_OPTIONS",
+  AI_KEY_UNAVAILABLE: "errors.AI_KEY_UNAVAILABLE",
+  INVALID_AI_KEY_ID: "errors.INVALID_AI_KEY_ID",
+  AI_KEY_NOT_FOUND: "errors.AI_KEY_NOT_FOUND",
+  INVALID_AI_USAGE_QUERY: "errors.INVALID_AI_USAGE_QUERY",
+  AI_USAGE_UNAVAILABLE: "errors.AI_USAGE_UNAVAILABLE",
+  USER_NOT_FOUND: "errors.USER_NOT_FOUND",
+  AI_REQUEST_NOT_FOUND: "errors.AI_REQUEST_NOT_FOUND",
+} satisfies Record<AutonomiaPublicErrorCode, TranslationKey>);
 
 const REQUEST_STATUSES = new Set<AutonomiaRequestStatus>([
   "pending_reservation",
@@ -85,7 +87,7 @@ function knownErrorCode(value: unknown): AutonomiaPublicErrorCode | null {
   if (typeof value !== "string") return null;
   const code = value.trim();
   if (!code || code.length > 100) return null;
-  if (hasOwn(ERROR_MESSAGES, code)) return code as AutonomiaPublicErrorCode;
+  if (hasOwn(ERROR_MESSAGE_KEYS, code)) return code as AutonomiaPublicErrorCode;
 
   return null;
 }
@@ -121,7 +123,7 @@ export function normalizeAutonomiaError(
   const context = options.context ?? "inference";
   const code =
     knownErrorCode(payloadErrorCode(payload)) ?? options.fallbackCode ?? statusErrorCode(status, context);
-  return { code, message: ERROR_MESSAGES[code] };
+  return { code, message: t(ERROR_MESSAGE_KEYS[code]) };
 }
 
 export function normalizeAutonomiaUsageErrorCode(value: unknown): AutonomiaPublicErrorCode | null {

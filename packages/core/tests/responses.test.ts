@@ -127,7 +127,7 @@ test("responses preparation translates the bridged subset onto the chat pipeline
   await assert.rejects(
     prepareAutonomiaResponsesRequest({
       body: responsesBody({
-        model: "autonomia/gpt-5.2-codex",
+        model: "autonomia/gpt-5.3-codex",
         input: [{ role: "user", content: [{ type: "input_image", image_url: "https://example.com/a.png" }] }],
       }),
       aiKey: aiKey(),

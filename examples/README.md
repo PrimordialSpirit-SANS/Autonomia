@@ -16,8 +16,8 @@ export AUTONOMIA_API_KEY=sk-autonomia-live_...               # 在控制台「�
 ## 事前準備
 
 1. 讀 [README 快速開始](../README.md#快速開始)把 gateway 跑起來(`npm run migrate` 種子管理員 → 控制台建金鑰)。
-2. 沒有供應商金鑰也能走完整流程:控制台 `?demo=1` 示範模式可建金鑰,但真實推理需要 `OPENROUTER_API_KEY_1` 等上游金鑰。
-3. 模型名稱帶 `autonomia/` 前綴(如 `autonomia/gpt-5.2`),可用目錄清單確認:`curl -H "Authorization: Bearer $AUTONOMIA_API_KEY" $AUTONOMIA_BASE_URL/models`。
+2. 真實推理需要 `OPENROUTER_API_KEY_1` 等上游金鑰(gateway 設定表見 [README](../README.md))。
+3. 模型名稱帶 `autonomia/` 前綴(如 `autonomia/gpt-6.1-sol`),可用目錄清單確認:`curl -H "Authorization: Bearer $AUTONOMIA_API_KEY" $AUTONOMIA_BASE_URL/models`。
 
 ## 行為差異速覽
 

@@ -1,32 +1,37 @@
+import { intlLocaleFor, translate } from "../../../i18n/core";
+
+// 金額/Token/時間格式化:數字分組與日期格式依當前語系的 Intl locale;
+// 時區固定 Asia/Taipei(與 gateway 紀錄一致),不隨語言改變。
+
 export function formatUsd(value: string | number): string {
   const amount = Number(value);
   if (!Number.isFinite(amount)) return "$0.00";
   if (amount >= 1000) {
-    return `$${new Intl.NumberFormat("zh-TW", { maximumFractionDigits: 0 }).format(amount)}`;
+    return `$${new Intl.NumberFormat(intlLocaleFor(), { maximumFractionDigits: 0 }).format(amount)}`;
   }
   if (amount >= 0.01) return `$${amount.toFixed(2)}`;
   return `$${amount.toFixed(4)}`;
 }
 
 export function formatPoints(value: number): string {
-  return new Intl.NumberFormat("zh-TW", { maximumFractionDigits: 0 }).format(value);
+  return new Intl.NumberFormat(intlLocaleFor(), { maximumFractionDigits: 0 }).format(value);
 }
 
 export function formatTokens(value: number): string {
   if (value >= 1_000_000) {
-    return `${new Intl.NumberFormat("zh-TW", { maximumFractionDigits: 1 }).format(value / 1_000_000)}M`;
+    return `${new Intl.NumberFormat(intlLocaleFor(), { maximumFractionDigits: 1 }).format(value / 1_000_000)}M`;
   }
   if (value >= 1_000) {
-    return `${new Intl.NumberFormat("zh-TW", { maximumFractionDigits: 1 }).format(value / 1_000)}K`;
+    return `${new Intl.NumberFormat(intlLocaleFor(), { maximumFractionDigits: 1 }).format(value / 1_000)}K`;
   }
-  return new Intl.NumberFormat("zh-TW").format(value);
+  return new Intl.NumberFormat(intlLocaleFor()).format(value);
 }
 
 export function formatAutonomiaTimestamp(value: string | null | undefined): string {
-  if (!value) return "尚未使用";
+  if (!value) return translate("common.neverUsed");
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "—";
-  return new Intl.DateTimeFormat("zh-TW", {
+  return new Intl.DateTimeFormat(intlLocaleFor(), {
     timeZone: "Asia/Taipei",
     year: "numeric",
     month: "2-digit",

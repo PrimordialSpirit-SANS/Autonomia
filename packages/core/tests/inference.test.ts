@@ -96,7 +96,7 @@ function fakeBilling(overrides: any = {}) {
 test("public model list exposes only stable Autonomia model metadata", () => {
   const list = listPublicAutonomiaModels();
   assert.equal(list.object, "list");
-  assert.equal(list.data.length, 21);
+  assert.equal(list.data.length, 22);
   for (const model of list.data) {
     assert.match(model.id, /^autonomia\//);
     assert.equal(model.object, "model");
@@ -110,7 +110,7 @@ test("chat preparation validates allowlists, features, limits, and nested finger
   await assert.rejects(
     prepareAutonomiaChatRequest({
       body: body(),
-      aiKey: aiKey({ model_allowlist: ["autonomia/gpt-5.2"] }),
+      aiKey: aiKey({ model_allowlist: ["autonomia/gpt-6.1-sol"] }),
     }),
     (error: any) => error.status === 403 && error.code === "model_not_allowed",
   );
@@ -183,11 +183,9 @@ test("chat preparation validates allowlists, features, limits, and nested finger
   await assert.rejects(
     prepareAutonomiaChatRequest({
       body: body({
-        model: "autonomia/claude-haiku-4-5",
-        messages: [
-          { role: "user", content: "x".repeat(100_000) },
-          { role: "user", content: "x".repeat(100_000) },
-        ],
+        model: "autonomia/claude-haiku-5-5",
+        // 10 條各 100K 字元(單條上限)≈ 1M token,超過 haiku-5-5 的輸入上限。
+        messages: Array.from({ length: 10 }, () => ({ role: "user", content: "x".repeat(100_000) })),
       }),
       aiKey: aiKey(),
     }),
@@ -290,7 +288,7 @@ test("response_format accepts text, gates structured outputs by model capability
   await assert.rejects(
     prepareAutonomiaChatRequest({
       body: body({
-        model: "autonomia/claude-haiku-4-5",
+        model: "autonomia/claude-haiku-5-5",
         response_format: { type: "json_object" },
       }),
       aiKey: aiKey(),
@@ -301,7 +299,7 @@ test("response_format accepts text, gates structured outputs by model capability
   await assert.rejects(
     prepareAutonomiaChatRequest({
       body: body({
-        model: "autonomia/claude-haiku-4-5",
+        model: "autonomia/claude-haiku-5-5",
         response_format: { type: "json_schema", json_schema: { name: "out", schema: { type: "object" } } },
       }),
       aiKey: aiKey(),
@@ -423,7 +421,7 @@ test("neutral OpenAI parameters are tolerated and dropped before upstream dispat
 });
 
 // ECO-03:vision 能力開啟的模型(gpt-6-astra)接受 user 訊息混合
-// text/image_url parts;非 vision 模型(gpt-5.2-codex)維持 400;
+// text/image_url parts;非 vision 模型(gpt-5.3-codex)維持 400;
 // http:// 的 image_url 一律 400(僅放行 https:// 與 data:image/);
 // 估計輸入 token 含每個 image part 的固定保守值。
 test("vision models accept mixed content parts with conservative token estimates", async () => {
@@ -452,7 +450,7 @@ test("vision models accept mixed content parts with conservative token estimates
   await assert.rejects(
     prepareAutonomiaChatRequest({
       body: body({
-        model: "autonomia/gpt-5.2-codex",
+        model: "autonomia/gpt-5.3-codex",
         messages: [{ role: "user", content: [{ type: "text", text: "no vision here" }] }],
       }),
       aiKey: aiKey(),

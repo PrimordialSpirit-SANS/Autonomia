@@ -7,26 +7,29 @@ title = "Autonomia Gateway secret scan"
 [extend]
 useDefault = true
 
+# CI 以 `gitleaks git .` 掃描完整歷史,因此規則與 allowlist 必須涵蓋
+# 歷代品牌前綴(beacon → akentros → autonomia);每次更名時兩邊都要保留
+# 舊前綴的相容條目,否則歷史 commit 會讓 secret scan 永遠失敗。
 [[rules]]
 id = "autonomia-key-plaintext"
-description = "Autonomia API key plaintext"
-regex = '''sk-autonomia-(?:live|test)_[A-Za-z0-9]{16,}'''
-keywords = ["sk-autonomia"]
+description = "Autonomia API key plaintext(含歷代品牌前綴)"
+regex = '''sk-(?:autonomia|akentros|beacon)-(?:live|test)_[A-Za-z0-9]{16,}'''
+keywords = ["sk-autonomia", "sk-akentros", "sk-beacon"]
 tags = ["key", "autonomia"]
 
 [allowlist]
 description = "文件、範例與測試中的佔位/遮罩形式,以及 secret_refs 的環境變數名稱形態"
 regexes = [
   # 文件中的遮罩形式(以省略號截斷,不足以還原金鑰)
-  '''sk-autonomia-live_…''',
+  '''sk-(?:autonomia|akentros)-live_…''',
   # 文件/設定中的佔位前綴(YOUR/xxx/變數插入)
-  '''sk-autonomia-(live|test)_(YOUR|xxx|\$\{)''',
-  # docs/DEPLOYMENT.md 示範 401 回應的刻意無效金鑰(含 Beacon 改名前的歷史版本)
-  '''^sk-(?:autonomia|beacon)-(?:live|test)_invalid$''',
+  '''sk-(?:autonomia|akentros)-(live|test)_(YOUR|xxx|\$\{)''',
+  # docs/DEPLOYMENT.md 示範 401 回應的刻意無效金鑰(含 Beacon、Akentros 改名前的歷史版本)
+  '''^sk-(?:autonomia|akentros|beacon)-(?:live|test)_invalid$''',
   # 控制台 demo 資料僅含 4 字元前綴片段(key_prefix 顯示用),不足以構成金鑰
-  '''^sk-autonomia-(live|test)_[A-Za-z0-9]{4}$''',
+  '''^sk-(?:autonomia|akentros)-(live|test)_[A-Za-z0-9]{4}$''',
   # packages/core/tests 的 HMAC 測試向量:固定字母順序序列,非金鑰
-  '''^sk-autonomia-live_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnop$''',
+  '''^sk-(?:autonomia|akentros)-live_ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnop$''',
   # secret_refs 機制:設定檔與 .dev.vars.example 中的環境變數「名稱」(值由環境注入,非金鑰本體)
   '''^[A-Z][A-Z0-9_]*_(API_KEY|API_TOKEN|ACCOUNT_ID)_[0-9]+=?$''',
 ]

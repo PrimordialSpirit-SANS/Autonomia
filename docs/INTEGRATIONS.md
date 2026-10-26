@@ -8,7 +8,7 @@ OpenAI baseURL 的工具,就能指向 Autonomia**。本文列出已驗證的主�
 | --- | --- |
 | Base URL | `https://<你的網域>/api/ai/v1`(本地開發 `http://localhost:8787/api/ai/v1`) |
 | API Key | `sk-autonomia-live_*` / `sk-autonomia-test_*`(控制台建立,只顯示一次) |
-| 模型名稱 | `autonomia/<model>`(如 `autonomia/gpt-5.2`;清單見 `GET /models`) |
+| 模型名稱 | `autonomia/<model>`(如 `autonomia/gpt-6.1-sol`;清單見 `GET /models`) |
 | 串流 | OpenAI SSE 形態,`data: [DONE]` 終止 |
 | 冪等 | `Idempotency-Key` 標頭;語義見下文與 `docs/openapi.yaml` |
 
@@ -22,7 +22,7 @@ OpenAI baseURL 的工具,就能指向 Autonomia**。本文列出已驗證的主�
 import { ChatOpenAI } from "@langchain/openai";
 
 const model = new ChatOpenAI({
-  model: "autonomia/gpt-5.2",
+  model: "autonomia/gpt-6.1-sol",
   apiKey: process.env.AUTONOMIA_API_KEY,
   configuration: {
     baseURL: "https://gw.example.com/api/ai/v1",
@@ -52,7 +52,7 @@ for await (const chunk of stream) console.log(chunk.content);
 from langchain_openai import ChatOpenAI
 
 model = ChatOpenAI(
-    model="autonomia/gpt-5.2",
+    model="autonomia/gpt-6.1-sol",
     api_key=os.environ["AUTONOMIA_API_KEY"],
     base_url="https://gw.example.com/api/ai/v1",
 )
@@ -75,7 +75,7 @@ const autonomia = createOpenAI({
 });
 
 const result = streamText({
-  model: autonomia("autonomia/gpt-5.2"),
+  model: autonomia("autonomia/gpt-6.1-sol"),
   prompt: "從 1 數到 10,每個數字一行。",
 });
 

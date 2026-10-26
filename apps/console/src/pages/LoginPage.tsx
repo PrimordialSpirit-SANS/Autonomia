@@ -1,22 +1,22 @@
 import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AutonomiaIcon } from "../components/AutonomiaIcon";
+import { LanguageSwitcher } from "../components/LanguageSwitcher";
+import { useI18n } from "../i18n";
 import {
   AutonomiaAuthError,
   loginAutonomiaAccount,
   registerAutonomiaAccount,
 } from "../lib/autonomia/api/autonomiaAuthApi";
 import type { AutonomiaConsoleUser } from "../lib/autonomia/types";
-import { isAutonomiaDemoMode } from "../services/demoApi";
 
 // 登入/註冊二合一頁。成功後寫入 session context 並導向控制台。
-// 示範模式會顯示提示:任意帳號密碼即可登入。
 
 type AuthMode = "login" | "register";
 
 export function LoginPage({ onAuthenticated }: { onAuthenticated: (user: AutonomiaConsoleUser) => void }) {
   const navigate = useNavigate();
-  const demo = isAutonomiaDemoMode();
+  const { t } = useI18n();
   const [mode, setMode] = React.useState<AuthMode>("login");
   const [email, setEmail] = React.useState("");
   const [username, setUsername] = React.useState("");
@@ -39,14 +39,14 @@ export function LoginPage({ onAuthenticated }: { onAuthenticated: (user: Autonom
       if (!user) {
         // 防枚舉回應(gateway 回 202 受理但不發 session):無法區分信箱是否
         // 已被註冊,引導使用者改走登入。
-        setNotice("註冊已受理。若此信箱尚未被使用,帳號已建立 — 請以它登入;若你已有帳號,請直接登入。");
+        setNotice(t("login.acceptedNotice"));
         setMode("login");
         return;
       }
       onAuthenticated(user);
       navigate("/overview", { replace: true });
     } catch (cause) {
-      setError(cause instanceof AutonomiaAuthError ? cause.message : "操作失敗,請稍後再試。");
+      setError(cause instanceof AutonomiaAuthError ? cause.message : t("errors.authRequestFailed"));
     } finally {
       setBusy(false);
     }
@@ -57,25 +57,25 @@ export function LoginPage({ onAuthenticated }: { onAuthenticated: (user: Autonom
       <section className="card auth-card">
         <div className="auth-brand">
           <AutonomiaIcon size={40} />
-          <h1>Autonomia 控制台</h1>
-          <p>{mode === "login" ? "登入以管理 API 金鑰與用量" : "建立新帳號,開始使用 Autonomia"}</p>
+          <h1>{t("login.title")}</h1>
+          <p>{mode === "login" ? t("login.subtitleLogin") : t("login.subtitleRegister")}</p>
         </div>
         <form className="auth-form" onSubmit={submit}>
           <label className="field">
-            <span>電子郵件</span>
+            <span>{t("login.email")}</span>
             <input
               className="input"
               type="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               autoComplete="email"
-              placeholder={demo ? "demo@autonomia.dev" : "you@example.com"}
+              placeholder="you@example.com"
               required
             />
           </label>
           {mode === "register" && (
             <label className="field">
-              <span>使用者名稱</span>
+              <span>{t("login.username")}</span>
               <input
                 className="input"
                 value={username}
@@ -83,20 +83,20 @@ export function LoginPage({ onAuthenticated }: { onAuthenticated: (user: Autonom
                 minLength={2}
                 maxLength={40}
                 autoComplete="username"
-                placeholder="how you'll be shown"
+                placeholder={t("login.usernamePlaceholder")}
                 required
               />
             </label>
           )}
           <label className="field">
-            <span>密碼</span>
+            <span>{t("login.password")}</span>
             <input
               className="input"
               type="password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               autoComplete={mode === "login" ? "current-password" : "new-password"}
-              placeholder={mode === "login" ? "" : "至少 8 字元"}
+              placeholder={mode === "login" ? "" : t("login.passwordPlaceholder")}
               minLength={mode === "register" ? 8 : undefined}
               required
             />
@@ -112,16 +112,15 @@ export function LoginPage({ onAuthenticated }: { onAuthenticated: (user: Autonom
             </div>
           )}
           <button className="btn btn-primary" type="submit" disabled={busy}>
-            {busy ? "處理中…" : mode === "login" ? "登入" : "建立帳號"}
+            {busy
+              ? t("login.submitting")
+              : mode === "login"
+                ? t("login.submitLogin")
+                : t("login.submitRegister")}
           </button>
         </form>
-        {demo && (
-          <p className="auth-switch" style={{ marginTop: 12 }}>
-            示範模式:輸入任意帳號密碼即可登入
-          </p>
-        )}
         <p className="auth-switch">
-          {mode === "login" ? "還沒有帳號?" : "已經有帳號了?"}
+          {mode === "login" ? t("login.noAccount") : t("login.haveAccount")}
           <button
             type="button"
             onClick={() => {
@@ -130,12 +129,15 @@ export function LoginPage({ onAuthenticated }: { onAuthenticated: (user: Autonom
               setNotice("");
             }}
           >
-            {mode === "login" ? "註冊新帳號" : "改為登入"}
+            {mode === "login" ? t("login.registerCta") : t("login.loginCta")}
           </button>
         </p>
         <p className="auth-switch">
-          <Link to="/home">← 回首頁</Link>
+          <Link to="/home">{t("login.backHome")}</Link>
         </p>
+        <div className="auth-switch auth-lang">
+          <LanguageSwitcher />
+        </div>
       </section>
     </div>
   );

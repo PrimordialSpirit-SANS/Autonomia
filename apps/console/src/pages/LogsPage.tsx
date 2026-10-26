@@ -1,5 +1,6 @@
 import React from "react";
 import { Alert, PageHeader, StateBlock } from "../components/ui";
+import { type TranslationKey, useI18n } from "../i18n";
 import { getAutonomiaRequestDetail, listAutonomiaLogs } from "../lib/autonomia/api/autonomiaDeveloperApi";
 import type { AutonomiaRequestDetail, AutonomiaUsageLog } from "../lib/autonomia/types";
 import {
@@ -9,23 +10,42 @@ import {
   formatUsd,
 } from "../lib/autonomia/utils/formatAutonomia";
 
-const STATUS_LABELS: Record<string, { label: string; className: string }> = {
-  succeeded: { label: "成功", className: "badge badge-ok" },
-  partially_succeeded: { label: "部分成功", className: "badge badge-warn" },
-  rejected: { label: "拒絕", className: "badge badge-err" },
-  refunded: { label: "已退款", className: "badge badge-info" },
-  dispatched: { label: "處理中", className: "badge" },
-  needs_reconciliation: { label: "待核對", className: "badge badge-warn" },
+// 狀態 → badge 樣式;顯示文字由 i18n 提供(見 logs.status*)。
+const STATUS_CLASSNAMES: Record<string, string> = {
+  succeeded: "badge badge-ok",
+  partially_succeeded: "badge badge-warn",
+  rejected: "badge badge-err",
+  refunded: "badge badge-info",
+  dispatched: "badge",
+  needs_reconciliation: "badge badge-warn",
   // 冪等重放命中:不執行、不計費,僅重放已落地的回應。
-  replayed: { label: "重放", className: "badge badge-info" },
+  replayed: "badge badge-info",
 };
 
-function statusBadge(status: string) {
-  const known = STATUS_LABELS[status] || { label: status, className: "badge" };
-  return <span className={known.className}>{known.label}</span>;
+const STATUS_LABEL_KEYS: Record<string, TranslationKey> = {
+  succeeded: "logs.statusSucceeded",
+  partially_succeeded: "logs.statusPartiallySucceeded",
+  rejected: "logs.statusRejected",
+  refunded: "logs.statusRefunded",
+  dispatched: "logs.statusDispatched",
+  needs_reconciliation: "logs.statusNeedsReconciliation",
+  replayed: "logs.statusReplayed",
+};
+
+const STATUS_FILTERS: Array<{ value: string; labelKey: TranslationKey }> = [
+  { value: "succeeded", labelKey: "logs.statusSucceeded" },
+  { value: "refunded", labelKey: "logs.statusRefunded" },
+  { value: "rejected", labelKey: "logs.statusRejected" },
+  { value: "needs_reconciliation", labelKey: "logs.statusNeedsReconciliation" },
+  { value: "replayed", labelKey: "logs.statusReplayed" },
+];
+
+function statusLabelKey(status: string): TranslationKey | null {
+  return STATUS_LABEL_KEYS[status] ?? null;
 }
 
 export function LogsPage() {
+  const { t } = useI18n();
   const [logs, setLogs] = React.useState<AutonomiaUsageLog[]>([]);
   const [pagination, setPagination] = React.useState({ next_cursor: null as string | null, has_more: false });
   const [status, setStatus] = React.useState("");
@@ -34,6 +54,11 @@ export function LogsPage() {
   const [detail, setDetail] = React.useState<AutonomiaRequestDetail | null>(null);
   const loadAbortRef = React.useRef<AbortController | null>(null);
   const detailAbortRef = React.useRef<AbortController | null>(null);
+
+  const statusBadge = (value: string) => {
+    const labelKey = statusLabelKey(value);
+    return <span className={STATUS_CLASSNAMES[value] || "badge"}>{labelKey ? t(labelKey) : value}</span>;
+  };
 
   const load = React.useCallback(
     async (cursor: string | null = null, append = false) => {
@@ -91,39 +116,44 @@ export function LogsPage() {
   };
 
   const detailRows: Array<[string, string]> = detail
-    ? [
-        ["狀態", STATUS_LABELS[detail.status]?.label || detail.status],
-        ["公開模型", detail.requested_model],
-        ["實際模型", detail.actual_model || "—"],
-        ["供應商", detail.provider || "—"],
-        ["Input tokens", formatTokens(Number(detail.input_tokens))],
-        ["Output tokens", formatTokens(Number(detail.output_tokens))],
-        ["扣除金額", formatUsd(detail.charged_usd)],
-        ["總延遲", formatLatency(detail.latency_ms)],
-        ["錯誤代碼", detail.error_code || "—"],
-        ...(detail.replay_of_request_id ? [["重放自", detail.replay_of_request_id] as [string, string]] : []),
-      ]
+    ? (() => {
+        const statusKey = statusLabelKey(detail.status);
+        return [
+          [t("logs.detailStatus"), statusKey ? t(statusKey) : detail.status],
+          [t("logs.detailRequestedModel"), detail.requested_model],
+          [t("logs.detailActualModel"), detail.actual_model || "—"],
+          [t("logs.detailProvider"), detail.provider || "—"],
+          [t("logs.detailInputTokens"), formatTokens(Number(detail.input_tokens))],
+          [t("logs.detailOutputTokens"), formatTokens(Number(detail.output_tokens))],
+          [t("logs.detailCharge"), formatUsd(detail.charged_usd)],
+          [t("logs.detailLatency"), formatLatency(detail.latency_ms)],
+          [t("logs.detailErrorCode"), detail.error_code || "—"],
+          ...(detail.replay_of_request_id
+            ? ([[t("logs.detailReplayOf"), detail.replay_of_request_id]] as Array<[string, string]>)
+            : []),
+        ];
+      })()
     : [];
 
   return (
     <>
       <PageHeader
-        title="請求紀錄"
-        subtitle="點擊任一列查看單筆請求詳情"
+        title={t("logs.title")}
+        subtitle={t("logs.subtitle")}
         action={
           <select
             className="select"
             style={{ width: "auto" }}
-            aria-label="依狀態篩選"
+            aria-label={t("logs.filterAria")}
             value={status}
             onChange={(event) => setStatus(event.target.value)}
           >
-            <option value="">全部狀態</option>
-            <option value="succeeded">成功</option>
-            <option value="refunded">已退款</option>
-            <option value="rejected">拒絕</option>
-            <option value="needs_reconciliation">待核對</option>
-            <option value="replayed">重放</option>
+            <option value="">{t("logs.filterAll")}</option>
+            {STATUS_FILTERS.map((item) => (
+              <option key={item.value} value={item.value}>
+                {t(item.labelKey)}
+              </option>
+            ))}
           </select>
         }
       />
@@ -133,7 +163,7 @@ export function LogsPage() {
             tone="error"
             action={
               <button className="btn btn-sm" type="button" onClick={() => void load()} disabled={loading}>
-                重新連線
+                {t("common.retry")}
               </button>
             }
           >
@@ -146,12 +176,12 @@ export function LogsPage() {
           <table className="table">
             <thead>
               <tr>
-                <th>時間</th>
-                <th>模型</th>
-                <th>狀態</th>
-                <th>Token</th>
-                <th>消費</th>
-                <th>延遲</th>
+                <th>{t("logs.colTime")}</th>
+                <th>{t("logs.colModel")}</th>
+                <th>{t("logs.colStatus")}</th>
+                <th>{t("logs.colTokens")}</th>
+                <th>{t("logs.colSpend")}</th>
+                <th>{t("logs.colLatency")}</th>
               </tr>
             </thead>
             <tbody>
@@ -170,7 +200,7 @@ export function LogsPage() {
                   </td>
                   <td className="cell-model">
                     <code>{log.requested_model}</code>
-                    <small>{log.key_name || "API 金鑰"}</small>
+                    <small>{log.key_name || t("logs.defaultKeyName")}</small>
                   </td>
                   <td>{statusBadge(log.status)}</td>
                   <td>{formatTokens(Number(log.total_tokens))}</td>
@@ -181,9 +211,9 @@ export function LogsPage() {
             </tbody>
           </table>
         ) : loading ? (
-          <StateBlock spinner>正在讀取請求紀錄…</StateBlock>
+          <StateBlock spinner>{t("logs.loading")}</StateBlock>
         ) : !error ? (
-          <StateBlock>尚無請求紀錄。</StateBlock>
+          <StateBlock>{t("logs.empty")}</StateBlock>
         ) : null}
       </div>
       {pagination.has_more && (
@@ -194,7 +224,7 @@ export function LogsPage() {
             onClick={() => void load(pagination.next_cursor, true)}
             disabled={loading}
           >
-            載入更多
+            {t("logs.loadMore")}
           </button>
         </div>
       )}
@@ -205,19 +235,19 @@ export function LogsPage() {
             type="button"
             className="drawer-backdrop"
             onClick={() => setDetail(null)}
-            aria-label="關閉請求詳細資料"
+            aria-label={t("logs.detailCloseAria")}
             tabIndex={-1}
           />
-          <aside className="drawer" role="dialog" aria-modal="true" aria-label="請求詳細資料">
+          <aside className="drawer" role="dialog" aria-modal="true" aria-label={t("logs.detailAria")}>
             <button
               type="button"
               className="btn btn-sm drawer-close"
               onClick={() => setDetail(null)}
-              aria-label="關閉"
+              aria-label={t("logs.detailClose")}
             >
               ×
             </button>
-            <h2>請求詳細資料</h2>
+            <h2>{t("logs.detailTitle")}</h2>
             <code className="drawer-request-id">{detail.request_id}</code>
             <dl className="detail-list" style={{ margin: 0 }}>
               {detailRows.map(([term, value]) => (

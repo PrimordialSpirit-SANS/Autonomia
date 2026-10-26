@@ -1,3 +1,4 @@
+import { t } from "../../../i18n/core";
 import { apiFetch } from "../../../services/api";
 import type {
   AutonomiaChatMessage,
@@ -117,7 +118,7 @@ function parseEventPayload(event: ParsedSseEvent, requestId: string | null): Aut
   try {
     payload = JSON.parse(event.data);
   } catch {
-    throw new AutonomiaStreamError("Autonomia 傳回了無法解析的串流資料。", {
+    throw new AutonomiaStreamError(t("errors.invalid_stream_payload"), {
       code: "invalid_stream_payload",
       requestId,
     });
@@ -134,7 +135,7 @@ function parseEventPayload(event: ParsedSseEvent, requestId: string | null): Aut
     });
   }
   if (typeof payload !== "object" || payload === null || Array.isArray(payload)) {
-    throw new AutonomiaStreamError("Autonomia 傳回了不支援的串流資料。", {
+    throw new AutonomiaStreamError(t("errors.unsupportedStreamData"), {
       code: "invalid_stream_payload",
       requestId,
     });
@@ -148,11 +149,11 @@ export async function streamAutonomiaChat(
   const authMode = options.authMode || "api-key";
   const apiKey = options.apiKey?.trim() || "";
   if (authMode === "api-key" && !apiKey) {
-    throw new AutonomiaStreamError("請輸入 API 金鑰。", { code: "invalid_request" });
+    throw new AutonomiaStreamError(t("errors.enterApiKey"), { code: "invalid_request" });
   }
-  if (!options.model) throw new AutonomiaStreamError("請選擇模型。", { code: "invalid_request" });
+  if (!options.model) throw new AutonomiaStreamError(t("errors.chooseModel"), { code: "invalid_request" });
   if (!options.messages.some((message) => message.content.trim())) {
-    throw new AutonomiaStreamError("請輸入訊息。", { code: "invalid_request" });
+    throw new AutonomiaStreamError(t("errors.enterMessage"), { code: "invalid_request" });
   }
 
   throwIfAborted(options.signal);
@@ -201,7 +202,7 @@ export async function streamAutonomiaChat(
   const contentType = response.headers.get("content-type")?.toLowerCase() || "";
   if (!response.body || !contentType.includes("text/event-stream")) {
     await response.body?.cancel().catch(() => {});
-    throw new AutonomiaStreamError("Autonomia 未傳回 SSE 串流。", {
+    throw new AutonomiaStreamError(t("errors.streamNoSse"), {
       status: response.status,
       code: "invalid_stream_response",
       requestId,
@@ -262,7 +263,7 @@ export async function streamAutonomiaChat(
 
   throwIfAborted(options.signal);
   if (!sawDone) {
-    throw new AutonomiaStreamError("Autonomia 串流在完成前中斷。", {
+    throw new AutonomiaStreamError(t("errors.stream_truncated"), {
       code: "stream_truncated",
       requestId,
     });

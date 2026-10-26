@@ -275,7 +275,7 @@ test("Anthropic requests convert OpenAI vision content parts into image source b
     pool,
     credential,
     body: {
-      model: "autonomia/claude-sonnet-5",
+      model: "autonomia/claude-sonnet-5-5",
       messages: [
         {
           role: "user",

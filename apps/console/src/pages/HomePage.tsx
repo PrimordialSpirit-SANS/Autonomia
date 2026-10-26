@@ -1,56 +1,49 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { AutonomiaIcon } from "../components/AutonomiaIcon";
-import { StarfieldCanvas } from "../components/StarfieldCanvas";
+import { LanguageSwitcher } from "../components/LanguageSwitcher";
 import { useSession } from "../components/session";
 import { BrandMark, CopyButton } from "../components/ui";
+import { useI18n } from "../i18n";
 import { getAutonomiaPublicApiRoot } from "../lib/autonomia/api/autonomiaDeveloperApi";
 import {
   loadAutonomiaBrandManifest,
   loadAutonomiaModels,
 } from "../lib/autonomia/catalog/loadAutonomiaCatalog";
-import type { AutonomiaModel } from "../lib/autonomia/types";
 import { buildCodeExamples } from "../lib/autonomia/utils/buildCodeExamples";
 import { formatModelLimit, formatUsd } from "../lib/autonomia/utils/formatAutonomia";
 
-// 首頁(/home):3D 星空背景上的產品落地頁。
-// 內容順序參考同類 AI 閘道官網:識別 → 價值主張 → 數據 → 功能 → 模型目錄 →
-// 供應商 → 快速開始 → 接入步驟 → 最終 CTA。模型數量與品牌圖示取自
-// public/data 與 public/brand 的靜態目錄,載入失敗時整段優雅略過。
+// 首頁(/home):公開的產品落地頁,不依附任何 layout,自帶頂欄與頁尾。
+// 模型與供應商資料來自 public/data/autonomia 目錄(動態載入、fail-soft),
+// 目錄不可用時頁面仍完整呈現,僅數據退為「—」。
 
-type BrandInfo = {
-  display_asset_url: string | null;
-  name: string;
-  fallback_label: string;
-};
+type BrandAsset = { display_asset_url: string | null; name: string; fallback_label: string };
 
-const PROVIDERS = [
-  { id: "openai", name: "OpenAI", asset: "/brand/autonomia/providers/openai.svg" },
-  { id: "anthropic", name: "Anthropic", asset: "/brand/autonomia/providers/anthropic.svg" },
-  { id: "google", name: "Google Gemini", asset: "/brand/autonomia/providers/google.svg" },
-  { id: "xai", name: "xAI", asset: "/brand/autonomia/providers/xai.svg" },
-  { id: "deepseek", name: "DeepSeek", asset: "/brand/autonomia/providers/deepseek.svg" },
-  { id: "moonshot", name: "Moonshot AI", asset: "/brand/autonomia/providers/moonshot.png" },
-  { id: "qwen", name: "Qwen", asset: "/brand/autonomia/providers/qwen.svg" },
-  { id: "z-ai", name: "Z.ai", asset: "/brand/autonomia/providers/z-ai.svg" },
-];
-
-const STEPS = [
-  {
-    title: "取得金鑰",
-    body: "在控制台建立一把 sk-autonomia 金鑰，順手設好可用模型與消費上限。",
-  },
-  {
-    title: "換上網址",
-    body: "把 OpenAI SDK 的 baseURL 指向你的閘道，其餘程式照常運作。",
-  },
-  {
-    title: "看清每一筆",
-    body: "用量、延遲與花費即時可見；需要時，請求會自動改走其他上游。",
-  },
-];
-
-function ApiIcon() {
+function FeatureIcon({ name }: { name: "api" | "route" | "billing" | "shield" }) {
+  const paths: Record<string, React.ReactNode> = {
+    api: (
+      <>
+        <path d="M7 8H5a3 3 0 0 0-3 3v2a3 3 0 0 0 3 3h2" />
+        <path d="M17 8h2a3 3 0 0 1 3 3v2a3 3 0 0 1-3 3h-2" />
+        <path d="M8 12h8" />
+      </>
+    ),
+    route: (
+      <>
+        <circle cx="5" cy="12" r="2.2" />
+        <circle cx="19" cy="6" r="2.2" />
+        <circle cx="19" cy="18" r="2.2" />
+        <path d="M7.2 12H10m0 0c2.6 0 3.8-2.6 6.6-5M10 12c2.6 0 3.8 2.6 6.6 5" />
+      </>
+    ),
+    billing: <path d="M12 3v18M17 5.5H9.8a3 3 0 0 0 0 6h4.4a3 3 0 0 1 0 6H7" />,
+    shield: (
+      <>
+        <path d="M12 3l8 4v5c0 4.4-3.2 8.2-8 9-4.8-.8-8-4.6-8-9V7l8-4Z" />
+        <path d="M9 12l2 2 4-4" />
+      </>
+    ),
+  };
   return (
     <svg
       viewBox="0 0 24 24"
@@ -61,199 +54,140 @@ function ApiIcon() {
       strokeLinejoin="round"
       aria-hidden="true"
     >
-      <rect x="3" y="4" width="18" height="16" rx="2" />
-      <path d="m7 9 2.5 3L7 15M12.5 15H17" />
+      {paths[name]}
     </svg>
   );
 }
 
-function PoolIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <circle cx="6" cy="6" r="2.2" />
-      <circle cx="18" cy="6" r="2.2" />
-      <circle cx="12" cy="18" r="2.2" />
-      <path d="M8.2 6h7.6M7.4 8.1l3.4 7.8M16.6 8.1l-3.4 7.8" />
-    </svg>
-  );
-}
-
-function CoinIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <circle cx="12" cy="12" r="8.5" />
-      <path d="M12 7v10M14.6 9.2c-.5-.7-1.5-1.2-2.6-1.2-1.6 0-2.8.9-2.8 2.1 0 1.2 1 1.8 2.8 2.3 1.9.5 2.8 1.1 2.8 2.3 0 1.2-1.2 2.1-2.8 2.1-1.1 0-2.1-.5-2.6-1.2" />
-    </svg>
-  );
-}
-
-function ShieldIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M12 3 5 6v6c0 4 3 7.2 7 9 4-1.8 7-5 7-9V6l-7-3Z" />
-      <path d="m9 12 2 2 4-4" />
-    </svg>
-  );
-}
-
-const FEATURES = [
-  {
-    icon: <ApiIcon />,
-    title: "一種語言，聽懂所有星",
-    body: "既有的 OpenAI SDK 與工具不必改寫，換上你的網址就能繼續用；串流、工具呼叫、向量與 responses 介面一併相容。",
-  },
-  {
-    icon: <PoolIcon />,
-    title: "一顆暗了，另一顆還亮著",
-    body: "同一個模型掛在多條上游之後：按權重分流、遇錯自動改道。單一供應商中斷，也只是少了一顆星。",
-  },
-  {
-    icon: <CoinIcon />,
-    title: "每一束光，都找得到源頭",
-    body: "以微美元整數結帳，先預留、後結算、多退少補；每一筆用量都能重算，帳目對得起來。",
-  },
-  {
-    icon: <ShieldIcon />,
-    title: "自己的夜空，自己畫",
-    body: "一個 SQLite 檔案就能起步，也能搬上 PostgreSQL 或 Cloudflare Workers；提示詞與回應預設不落地，金鑰只存雜湊。",
-  },
-];
+const HOME_MODEL_COUNT = 6;
 
 export function HomePage() {
+  const { t } = useI18n();
   const { user } = useSession();
-  const [models, setModels] = React.useState<AutonomiaModel[]>([]);
-  const [brands, setBrands] = React.useState<Map<string, BrandInfo>>(new Map());
+  const [models, setModels] = React.useState<
+    Awaited<ReturnType<typeof loadAutonomiaModels>>["models"] | null
+  >(null);
+  const [brandAssets, setBrandAssets] = React.useState<Map<string, BrandAsset>>(new Map());
 
   React.useEffect(() => {
     const controller = new AbortController();
     loadAutonomiaModels(controller.signal)
       .then((catalog) => setModels(catalog.models))
       .catch(() => {
-        // 目錄載入失敗時首頁仍可完整瀏覽,只是不顯示模型區。
+        // 落地頁不做錯誤阻斷:目錄載入失敗時退為靜態內容。
       });
     loadAutonomiaBrandManifest(controller.signal)
       .then((manifest) => {
-        setBrands(new Map(manifest.assets.map((asset) => [asset.id, asset])));
+        setBrandAssets(new Map(manifest.assets.map((asset) => [asset.id, asset])));
       })
       .catch(() => {
-        // 品牌 manifest 是裝飾性的;失敗時退回字母徽章。
+        // 品牌 manifest 是裝飾性的;載入失敗時退回字母徽章即可。
       });
     return () => controller.abort();
   }, []);
 
+  const providers = React.useMemo(() => {
+    const seen = new Map<string, { owner: string; assetId: string }>();
+    for (const model of models ?? []) {
+      if (!seen.has(model.owner))
+        seen.set(model.owner, { owner: model.owner, assetId: model.owner_brand_asset_id });
+    }
+    return [...seen.values()];
+  }, [models]);
+
+  const featured = (models ?? []).slice(0, HOME_MODEL_COUNT);
+  const code = buildCodeExamples(
+    getAutonomiaPublicApiRoot(),
+    models?.[0]?.id ?? "autonomia/gpt-6-astra",
+  ).curl;
   const consoleHref = user ? "/overview" : "/login";
-  const quickstartModel = models[0]?.id ?? "autonomia/gpt-5.2";
-  const quickstart = React.useMemo(
-    () => buildCodeExamples(getAutonomiaPublicApiRoot(), quickstartModel).curl.code,
-    [quickstartModel],
-  );
+  const dash = "—";
 
   return (
     <div className="home">
-      <StarfieldCanvas />
-
       <header className="home-topbar">
         <Link className="home-brand" to="/home">
-          <AutonomiaIcon size={26} />
+          <AutonomiaIcon size={22} />
           <strong>Autonomia</strong>
         </Link>
-        <nav className="home-topnav">
-          <Link to="/models">模型</Link>
-          <Link to="/docs">文件</Link>
-          <Link className="btn btn-sm" to={consoleHref}>
-            {user ? "控制台" : "登入"}
+        <nav className="home-topnav" aria-label={t("nav.publicNav")}>
+          <Link to="/models">{t("nav.models")}</Link>
+          <Link to="/docs">{t("nav.quickstart")}</Link>
+          <LanguageSwitcher />
+          <Link className="btn btn-primary btn-sm" to={consoleHref}>
+            {user ? t("home.ctaConsole") : t("nav.loginOrRegister")}
           </Link>
         </nav>
       </header>
 
       <main className="home-main">
         <section className="home-hero">
-          <span className="home-badge">自託管・OpenAI 相容 AI 閘道</span>
+          <span className="home-badge">{t("home.badge")}</span>
           <h1>
-            散落的星，連成<span className="home-hero-em">你的星座</span>
+            {t("home.heroTitleLead")}
+            <em className="home-hero-em">{t("home.heroTitleEm")}</em>
           </h1>
-          <p>
-            {
-              "每一家模型，都是夜空中獨自閃爍的星。Autonomia 用一個 OpenAI 相容端點把它們連起來：選路、計費、金鑰，全都留在你自己的星系裡。"
-            }
-          </p>
+          <p>{t("home.heroLead")}</p>
           <div className="home-cta">
             <Link className="btn btn-primary" to={consoleHref}>
-              {user ? "進入控制台" : "開始使用"}
+              {user ? t("home.ctaConsole") : t("home.ctaStart")}
             </Link>
             <Link className="btn" to="/docs">
-              閱讀文件
+              {t("home.ctaDocs")}
             </Link>
           </div>
         </section>
 
         <div className="home-metrics">
           <div className="home-metric">
-            <strong>{models.length > 0 ? models.length : "—"}</strong>
-            <span>款模型</span>
+            <strong>{models?.length ?? dash}</strong>
+            <span>{t("home.metricModels")}</span>
           </div>
           <div className="home-metric">
-            <strong>{PROVIDERS.length}</strong>
-            <span>家供應商</span>
+            <strong>{providers.length > 0 ? providers.length : dash}</strong>
+            <span>{t("home.metricProviders")}</span>
           </div>
           <div className="home-metric">
             <strong>100%</strong>
-            <span>OpenAI 相容</span>
+            <span>{t("home.metricCompat")}</span>
           </div>
           <div className="home-metric">
             <strong>MIT</strong>
-            <span>開源授權</span>
+            <span>{t("home.metricLicense")}</span>
           </div>
         </div>
 
-        <section className="home-features" aria-label="核心功能">
-          {FEATURES.map((feature) => (
+        <section className="home-features" aria-label={t("home.featuresLabel")}>
+          {(
+            [
+              { icon: "api", title: "home.feature1Title", body: "home.feature1Body" },
+              { icon: "route", title: "home.feature2Title", body: "home.feature2Body" },
+              { icon: "billing", title: "home.feature3Title", body: "home.feature3Body" },
+              { icon: "shield", title: "home.feature4Title", body: "home.feature4Body" },
+            ] as const
+          ).map((feature) => (
             <article className="home-feature" key={feature.title}>
-              {feature.icon}
-              <h2>{feature.title}</h2>
-              <p>{feature.body}</p>
+              <FeatureIcon name={feature.icon} />
+              <h3>{t(feature.title)}</h3>
+              <p>{t(feature.body)}</p>
             </article>
           ))}
         </section>
 
-        {models.length > 0 && (
-          <section className="home-section">
-            <header className="home-section-head">
-              <div>
-                <h2>模型星圖</h2>
-                <p>一個閘道，連起各家前沿模型。價格公開，按實際用量計費。</p>
-              </div>
-              <Link className="home-section-link" to="/models">
-                展開完整星圖 →
-              </Link>
-            </header>
+        <section className="home-section" aria-label={t("home.modelsTitle")}>
+          <div className="home-section-head">
+            <div>
+              <h2>{t("home.modelsTitle")}</h2>
+              <p>{t("home.modelsDesc")}</p>
+            </div>
+            <Link className="home-section-link" to="/models">
+              {t("home.modelsLink")}
+            </Link>
+          </div>
+          {featured.length > 0 && (
             <div className="home-model-grid">
-              {models.slice(0, 6).map((model) => {
-                const brand = brands.get(model.owner_brand_asset_id);
+              {featured.map((model) => {
+                const brand = brandAssets.get(model.owner_brand_asset_id);
                 return (
                   <article className="home-model-card" key={model.id}>
                     <div className="home-model-head">
@@ -269,15 +203,15 @@ export function HomePage() {
                     </div>
                     <dl className="home-model-stats">
                       <div>
-                        <dt>上下文</dt>
+                        <dt>{t("home.modelContext")}</dt>
                         <dd>{formatModelLimit(model.context_window_tokens)}</dd>
                       </div>
                       <div>
-                        <dt>輸入 / 1M</dt>
+                        <dt>{t("models.billingInput")}</dt>
                         <dd>{formatUsd(model.billing.input_usd_per_million_tokens)}</dd>
                       </div>
                       <div>
-                        <dt>輸出 / 1M</dt>
+                        <dt>{t("models.billingOutput")}</dt>
                         <dd>{formatUsd(model.billing.output_usd_per_million_tokens)}</dd>
                       </div>
                     </dl>
@@ -285,62 +219,75 @@ export function HomePage() {
                 );
               })}
             </div>
-            <ul className="home-providers" aria-label="支援的模型供應商">
-              {PROVIDERS.map((provider) => (
-                <li className="home-provider" key={provider.id}>
-                  <img src={provider.asset} alt="" loading="lazy" />
-                  <span>{provider.name}</span>
-                </li>
-              ))}
+          )}
+          {providers.length > 0 && (
+            <ul className="home-providers" aria-label={t("home.providersLabel")}>
+              {providers.map((provider) => {
+                const brand = brandAssets.get(provider.assetId);
+                return (
+                  <li className="home-provider" key={provider.owner}>
+                    {brand?.display_asset_url ? (
+                      <img src={brand.display_asset_url} alt="" loading="lazy" />
+                    ) : (
+                      <span aria-hidden="true">{(brand?.fallback_label || provider.owner).slice(0, 1)}</span>
+                    )}
+                    <span>{brand?.name || provider.owner}</span>
+                  </li>
+                );
+              })}
             </ul>
-          </section>
-        )}
+          )}
+        </section>
 
         <section className="home-quickstart" id="quickstart">
-          <h2>五分鐘，點亮第一顆星</h2>
-          <p>把 baseURL 換成閘道網址，其餘一行都不用動。</p>
+          <h2>{t("home.quickstartTitle")}</h2>
+          <p>{t("home.quickstartDesc")}</p>
           <div className="home-code">
             <div className="home-code-head">
-              <span>curl · chat/completions</span>
-              <CopyButton value={quickstart} label="複製指令" />
+              <span>{code.label}</span>
+              <CopyButton value={code.code} label={t("common.copy")} compact />
             </div>
             <pre>
-              <code>{quickstart}</code>
+              <code>{code.code}</code>
             </pre>
           </div>
         </section>
 
-        <section className="home-section" aria-label="接入步驟">
-          <header className="home-section-head">
+        <section className="home-section" aria-label={t("home.stepsLabel")}>
+          <div className="home-section-head">
             <div>
-              <h2>從一顆星，到一張星圖</h2>
-              <p>不用重寫應用，也不用搬資料。</p>
+              <h2>{t("home.stepsTitle")}</h2>
+              <p>{t("home.stepsDesc")}</p>
             </div>
-          </header>
+          </div>
           <ol className="home-steps">
-            {STEPS.map((step, index) => (
-              <li className="home-step" key={step.title}>
-                <span className="home-step-index">{String(index + 1).padStart(2, "0")}</span>
-                <h3>{step.title}</h3>
-                <p>{step.body}</p>
-              </li>
-            ))}
+            <li className="home-step">
+              <span className="home-step-index">01</span>
+              <h3>{t("home.step1Title")}</h3>
+              <p>{t("home.step1Body")}</p>
+            </li>
+            <li className="home-step">
+              <span className="home-step-index">02</span>
+              <h3>{t("home.step2Title")}</h3>
+              <p>{t("home.step2Body")}</p>
+            </li>
+            <li className="home-step">
+              <span className="home-step-index">03</span>
+              <h3>{t("home.step3Title")}</h3>
+              <p>{t("home.step3Body")}</p>
+            </li>
           </ol>
         </section>
 
         <section className="home-final">
-          <h2>整片星空，留在自己家</h2>
-          <p>
-            {
-              "從一個 SQLite 檔案開始，慢慢長成你自己的星座。自託管、可觀測、分毫清楚——星圖與資料，都不必交給別人。"
-            }
-          </p>
+          <h2>{t("home.finalTitle")}</h2>
+          <p>{t("home.finalBody")}</p>
           <div className="home-cta">
             <Link className="btn btn-primary" to={consoleHref}>
-              {user ? "進入控制台" : "開始使用"}
+              {user ? t("home.ctaConsole") : t("home.ctaStart")}
             </Link>
             <Link className="btn" to="/models">
-              瀏覽模型
+              {t("home.ctaModels")}
             </Link>
           </div>
         </section>
@@ -348,12 +295,12 @@ export function HomePage() {
 
       <footer className="home-footer">
         <span>
-          <AutonomiaIcon size={16} />© 2026 Autonomia · MIT License
+          <AutonomiaIcon size={14} /> Autonomia · © 2026 · MIT License
         </span>
-        <nav>
-          <Link to="/models">模型目錄</Link>
-          <Link to="/docs">文件</Link>
-          <Link to="/login">登入</Link>
+        <nav aria-label={t("nav.footerNav")}>
+          <Link to="/models">{t("nav.models")}</Link>
+          <Link to="/docs">{t("nav.quickstart")}</Link>
+          <Link to="/login">{t("nav.login")}</Link>
         </nav>
       </footer>
     </div>

@@ -1,5 +1,6 @@
 import React from "react";
 import { Alert, formatDuration, PageHeader } from "../components/ui";
+import { intlLocaleFor, type TranslationKey, useI18n } from "../i18n";
 import {
   type AutonomiaStreamDeltaEvent,
   streamAutonomiaChat,
@@ -12,19 +13,30 @@ import type { AutonomiaChatUsage, AutonomiaModel } from "../lib/autonomia/types"
 
 type RunStatus = "idle" | "connecting" | "streaming" | "complete" | "stopped" | "error";
 
-const STATUS_BADGES: Record<RunStatus, { label: string; className: string }> = {
-  idle: { label: "待命", className: "badge" },
-  connecting: { label: "連線中", className: "badge badge-warn" },
-  streaming: { label: "生成中", className: "badge badge-info" },
-  complete: { label: "完成", className: "badge badge-ok" },
-  stopped: { label: "已停止", className: "badge" },
-  error: { label: "錯誤", className: "badge badge-err" },
+// 狀態 → badge 樣式;顯示文字由 i18n 提供(見 playground.status*)。
+const STATUS_CLASSNAMES: Record<RunStatus, string> = {
+  idle: "badge",
+  connecting: "badge badge-warn",
+  streaming: "badge badge-info",
+  complete: "badge badge-ok",
+  stopped: "badge",
+  error: "badge badge-err",
 };
 
-const PRESETS = [
-  { label: "自我介紹", prompt: "你好!請簡單自我介紹,並說明你能提供哪些協助。" },
-  { label: "寫詩", prompt: "請以繁體中文寫一首描寫秋天夜空的五言律詩。" },
-  { label: "程式碼", prompt: "請用 Python 寫一個快速判斷質數的函式,並加上範例與註解。" },
+const STATUS_LABEL_KEYS: Record<RunStatus, TranslationKey> = {
+  idle: "playground.statusIdle",
+  connecting: "playground.statusConnecting",
+  streaming: "playground.statusStreaming",
+  complete: "playground.statusComplete",
+  stopped: "playground.statusStopped",
+  error: "playground.statusError",
+};
+
+// 預設提示詞隨語系切換(標籤 + 提示內容皆由字典提供)。
+const PRESETS: Array<{ labelKey: TranslationKey; promptKey: TranslationKey }> = [
+  { labelKey: "playground.presetIntroLabel", promptKey: "playground.presetIntroPrompt" },
+  { labelKey: "playground.presetPoemLabel", promptKey: "playground.presetPoemPrompt" },
+  { labelKey: "playground.presetCodeLabel", promptKey: "playground.presetCodePrompt" },
 ];
 
 function countCharacters(value: string): number {
@@ -42,6 +54,7 @@ function isAbortError(cause: unknown): boolean {
 }
 
 export function PlaygroundPage() {
+  const { t } = useI18n();
   const [models, setModels] = React.useState<AutonomiaModel[]>([]);
   const [catalogError, setCatalogError] = React.useState("");
   const [authMode, setAuthMode] = React.useState<"account" | "api-key">("account");
@@ -49,7 +62,8 @@ export function PlaygroundPage() {
   const [modelId, setModelId] = React.useState("");
   const [modelMenuOpen, setModelMenuOpen] = React.useState(false);
   const [activeModelIndex, setActiveModelIndex] = React.useState(0);
-  const [prompt, setPrompt] = React.useState(PRESETS[0].prompt);
+  // 初始值取自掛載當下語系的第一個預設;之後切換語言不覆寫已編輯內容。
+  const [prompt, setPrompt] = React.useState(() => t(PRESETS[0].promptKey));
   const [maxTokens, setMaxTokens] = React.useState(1024);
   const [status, setStatus] = React.useState<RunStatus>("idle");
   const [output, setOutput] = React.useState("");
@@ -187,15 +201,15 @@ export function PlaygroundPage() {
     if (running) return;
 
     if (authMode === "api-key" && !apiKey.trim()) {
-      setError("請輸入 API 金鑰。");
+      setError(t("playground.errorApiKey"));
       return;
     }
     if (!normalizedModelId) {
-      setError("請選擇或輸入欲測試的模型。");
+      setError(t("playground.errorModel"));
       return;
     }
     if (!prompt.trim()) {
-      setError("請輸入訊息。");
+      setError(t("playground.errorMessage"));
       return;
     }
 
@@ -228,7 +242,7 @@ export function PlaygroundPage() {
         setStatus("stopped");
       } else {
         setStatus("error");
-        setError(cause instanceof Error ? cause.message : "Autonomia 串流測試失敗。");
+        setError(cause instanceof Error ? cause.message : t("playground.streamFailed"));
       }
     } finally {
       if (abortRef.current === controller) abortRef.current = null;
@@ -242,189 +256,214 @@ export function PlaygroundPage() {
     setStatus("idle");
   };
 
-  const statusBadge = STATUS_BADGES[status];
   const placeholder = running
     ? reasoningCharacters > 0
-      ? "推理中…"
-      : "等待首段回應…"
+      ? t("playground.placeholderReasoning")
+      : t("playground.placeholderWaiting")
     : status === "stopped"
-      ? "生成已停止。"
-      : "尚未開始";
+      ? t("playground.placeholderStopped")
+      : t("playground.placeholderIdle");
 
   return (
     <>
-      <PageHeader
-        title="串流測試"
-        subtitle="以 OpenAI 相容端點即時驗證模型回應"
-        action={
-          <span className={statusBadge.className} role="status" aria-live="polite">
-            {statusBadge.label}
-          </span>
-        }
-      />
+      <PageHeader title={t("playground.title")} subtitle={t("playground.subtitle")} />
       {catalogError && (
-        <div style={{ marginBottom: 12 }}>
+        <div className="pg-alert">
           <Alert tone="error">{catalogError}</Alert>
         </div>
       )}
       <div className="playground">
-        <form className="card card-pad form-grid" onSubmit={start}>
-          <div className="field">
-            <span>認證方式</span>
-            <fieldset className="choice" aria-label="認證方式">
-              <button
-                type="button"
-                className={authMode === "account" ? "active" : ""}
-                onClick={() => setAuthMode("account")}
-                disabled={running}
-              >
-                登入工作階段
-              </button>
-              <button
-                type="button"
-                className={authMode === "api-key" ? "active" : ""}
-                onClick={() => setAuthMode("api-key")}
-                disabled={running}
-              >
-                API 金鑰
-              </button>
-            </fieldset>
-            <small>
-              {authMode === "account"
-                ? "免填金鑰,直接使用帳戶餘額測試。"
-                : "輸入專屬 sk-autonomia-live_… 金鑰進行公開端點驗證。"}
-            </small>
-          </div>
-
-          {authMode === "api-key" && (
-            <label className="field">
-              <span>API 金鑰</span>
-              <input
-                className="input input-mono"
-                type="password"
-                value={apiKey}
-                onChange={(event) => setApiKey(event.target.value)}
-                autoComplete="off"
-                spellCheck={false}
-                placeholder="sk-autonomia-live_…"
-                disabled={running}
-              />
-            </label>
-          )}
-
-          <div className="form-row">
-            <div className="field model-picker" ref={modelPickerRef}>
-              <span>模型</span>
-              <input
-                className="input input-mono"
-                type="search"
-                value={modelId}
-                onChange={(event) => {
-                  changeModel(event.target.value);
-                  setModelMenuOpen(true);
-                  setActiveModelIndex(0);
-                }}
-                onFocus={() => setModelMenuOpen(true)}
-                onKeyDown={(event) => {
-                  if (event.key === "Escape") setModelMenuOpen(false);
-                  if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-                    event.preventDefault();
-                    setModelMenuOpen(true);
-                    const direction = event.key === "ArrowDown" ? 1 : -1;
-                    setActiveModelIndex((current) =>
-                      Math.max(0, Math.min(filteredModels.length - 1, current + direction)),
-                    );
-                  }
-                  if (event.key === "Enter" && modelMenuOpen && filteredModels[activeModelIndex]) {
-                    event.preventDefault();
-                    chooseModel(filteredModels[activeModelIndex]);
-                  }
-                }}
-                placeholder="請輸入模型型號"
-                autoComplete="off"
-                spellCheck={false}
-                role="combobox"
-                aria-expanded={modelMenuOpen}
-                aria-controls="autonomia-model-options"
-                disabled={running}
-              />
-              {modelMenuOpen && (
-                <div className="model-picker-menu" id="autonomia-model-options" role="listbox">
-                  {filteredModels.length ? (
-                    filteredModels.map((model, index) => (
-                      <button
-                        type="button"
-                        key={model.id}
-                        role="option"
-                        aria-selected={model.id === normalizedModelId}
-                        className={`model-option${index === activeModelIndex ? " active" : ""}`}
-                        onMouseEnter={() => setActiveModelIndex(index)}
-                        onClick={() => chooseModel(model)}
-                      >
-                        <strong>{model.id}</strong>
-                        <span>{model.display_name}</span>
-                      </button>
-                    ))
-                  ) : (
-                    <div className="model-empty">沒有相符型號,可直接使用目前輸入值</div>
-                  )}
-                </div>
-              )}
-            </div>
-            <label className="field">
-              <span>最大輸出 Token</span>
-              <input
-                className="input"
-                type="number"
-                min={1}
-                max={maxOutputTokens}
-                value={maxTokens}
-                onChange={(event) =>
-                  setMaxTokens(Math.min(maxOutputTokens, Math.max(1, Number(event.target.value) || 1)))
-                }
-                disabled={running}
-              />
-            </label>
-          </div>
-
-          <div className="field">
-            <span>訊息</span>
-            <div className="prompt-presets">
-              {PRESETS.map((preset) => (
+        <form className="card pg-panel" onSubmit={start}>
+          <header className="pg-head">
+            <h2>{t("playground.settingsTitle")}</h2>
+            <span className={STATUS_CLASSNAMES[status]} role="status" aria-live="polite">
+              {t(STATUS_LABEL_KEYS[status])}
+            </span>
+          </header>
+          <div className="pg-body form-grid">
+            <div className="field">
+              <span>{t("playground.authLabel")}</span>
+              <fieldset className="choice" aria-label={t("playground.authChoiceAria")}>
                 <button
-                  key={preset.label}
                   type="button"
-                  className="chip"
-                  onClick={() => setPrompt(preset.prompt)}
+                  className={authMode === "account" ? "active" : ""}
+                  onClick={() => setAuthMode("account")}
                   disabled={running}
                 >
-                  {preset.label}
+                  {t("playground.authAccount")}
                 </button>
-              ))}
+                <button
+                  type="button"
+                  className={authMode === "api-key" ? "active" : ""}
+                  onClick={() => setAuthMode("api-key")}
+                  disabled={running}
+                >
+                  {t("playground.authApiKey")}
+                </button>
+              </fieldset>
+              <small>
+                {authMode === "account" ? t("playground.authAccountHint") : t("playground.authApiKeyHint")}
+              </small>
             </div>
-            <textarea
-              className="textarea"
-              value={prompt}
-              onChange={(event) => setPrompt(event.target.value)}
-              placeholder="請輸入訊息"
-              rows={7}
-              disabled={running}
-            />
-          </div>
 
-          <div style={{ display: "flex", gap: 8 }}>
-            <button className="btn btn-primary" type="submit" disabled={running} style={{ flex: 1 }}>
-              {running ? "生成中…" : "開始生成"}
-            </button>
-            <button className="btn btn-danger" type="button" onClick={stop} disabled={!running}>
-              停止
-            </button>
+            {authMode === "api-key" && (
+              <label className="field">
+                <span>{t("playground.authApiKey")}</span>
+                <input
+                  className="input input-mono"
+                  type="password"
+                  value={apiKey}
+                  onChange={(event) => setApiKey(event.target.value)}
+                  autoComplete="off"
+                  spellCheck={false}
+                  placeholder="sk-autonomia-live_…"
+                  disabled={running}
+                />
+              </label>
+            )}
+
+            <div className="form-row">
+              <div className="field model-picker" ref={modelPickerRef}>
+                <span>{t("playground.modelLabel")}</span>
+                <input
+                  className="input input-mono"
+                  type="search"
+                  value={modelId}
+                  onChange={(event) => {
+                    changeModel(event.target.value);
+                    setModelMenuOpen(true);
+                    setActiveModelIndex(0);
+                  }}
+                  onFocus={() => setModelMenuOpen(true)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Escape") setModelMenuOpen(false);
+                    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+                      event.preventDefault();
+                      setModelMenuOpen(true);
+                      const direction = event.key === "ArrowDown" ? 1 : -1;
+                      setActiveModelIndex((current) =>
+                        Math.max(0, Math.min(filteredModels.length - 1, current + direction)),
+                      );
+                    }
+                    if (event.key === "Enter" && modelMenuOpen && filteredModels[activeModelIndex]) {
+                      event.preventDefault();
+                      chooseModel(filteredModels[activeModelIndex]);
+                    }
+                  }}
+                  placeholder={t("playground.modelPlaceholder")}
+                  autoComplete="off"
+                  spellCheck={false}
+                  role="combobox"
+                  aria-expanded={modelMenuOpen}
+                  aria-controls="autonomia-model-options"
+                  disabled={running}
+                />
+                {modelMenuOpen && (
+                  <div className="model-picker-menu" id="autonomia-model-options" role="listbox">
+                    {filteredModels.length ? (
+                      filteredModels.map((model, index) => (
+                        <button
+                          type="button"
+                          key={model.id}
+                          role="option"
+                          aria-selected={model.id === normalizedModelId}
+                          className={`model-option${index === activeModelIndex ? " active" : ""}`}
+                          onMouseEnter={() => setActiveModelIndex(index)}
+                          onClick={() => chooseModel(model)}
+                        >
+                          <strong>{model.id}</strong>
+                          <span>{model.display_name}</span>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="model-empty">{t("playground.modelEmpty")}</div>
+                    )}
+                  </div>
+                )}
+              </div>
+              <label className="field">
+                <span>{t("playground.maxTokensLabel")}</span>
+                <input
+                  className="input"
+                  type="number"
+                  min={1}
+                  max={maxOutputTokens}
+                  value={maxTokens}
+                  onChange={(event) =>
+                    setMaxTokens(Math.min(maxOutputTokens, Math.max(1, Number(event.target.value) || 1)))
+                  }
+                  disabled={running}
+                />
+              </label>
+            </div>
+
+            <div className="field">
+              <span>{t("playground.messageLabel")}</span>
+              <div className="prompt-presets">
+                {PRESETS.map((preset) => (
+                  <button
+                    key={preset.labelKey}
+                    type="button"
+                    className="chip"
+                    onClick={() => setPrompt(t(preset.promptKey))}
+                    disabled={running}
+                  >
+                    {t(preset.labelKey)}
+                  </button>
+                ))}
+              </div>
+              <textarea
+                className="textarea"
+                value={prompt}
+                onChange={(event) => setPrompt(event.target.value)}
+                placeholder={t("playground.messagePlaceholder")}
+                rows={7}
+                disabled={running}
+              />
+              <span className="char-count" aria-hidden="true">
+                {t("playground.charCount", {
+                  count: countCharacters(prompt).toLocaleString(intlLocaleFor()),
+                })}
+              </span>
+            </div>
+
+            <div className="pg-actions">
+              <button className="btn btn-primary" type="submit" disabled={running}>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="m10 8.5 5 3.5-5 3.5Z" />
+                </svg>
+                {running ? t("playground.running") : t("playground.run")}
+              </button>
+              <button className="btn" type="button" onClick={stop} disabled={!running}>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <rect x="7" y="7" width="10" height="10" rx="1.5" />
+                </svg>
+                {t("playground.stop")}
+              </button>
+            </div>
           </div>
         </form>
 
-        <article className="card" style={{ overflow: "hidden" }}>
-          <header className="pane-header">
-            <h2>回應</h2>
+        <article className="card pg-panel">
+          <header className="pg-head">
+            <h2>{t("playground.responseTitle")}</h2>
             <div className="pane-actions">
               <button
                 type="button"
@@ -439,51 +478,76 @@ export function PlaygroundPage() {
                 }}
                 disabled={!output}
               >
-                複製
+                {t("common.copy")}
               </button>
               <button type="button" className="btn btn-sm" onClick={clearResult} disabled={running}>
-                清除
+                {t("playground.clear")}
               </button>
             </div>
           </header>
 
-          <dl className="metrics-strip" style={{ margin: 0 }}>
-            <div className="metric-cell">
-              <span>字元</span>
-              <strong>{countCharacters(output).toLocaleString("zh-TW")}</strong>
-            </div>
-            <div className="metric-cell">
-              <span>輸出 Token</span>
-              <strong>{usage ? usage.completion_tokens.toLocaleString("zh-TW") : "—"}</strong>
-            </div>
-            <div className="metric-cell">
-              <span>首段</span>
-              <strong>{formatDuration(firstDeltaMs)}</strong>
-            </div>
-            <div className="metric-cell">
-              <span>耗時</span>
-              <strong>{formatDuration(elapsedMs)}</strong>
-            </div>
-          </dl>
-
-          {reasoningCharacters > 0 && (
-            <div className="reasoning-note">
-              推理文字 {reasoningCharacters.toLocaleString("zh-TW")} 字元
-              {usage?.completion_tokens_details
-                ? ` · 推理 ${usage.completion_tokens_details.reasoning_tokens.toLocaleString("zh-TW")} Token(已含於輸出)`
-                : "(字元數不等於 Token 數)"}
+          {output ? (
+            <pre className="output-pane" aria-live="polite" aria-busy={running}>
+              {output}
+              {running && <span className="stream-caret" aria-hidden="true" />}
+            </pre>
+          ) : (
+            <div className="pg-empty">
+              <div className="pg-empty-inner">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="m10 8.5 5 3.5-5 3.5Z" />
+                </svg>
+                <span>{placeholder}</span>
+              </div>
             </div>
           )}
 
-          <pre className={`output-pane${output ? "" : " empty"}`} aria-live="polite" aria-busy={running}>
-            {output || placeholder}
-          </pre>
+          {reasoningCharacters > 0 && (
+            <div className="reasoning-note">
+              {t("playground.reasoningChars", {
+                chars: reasoningCharacters.toLocaleString(intlLocaleFor()),
+              })}
+              {usage?.completion_tokens_details
+                ? t("playground.reasoningTokens", {
+                    tokens: usage.completion_tokens_details.reasoning_tokens.toLocaleString(intlLocaleFor()),
+                  })
+                : t("playground.reasoningCharsNote")}
+            </div>
+          )}
 
           {error && (
             <div className="output-error" role="alert">
               {error}
             </div>
           )}
+
+          <dl className="pg-metrics">
+            <div className="pg-metric">
+              <span>{t("playground.metricChars")}</span>
+              <strong>{countCharacters(output).toLocaleString(intlLocaleFor())}</strong>
+            </div>
+            <div className="pg-metric">
+              <span>{t("playground.metricTokens")}</span>
+              <strong>{usage ? usage.completion_tokens.toLocaleString(intlLocaleFor()) : "—"}</strong>
+            </div>
+            <div className="pg-metric">
+              <span>{t("playground.metricFirstDelta")}</span>
+              <strong>{formatDuration(firstDeltaMs)}</strong>
+            </div>
+            <div className="pg-metric">
+              <span>{t("playground.metricElapsed")}</span>
+              <strong>{formatDuration(elapsedMs)}</strong>
+            </div>
+          </dl>
         </article>
       </div>
     </>

@@ -15,7 +15,7 @@ fail-closed 安全邊界做為不可妥協的核心。本文映射兩邊的概�
 | 預算控制 | Budgets(金額 / 時長) | Quota(額度) | 金鑰級美元消費上限 + 餘額(微美元整數結算) |
 | 速率限制 | RPM / TPM 設定 | 依渠道 | 金鑰級 RPM + 最大併發(資料庫交易內原子計數) |
 | 團隊 / 組織 | Teams、Orgs | Users、Groups | 單租格帳號系統(內建,無多租戶概念) |
-| 管理介面 | Admin UI(較新版本) | Web 控制台 | 開發者控制台(React,可 `?demo=1` 離線體驗) |
+| 管理介面 | Admin UI(較新版本) | Web 控制台 | 開發者控制台(React) |
 | 部署形態 | Python(Docker/Beanstalk) | Go(Docker 為主) | Node ≥ 22.18 單程序 / Cloudflare Workers / **Docker(Topology D)** |
 
 ## 從 LiteLLM 遷移

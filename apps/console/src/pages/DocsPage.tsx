@@ -1,5 +1,6 @@
 import React from "react";
 import { CopyButton, PageHeader } from "../components/ui";
+import { useI18n } from "../i18n";
 import {
   getAutonomiaChatCompletionsUrl,
   getAutonomiaPublicApiRoot,
@@ -7,41 +8,39 @@ import {
 import { buildCodeExamples, type CodeLanguage } from "../lib/autonomia/utils/buildCodeExamples";
 
 export function DocsPage() {
+  const { t } = useI18n();
   const [language, setLanguage] = React.useState<CodeLanguage>("curl");
   const examples = buildCodeExamples(getAutonomiaPublicApiRoot(), "YOUR_MODEL_ID");
   const current = examples[language];
 
   return (
     <>
-      <PageHeader
-        title="快速開始"
-        subtitle="四步驟送出第一個請求;回應格式與 OpenAI Chat Completions 相容。"
-      />
+      <PageHeader title={t("docs.title")} subtitle={t("docs.subtitle")} />
       <ol className="steps">
         <li className="card">
           <span>01</span>
-          <strong>建立金鑰</strong>
-          <p>在「API 金鑰」頁建立並安全保存 secret。</p>
+          <strong>{t("docs.step1Title")}</strong>
+          <p>{t("docs.step1Body")}</p>
         </li>
         <li className="card">
           <span>02</span>
-          <strong>設定環境變數</strong>
+          <strong>{t("docs.step2Title")}</strong>
           <code>AUTONOMIA_API_KEY=sk-autonomia-live_…</code>
         </li>
         <li className="card">
           <span>03</span>
-          <strong>選擇模型</strong>
+          <strong>{t("docs.step3Title")}</strong>
           <code>YOUR_MODEL_ID</code>
         </li>
         <li className="card">
           <span>04</span>
-          <strong>送出請求</strong>
-          <p>以下任一語言的範例都能直接執行。</p>
+          <strong>{t("docs.step4Title")}</strong>
+          <p>{t("docs.step4Body")}</p>
         </li>
       </ol>
 
       <div>
-        <div className="code-tabs" role="tablist" aria-label="程式語言">
+        <div className="code-tabs" role="tablist" aria-label={t("docs.tabsAria")}>
           {(Object.keys(examples) as CodeLanguage[]).map((item) => (
             <button
               key={item}
@@ -55,7 +54,7 @@ export function DocsPage() {
             </button>
           ))}
           <span className="copy-slot">
-            <CopyButton value={current.code} label="COPY" />
+            <CopyButton value={current.code} label={t("common.copy")} />
           </span>
         </div>
         <pre className="code-block">
@@ -98,17 +97,17 @@ export function DocsPage() {
           <path d="M9 12l2 2 4-4" />
         </svg>
         <div>
-          <strong style={{ fontSize: "0.84rem" }}>Idempotency-Key 語意</strong>
+          <strong style={{ fontSize: "0.84rem" }}>{t("docs.idempotencyTitle")}</strong>
           <p style={{ margin: "4px 0 0", fontSize: "0.85rem", lineHeight: 1.6 }}>
-            冪等鍵用於防止同一請求被重複執行與重複扣款。預設(未開啟重放)金鑰不落地 prompt 與
-            completion,已完成的冪等鍵重送會回
-            <code>409 idempotent_request_replayed</code>(附原始 X-Request-Id),進行中的鍵則回
-            <code>409 idempotent_request_in_progress</code>。在金鑰上開啟
-            <code>idempotency_replay_ttl_seconds</code>{" "}
-            後,成功回應會落地該時限:時限內同鍵同體重送直接重放原始回應;時限屆滿後綁定釋放,同鍵重送視為全新請求重新執行(重新計費)。超過
-            2MB 的回應無法落地,時限內同鍵重送回
-            <code>409 idempotency_replay_not_stored</code>(換新鍵可立即重新執行)。依賴冪等重放的客戶端應將 409
-            視為終局結果,而非可重試錯誤。
+            {t("docs.idempotencyIntro")}
+            <code>409 idempotent_request_replayed</code>
+            {t("docs.idempotencyReplayedNote")}
+            <code>409 idempotent_request_in_progress</code>
+            {t("docs.idempotencyReplayOpen")}
+            <code>idempotency_replay_ttl_seconds</code>
+            {t("docs.idempotencyReplayBody")}
+            <code>409 idempotent_replay_not_stored</code>
+            {t("docs.idempotencyTail")}
           </p>
         </div>
       </div>

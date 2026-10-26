@@ -25,4 +25,3 @@ Q&A 分類是使用問題的首選:提問、回答與「已解決」標記都會
 [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md)(框架對接)、
 [docs/MIGRATION.md](docs/MIGRATION.md)(從 LiteLLM / one-api 遷移)與
 [examples/](../examples/)(可直接執行的 SDK 範例)涵蓋了最常見的接入問題。
-控制台的 `?demo=1` 離線示範模式可以在不設定任何供應商金鑰的情況下熟悉全部功能。

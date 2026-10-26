@@ -1,6 +1,6 @@
 // 平台整合接縫:console 邏輯層(lib/autonomia)所有 API 呼叫的底層。
 // 原始平台在此提供 JWT 會話、CSRF 與外部 API base;本獨立版以同源 cookie session
-// 加上環境變數設定重現相同契約。離線示範模式由 demoApi.ts 以 fetch 攔截實現。
+// 加上環境變數設定重現相同契約。
 
 // FN-10 fix:`??` 換成 `||` —— 環境變數設為空字串時(對照 .env.example
 // 「留空時使用同源的 /api」),`??` 不會放行 fallback,所有請求打到錯誤的

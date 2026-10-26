@@ -143,7 +143,7 @@ test("opt-in key replays the stored response; non-opt-in key keeps 409 semantics
 
   const app = createTestApp(env);
   const requestBody = {
-    model: "autonomia/gpt-5.2",
+    model: "autonomia/gpt-6.1-sol",
     messages: [{ role: "user", content: "Hello replay" }],
   };
   let providerCalls = 0;
@@ -151,7 +151,7 @@ test("opt-in key replays the stored response; non-opt-in key keeps 409 semantics
   globalThis.fetch = (async (url: any, init: any) => {
     providerCalls += 1;
     assert.ok(String(url).endsWith("/chat/completions"), `unexpected upstream URL: ${url}`);
-    assert.equal(JSON.parse(init.body).model, "gpt-5.2");
+    assert.equal(JSON.parse(init.body).model, "gpt-6.1-sol");
     return new Response(
       JSON.stringify({
         id: "upstream-e2e",
@@ -224,7 +224,7 @@ test("opt-in key replays the stored response; non-opt-in key keeps 409 semantics
         "idempotency-key": "e2e-1",
       },
       body: JSON.stringify({
-        model: "autonomia/gpt-5.2",
+        model: "autonomia/gpt-6.1-sol",
         messages: [{ role: "user", content: "Different body" }],
       }),
     });
@@ -275,7 +275,7 @@ test("opt-in key: after replay TTL expiry the same key re-executes and re-stores
   });
   const app = createTestApp(env);
   const requestBody = {
-    model: "autonomia/gpt-5.2",
+    model: "autonomia/gpt-6.1-sol",
     messages: [{ role: "user", content: "Hello expiry" }],
   };
   let providerCalls = 0;
@@ -363,7 +363,7 @@ test("opt-in key: oversized response stores a tombstone; retries are rejected di
   });
   const app = createTestApp(env);
   const requestBody = {
-    model: "autonomia/gpt-5.2",
+    model: "autonomia/gpt-6.1-sol",
     messages: [{ role: "user", content: "Hello oversized" }],
   };
   let providerCalls = 0;
@@ -449,7 +449,7 @@ test("idempotent replays count toward the key's RPM admission (SN-9)", async () 
   });
   const app = createTestApp(env);
   const requestBody = {
-    model: "autonomia/gpt-5.2",
+    model: "autonomia/gpt-6.1-sol",
     messages: [{ role: "user", content: "RPM replay" }],
   };
   const originalFetch = globalThis.fetch;
@@ -523,7 +523,7 @@ test("models listing counts toward the key's RPM admission (SN-8)", async () => 
         "content-type": "application/json",
       },
       body: JSON.stringify({
-        model: "autonomia/gpt-5.2",
+        model: "autonomia/gpt-6.1-sol",
         messages: [{ role: "user", content: "Models RPM" }],
       }),
     });

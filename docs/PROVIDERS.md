@@ -79,7 +79,7 @@ The published catalog covers 19 chat models from eight model families (OpenAI GP
 Anthropic Claude, Google Gemini, xAI Grok, DeepSeek, Moonshot AI Kimi, Z.ai
 GLM, and Alibaba Qwen), plus two `text-embedding-3` embedding models served
 from the OpenAI pool. Rates use each provider's official public API prices
-checked on 2026-09-14. Autonomia passes the upstream USD rate through with a small
+checked on 2026-10-25. Autonomia passes the upstream USD rate through with a small
 settlement margin (`input_usd_per_million_tokens` / `output_usd_per_million_tokens`,
 USD decimals), with a $0.0001 per-request minimum. Cache discounts, batch
 discounts, tiered long-context pricing, and promotions are excluded from the
@@ -90,28 +90,29 @@ published rates.
 | Public model | Upstream model | USD in / out per 1M |
 | --- | --- | --- |
 | `autonomia/gpt-6-astra` | `gpt-6-astra` | 10 / 50.01 |
-| `autonomia/gpt-5.2` | `gpt-5.2` | 1.26 / 10.02 |
-| `autonomia/gpt-5.2-codex` | `gpt-5.2-codex` | 1.26 / 10.02 |
+| `autonomia/gpt-6.1-sol` | `gpt-6.1-sol` | 2 / 10.01 |
+| `autonomia/gpt-5.3-codex` | `gpt-5.3-codex` | 1.75 / 14.01 |
 
-Contexts: GPT-6 Astra 1,000,000 tokens; GPT-5.2 and GPT-5.2 Codex 400,000.
+Contexts: GPT-6 Astra 1,000,000 tokens; GPT-6.1 Sol and GPT-5.3 Codex 400,000.
 
 ### Anthropic (`https://api.anthropic.com/v1`, Messages API)
 
 | Public model | Upstream model | USD in / out per 1M |
 | --- | --- | --- |
-| `autonomia/claude-opus-4-8` | `claude-opus-4-8` | 5 / 25.01 |
-| `autonomia/claude-sonnet-5` | `claude-sonnet-5` | 2 / 10.01 |
-| `autonomia/claude-haiku-4-5` | `claude-haiku-4-5` | 1.02 / 5.01 |
+| `autonomia/claude-fable-5-1` | `claude-fable-5-1` | 10 / 50.01 |
+| `autonomia/claude-opus-5-5` | `claude-opus-5-5` | 4 / 20.01 |
+| `autonomia/claude-sonnet-5-5` | `claude-sonnet-5-5` | 2 / 10.01 |
+| `autonomia/claude-haiku-5-5` | `claude-haiku-5-5` | 0.11 / 0.51 |
 
-Context 200,000 tokens. Prompt-cache write/read discounts are excluded.
+Context 1,000,000 tokens. Prompt-cache write/read discounts are excluded.
 
 ### Google Gemini (`https://generativelanguage.googleapis.com/v1beta/openai`)
 
 | Public model | Upstream model | USD in / out per 1M |
 | --- | --- | --- |
-| `autonomia/gemini-3.5-pro` | `gemini-3.5-pro` | 2.01 / 12.02 |
-| `autonomia/gemini-3.8-flash` | `gemini-3.8-flash` | 0.30 / 2.52 |
-| `autonomia/gemini-3.5-flash-lite` | `gemini-3.5-flash-lite` | 0.12 / 0.42 |
+| `autonomia/gemini-4-argon` | `gemini-4-argon` | 2 / 10.01 |
+| `autonomia/gemini-3.8-flash` | `gemini-3.8-flash` | 0.75 / 3.76 |
+| `autonomia/gemini-3.5-flash-lite` | `gemini-3.5-flash-lite` | 0.30 / 2.51 |
 
 Context 1,048,576 tokens. Autonomia bills the baseline tier; tiered long-context
 pricing above 200k inputs is not reflected in the published rates, so very
@@ -121,11 +122,12 @@ large prompts can exceed the modeled upstream cost.
 
 | Public model | Upstream model | USD in / out per 1M |
 | --- | --- | --- |
-| `autonomia/grok-4.6` | `grok-4.6` | 2 / 6.01 |
-| `autonomia/grok-4.1-fast` | `grok-4.1-fast` | 0.21 / 0.51 |
+| `autonomia/grok-4.7` | `grok-4.7` | 2 / 6.01 |
+| `autonomia/grok-4.3` | `grok-4.3` | 1.25 / 2.51 |
 
-Context 2,000,000 tokens for both models. Grok 4.6 applies higher long-context
-rates above 200k inputs; Autonomia bills the standard tier.
+Context: Grok 4.7 500,000 tokens; Grok 4.3 1,000,000 tokens. Grok applies
+higher long-context rates above 200k inputs; Autonomia bills the standard
+tier.
 
 ### DeepSeek (`https://api.deepseek.com/v1`)
 

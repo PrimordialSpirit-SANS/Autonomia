@@ -73,7 +73,7 @@ test("validation failures release the admission lease instead of leaking it", as
         method: "POST",
         headers,
         body: JSON.stringify({
-          model: "autonomia/gpt-5.2",
+          model: "autonomia/gpt-6.1-sol",
           messages: [{ role: "user", content: "hi" }],
           logprobs: true,
         }),
@@ -91,7 +91,7 @@ test("validation failures release the admission lease instead of leaking it", as
         method: "POST",
         headers,
         body: JSON.stringify({
-          model: "autonomia/gpt-5.2",
+          model: "autonomia/gpt-6.1-sol",
           input: "hi",
           background: true,
         }),
@@ -138,7 +138,7 @@ test("validation failures release the admission lease instead of leaking it", as
         method: "POST",
         headers,
         body: JSON.stringify({
-          model: "autonomia/gpt-5.2",
+          model: "autonomia/gpt-6.1-sol",
           messages: [{ role: "user", content: "still admitted?" }],
         }),
       });

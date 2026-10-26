@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { SessionProvider, useSession } from "./components/session";
 import { StateBlock } from "./components/ui";
+import { useI18n } from "./i18n";
 import { ConsoleLayout, SharedLayout } from "./pages/ConsoleLayout";
 import { DocsPage } from "./pages/DocsPage";
 import { HomePage } from "./pages/HomePage";
@@ -10,14 +11,14 @@ import { LogsPage } from "./pages/LogsPage";
 import { ModelsPage } from "./pages/ModelsPage";
 import { OverviewPage } from "./pages/OverviewPage";
 import { PlaygroundPage } from "./pages/PlaygroundPage";
-import { isAutonomiaDemoActive } from "./services/demoApi";
 
 function LoginRoute() {
   const { user, loading, setUser } = useSession();
+  const { t } = useI18n();
   if (loading) {
     return (
       <div className="auth-wrap">
-        <StateBlock spinner>正在確認登入狀態…</StateBlock>
+        <StateBlock spinner>{t("app.checkingSession")}</StateBlock>
       </div>
     );
   }
@@ -40,15 +41,6 @@ function LegacyDeveloperRedirect() {
   const { pathname } = useLocation();
   const page = pathname.replace(/^\/Developer\/ai-api\/?/, "").replace(/\/+$/, "");
   return <Navigate to={LEGACY_PAGE_MAP[page] ?? "/home"} replace />;
-}
-
-function DemoModeBadge() {
-  if (!isAutonomiaDemoActive()) return null;
-  return (
-    <div className="demo-badge" role="note">
-      示範模式・未連接後端
-    </div>
-  );
 }
 
 export default function App() {
@@ -75,7 +67,6 @@ export default function App() {
         <Route path="/Developer/ai-api/*" element={<LegacyDeveloperRedirect />} />
         <Route path="*" element={<Navigate to="/home" replace />} />
       </Routes>
-      <DemoModeBadge />
     </SessionProvider>
   );
 }

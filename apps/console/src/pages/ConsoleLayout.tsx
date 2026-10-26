@@ -1,8 +1,10 @@
 import React from "react";
 import { Link, Navigate, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { AutonomiaIcon } from "../components/AutonomiaIcon";
+import { LanguageSwitcher } from "../components/LanguageSwitcher";
 import { useSession } from "../components/session";
 import { StateBlock } from "../components/ui";
+import { type TranslationKey, useI18n } from "../i18n";
 import { logoutAutonomiaAccount } from "../lib/autonomia/api/autonomiaAuthApi";
 import type { AutonomiaConsoleUser } from "../lib/autonomia/types";
 import { formatUsd } from "../lib/autonomia/utils/formatAutonomia";
@@ -68,27 +70,31 @@ function NavIcon({ name }: { name: "overview" | "play" | "key" | "cube" | "list"
 }
 
 const NAV_GROUPS: Array<{
-  label: string;
-  items: Array<{ to: string; label: string; icon: "overview" | "play" | "key" | "cube" | "list" | "book" }>;
+  labelKey: TranslationKey;
+  items: Array<{
+    to: string;
+    labelKey: TranslationKey;
+    icon: "overview" | "play" | "key" | "cube" | "list" | "book";
+  }>;
 }> = [
   {
-    label: "使用",
+    labelKey: "nav.groupUse",
     items: [
-      { to: "/overview", label: "總覽", icon: "overview" },
-      { to: "/playground", label: "串流測試", icon: "play" },
+      { to: "/overview", labelKey: "nav.overview", icon: "overview" },
+      { to: "/playground", labelKey: "nav.playground", icon: "play" },
     ],
   },
   {
-    label: "資源",
+    labelKey: "nav.groupResources",
     items: [
-      { to: "/keys", label: "API 金鑰", icon: "key" },
-      { to: "/models", label: "模型", icon: "cube" },
-      { to: "/logs", label: "請求紀錄", icon: "list" },
+      { to: "/keys", labelKey: "nav.keys", icon: "key" },
+      { to: "/models", labelKey: "nav.models", icon: "cube" },
+      { to: "/logs", labelKey: "nav.logs", icon: "list" },
     ],
   },
   {
-    label: "文件",
-    items: [{ to: "/docs", label: "快速開始", icon: "book" }],
+    labelKey: "nav.groupDocs",
+    items: [{ to: "/docs", labelKey: "nav.quickstart", icon: "book" }],
   },
 ];
 
@@ -96,6 +102,7 @@ const NAV_GROUPS: Array<{
 // user 由呼叫端在通過登入檢查後傳入,避免登出清空 context 時的 null 競態。
 function ConsoleShell({ user }: { user: AutonomiaConsoleUser }) {
   const { setUser } = useSession();
+  const { t } = useI18n();
   const navigate = useNavigate();
 
   const logout = async () => {
@@ -116,10 +123,10 @@ function ConsoleShell({ user }: { user: AutonomiaConsoleUser }) {
           <strong>Autonomia</strong>
           <small>CONSOLE</small>
         </NavLink>
-        <nav className="sidebar-nav" aria-label="控制台導覽">
+        <nav className="sidebar-nav" aria-label={t("nav.consoleNav")}>
           {NAV_GROUPS.map((group) => (
-            <React.Fragment key={group.label}>
-              <span className="nav-group">{group.label}</span>
+            <React.Fragment key={group.labelKey}>
+              <span className="nav-group">{t(group.labelKey)}</span>
               {group.items.map((item) => (
                 <NavLink
                   key={item.to}
@@ -127,22 +134,30 @@ function ConsoleShell({ user }: { user: AutonomiaConsoleUser }) {
                   className={({ isActive }: { isActive: boolean }) => `nav-item${isActive ? " active" : ""}`}
                 >
                   <NavIcon name={item.icon} />
-                  <span>{item.label}</span>
+                  <span>{t(item.labelKey)}</span>
                 </NavLink>
               ))}
             </React.Fragment>
           ))}
         </nav>
+        <div className="sidebar-lang">
+          <LanguageSwitcher />
+        </div>
         <div className="sidebar-user">
           <span className="sidebar-user-avatar" aria-hidden="true">
             {(user.display_name || user.username || "?").slice(0, 1).toUpperCase()}
           </span>
           <span className="sidebar-user-meta">
             <strong>{user.display_name || user.username}</strong>
-            <span>餘額 {formatUsd(user.balance_usd)}</span>
+            <span>{t("nav.balance", { amount: formatUsd(user.balance_usd) })}</span>
           </span>
-          <button type="button" className="sidebar-logout" onClick={() => void logout()} aria-label="登出">
-            登出
+          <button
+            type="button"
+            className="sidebar-logout"
+            onClick={() => void logout()}
+            aria-label={t("nav.logout")}
+          >
+            {t("nav.logout")}
           </button>
         </div>
       </aside>
@@ -156,9 +171,10 @@ function ConsoleShell({ user }: { user: AutonomiaConsoleUser }) {
 }
 
 function SessionLoading() {
+  const { t } = useI18n();
   return (
     <div className="auth-wrap">
-      <StateBlock spinner>正在確認登入狀態…</StateBlock>
+      <StateBlock spinner>{t("app.checkingSession")}</StateBlock>
     </div>
   );
 }
@@ -175,6 +191,7 @@ export function ConsoleLayout() {
 
 // 公開頁外框:未登入時以極簡頂欄呈現(模型/文件不需要帳號即可瀏覽)。
 function PublicShell() {
+  const { t } = useI18n();
   return (
     <div className="home">
       <header className="home-topbar">
@@ -182,12 +199,13 @@ function PublicShell() {
           <AutonomiaIcon size={22} />
           <strong>Autonomia</strong>
         </Link>
-        <nav className="home-topnav" aria-label="公開頁導覽">
-          <Link to="/home">首頁</Link>
-          <Link to="/models">模型</Link>
-          <Link to="/docs">快速開始</Link>
+        <nav className="home-topnav" aria-label={t("nav.publicNav")}>
+          <Link to="/home">{t("nav.home")}</Link>
+          <Link to="/models">{t("nav.models")}</Link>
+          <Link to="/docs">{t("nav.quickstart")}</Link>
+          <LanguageSwitcher />
           <Link className="btn btn-primary btn-sm" to="/login">
-            登入 / 建立帳號
+            {t("nav.loginOrRegister")}
           </Link>
         </nav>
       </header>
@@ -196,11 +214,11 @@ function PublicShell() {
       </main>
       <footer className="home-footer">
         <span>
-          <AutonomiaIcon size={14} /> Autonomia — Self-hosted AI Gateway
+          <AutonomiaIcon size={14} /> {t("nav.footerTagline")}
         </span>
-        <nav aria-label="頁尾導覽">
-          <Link to="/home">首頁</Link>
-          <Link to="/login">登入</Link>
+        <nav aria-label={t("nav.footerNav")}>
+          <Link to="/home">{t("nav.home")}</Link>
+          <Link to="/login">{t("nav.login")}</Link>
         </nav>
       </footer>
     </div>

@@ -22,7 +22,7 @@ curl -sS "$AUTONOMIA_BASE_URL/chat/completions" \
   -H "Authorization: Bearer $AUTONOMIA_API_KEY" \
   -H "Idempotency-Key: demo-1" \
   -H "Content-Type: application/json" \
-  -d '{"model":"autonomia/gpt-5.2","messages":[{"role":"user","content":"回覆「好的」"}]}'
+  -d '{"model":"autonomia/gpt-6.1-sol","messages":[{"role":"user","content":"回覆「好的」"}]}'
 
 # 健康探針(部署煙霧測試;不需要金鑰)
 curl -sS http://localhost:8787/healthz

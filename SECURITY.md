@@ -16,7 +16,7 @@
 
 ## 設計上已防護的邊界(供測試者參考)
 
-- API 金鑰明文只在建立/輪替時出現一次;落庫為 HMAC-SHA256(pepper) digest + prefix/suffix 遮罩。
+- API 金鑰明文只在建立/輪替時出現一次;落庫為 HMAC-SHA256(pepper) digest + prefix/suffix 遮罩。金鑰驗證採業界標準的 hash-then-lookup:對摘要做索引等值查詢而非逐位元組常數時間比較 —— 金鑰為 256-bit CSPRNG、pepper 強制 32 bytes 以上,時序側通道不具實用性,此為刻意設計。
 - prompt、completion、完整金鑰與 provider token 不入庫、不入 log、不進錯誤回應。
 - 供應商 secret 只存在 runtime 環境變數;資料庫僅存 opaque credential ID。
 - 管理面請求需登入 cookie(JWT)+ CSRF 雙提交標頭;公開推理面只接受 `sk-autonomia-*` Bearer 金鑰,兩者互不可換。

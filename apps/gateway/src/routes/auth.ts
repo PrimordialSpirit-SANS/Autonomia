@@ -11,12 +11,13 @@ import { signAutonomiaJwt, verifyAutonomiaJwt } from "../utils/jwt.ts";
 import { logAutonomiaEvent } from "../utils/logger.ts";
 import type { AutonomiaAccount } from "../utils/users.ts";
 import {
-  AUTONOMIA_PASSWORD_ITERATIONS,
+  configuredPbkdf2Iterations,
   createUser,
   findUserByEmail,
   findUserById,
   findUserPasswordHash,
   hashPassword,
+  revokeAutonomiaSessions,
   verifyPassword,
 } from "../utils/users.ts";
 
@@ -351,13 +352,21 @@ function registrationDisabled(env: AutonomiaRuntimeEnv): boolean {
 }
 
 function signupBonusUsdMicros(env: AutonomiaRuntimeEnv): string {
+  const configured = env?.AUTONOMIA_SIGNUP_BONUS_USD;
+  if (configured === undefined || configured === null || String(configured).trim() === "") {
+    return parseUsdToMicros("5.00", "AUTONOMIA_SIGNUP_BONUS_USD").toString();
+  }
   try {
-    return parseUsdToMicros(
-      env?.AUTONOMIA_SIGNUP_BONUS_USD ?? "5.00",
-      "AUTONOMIA_SIGNUP_BONUS_USD",
-    ).toString();
-  } catch {
-    return "5000000";
+    return parseUsdToMicros(configured, "AUTONOMIA_SIGNUP_BONUS_USD").toString();
+  } catch (error: any) {
+    // S-09 修復:修復前解析失敗一律靜默回退 5 美元 —— 公開註冊(無信箱
+    // 驗證)的部署上,一個打錯的環境變數讓每個機器人帳號自動獲得 5 美元
+    // 推理額度且無任何信號。改為安全側 0 元 + 警告日誌。
+    logAutonomiaEvent("warn", "autonomia_signup_bonus_misconfigured", {
+      hint: "AUTONOMIA_SIGNUP_BONUS_USD could not be parsed; falling back to 0 USD (not 5.00)",
+      detail: String(error?.message || error),
+    });
+    return "0";
   }
 }
 
@@ -540,11 +549,13 @@ authRoutes.post("/login", async (c: AutonomiaContext) => {
   const password = String(body?.password || "");
 
   // 帳號不存在時仍執行一次雜湊驗證,讓回應時間不洩漏帳號存在性。
-  // dummy hash 的迭代數必須跟著預設值走,兩條路徑的運算成本才會一致。
+  // dummy hash 的迭代數必須與「設定值」同一來源(S-01):hashPassword 對真實
+  // 帳號使用 configuredPbkdf2Iterations(env),這裡若寫死常數,自訂迭代數
+  // 的部署下兩條路徑成本不一致,登入延遲即成為帳號枚舉 oracle。
   const storedHash = await findUserPasswordHash(c.env, email);
   const passwordOk = await verifyPassword(
     password,
-    storedHash || `pbkdf2$${AUTONOMIA_PASSWORD_ITERATIONS}$00$00`,
+    storedHash || `pbkdf2$${configuredPbkdf2Iterations(c.env)}$00$00`,
   );
   const user = passwordOk ? await findUserByEmail(c.env, email) : null;
   if (!user || user.is_banned || !passwordOk) {
@@ -556,9 +567,53 @@ authRoutes.post("/login", async (c: AutonomiaContext) => {
 });
 
 authRoutes.post("/logout", async (c: AutonomiaContext) => {
+  // S-20 修復:登出原本只刪 cookie、不撤銷伺服端會話 —— 被複製的
+  // autonomia_token 在「登出」後仍可用至自然到期(最長 30 天)。會話撤銷
+  // 機制(session_epoch,SEC-01)早已存在且有測試釘死,這裡把它接上登出:
+  // 驗證當前會話確實有效後 bump epoch,所有已簽發的 token(含被複製者)
+  // 隨即失效。撤銷失敗不擋登出:cookie 仍會刪除,錯誤進日誌由維運處理。
+  const secret = String(c.env?.JWT_SECRET || "");
+  const sessionToken = getCookie(c, AUTONOMIA_SESSION_COOKIE) || "";
+  const payload = secret.length >= 32 && sessionToken ? await verifyAutonomiaJwt(sessionToken, secret) : null;
+  if (payload?.sub) {
+    try {
+      const user = await findUserById(c.env, String(payload.sub));
+      if (user && !user.is_banned && (payload.epv ?? 0) === user.sessionEpoch) {
+        await revokeAutonomiaSessions(c.env, { userId: user.id });
+      }
+    } catch (error: any) {
+      logAutonomiaEvent("error", "autonomia_logout_revocation_failed", {
+        detail: String(error?.message || error),
+      });
+    }
+  }
   deleteCookie(c, AUTONOMIA_SESSION_COOKIE, { path: "/" });
   deleteCookie(c, AUTONOMIA_CSRF_COOKIE, { path: "/" });
   return c.json({ ok: true });
+});
+
+// F-01 修復:跨主機(同站)拓撲的 CSRF token 引導端點。
+// host-only 的 csrf cookie 設在閘道主機上,console.example.com 頁面的
+// document.cookie 讀不到它 → apiFetch 附不上 X-CSRF-Token → 所有
+// 變更操作一律 403 csrf_token_invalid(文件建議拓撲實質不可用)。
+// 本端點回傳「目前 cookie 內的 token」(沒有則建立一個):
+// - 回應只會被 FRONTEND_ORIGINS 白名單內的來源以帶憑證 CORS 讀到,
+//   跨站攻擊頁面讀不到 token;
+// - 表單 POST 本就無法附加自訂標頭;
+// 因此雙提交防護的兩個前提維持不變,而同站跨主機的控制台得以運作。
+authRoutes.get("/csrf", (c: AutonomiaContext) => {
+  let token = getCookie(c, AUTONOMIA_CSRF_COOKIE) || "";
+  if (!token) {
+    token = randomBytesHex(32);
+    setCookie(c, AUTONOMIA_CSRF_COOKIE, token, {
+      httpOnly: false,
+      sameSite: "Lax",
+      secure: isSecureRequest(c),
+      path: "/",
+      maxAge: AUTONOMIA_SESSION_TTL_SECONDS,
+    });
+  }
+  return c.json({ token });
 });
 
 authRoutes.get("/me", authenticateToken, async (c: AutonomiaContext) => {

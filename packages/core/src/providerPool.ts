@@ -194,6 +194,16 @@ function providerPoolSql(query: { dialect?: "postgres" | "sqlite" } = {}) {
     )
     RETURNING credential_id, in_flight
   `,
+    // F-03 修復:租約列的清理語句。修復前倉庫中不存在任何一條針對此表的
+    // DELETE —— release 僅標記 released_at,列永久留存(每請求 1~8 列),
+    // 與金額資料同檔持續膨脹,選路熱路徑的 lease 子查詢隨表退化。
+    // 保留 recently-released 列供短期診斷,過保留期或逾期未歸還即刪。
+    cleanupExpiredLeases: `
+    DELETE FROM ai_provider_credential_leases
+    WHERE (expires_at <= ? AND released_at IS NULL)
+       OR (released_at IS NOT NULL AND released_at <= ?)
+    RETURNING lease_id
+  `,
   });
 }
 export const AUTONOMIA_PROVIDER_POOL_SQL = providerPoolSql();
@@ -248,6 +258,17 @@ export function createAutonomiaProviderPoolStore(query: AutonomiaQuery) {
         credentialId: String(row.credential_id),
         inFlight: Number(row.in_flight),
       }));
+    },
+
+    /** F-03 修復:刪除「已過期未歸還」與「已釋放且超過保留期」的租約列,
+     * 回傳刪除數。release 僅標記 released_at,若無清理,每筆推理請求
+     * 產生 1~8 列永久留存,租約表與選路子查詢隨流量持續退化。預設保留
+     * 已釋放列 24 小時供短期診斷;逾期未歸還(程序崩潰)的列立即清除。 */
+    async cleanupExpiredLeases(retentionMs = 86_400_000): Promise<number> {
+      const now = new Date().toISOString();
+      const cutoff = new Date(Date.now() - Math.max(0, retentionMs)).toISOString();
+      const removed = await query(sql.cleanupExpiredLeases, [now, cutoff]);
+      return rows(removed).length;
     },
 
     async claim({

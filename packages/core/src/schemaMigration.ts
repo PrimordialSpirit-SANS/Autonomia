@@ -212,6 +212,13 @@ const CANONICAL_INDEXES = Object.freeze([
 // v4 = 伺服端會話撤銷(users.session_epoch,SEC-01)。
 // PostgreSQL 並行版的歷史請參閱 Git 歷史。
 function buildAutonomiaMigrations(dialect: "postgres" | "sqlite") {
+  // F-04 修復:PG 方言以 ADD COLUMN IF NOT EXISTS 讓 ALTER 冪等(SQLite
+  // 不支援此語法,改由 migrateAutonomiaSchema 以 PRAGMA 欄位存在性檢查
+  // 防護);SQLite 方言字串維持原樣,既有契約測試釘死的形狀不變。
+  const addColumn = (table: string, definition: string) =>
+    dialect === "postgres"
+      ? `ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS ${definition}`
+      : `ALTER TABLE ${table} ADD COLUMN ${definition}`;
   return [
     Object.freeze({
       version: 1,
@@ -240,12 +247,12 @@ function buildAutonomiaMigrations(dialect: "postgres" | "sqlite") {
         // > 0 = 成功回應落地該 TTL 秒,完成鍵重送直接重放原始回應。
         // canonical v1 不含此欄位,統一由此遷移加入,避免 fresh/upgrade
         // 兩條路徑的 ALTER 行為分歧。
-        `ALTER TABLE ai_api_keys ADD COLUMN idempotency_replay_ttl_seconds INTEGER NOT NULL DEFAULT 0`,
+        addColumn("ai_api_keys", "idempotency_replay_ttl_seconds INTEGER NOT NULL DEFAULT 0"),
         // 重放命中不執行推論,但會在 ai_requests 落一列 status='replayed' 的
         // 輕量紀錄(計費欄位全 0),讓管理面看得到重放事件;此欄指向被重放的
         // 原始請求。idempotency_key 該列存 NULL,避開 (api_key_id,
         // idempotency_key) 的部分唯一索引。
-        `ALTER TABLE ai_requests ADD COLUMN replay_of_request_id VARCHAR(80) NULL`,
+        addColumn("ai_requests", "replay_of_request_id VARCHAR(80) NULL"),
         `CREATE TABLE IF NOT EXISTS ai_idempotency_replays (
         request_id VARCHAR(80) PRIMARY KEY,
         api_key_id INTEGER NOT NULL,
@@ -281,7 +288,7 @@ function buildAutonomiaMigrations(dialect: "postgres" | "sqlite") {
         // 版本化遷移之前建立(與 v1 依賴 ledger_entries 先存在同一前置
         // 模式)。既有列 DEFAULT 0 —— 無 epv 的舊 token 視為 0,過渡期
         // 不自動登出既有用戶。
-        `ALTER TABLE users ADD COLUMN session_epoch INTEGER NOT NULL DEFAULT 0`,
+        addColumn("users", "session_epoch INTEGER NOT NULL DEFAULT 0"),
       ]),
     }),
   ];
@@ -297,6 +304,21 @@ export const AUTONOMIA_MIGRATIONS = Object.freeze(buildAutonomiaMigrations("sqli
 
 function rows(result: any): any[] {
   return Array.isArray(result?.rows) ? result.rows : [];
+}
+
+// F-04 修復:遷移執行器一律透過 query 介面的交易 helper 包裹每個 migration
+// 的「全部語句 + 版號寫入」;介面未提供交易時(測試殼)退回逐句執行。
+async function withMigrationTransaction<T>(query: any, fn: () => Promise<T>): Promise<T> {
+  if (typeof query?.transaction === "function") {
+    return (await query.transaction(fn)) as T;
+  }
+  return fn();
+}
+
+// SQLite 無 ADD COLUMN IF NOT EXISTS;識別 ALTER 語句以供執行器做自癒防護
+// (僅識別開發者撰寫的語句形狀,不插值任何外部輸入)。
+function sqliteAddColumnStatement(statement: string): boolean {
+  return /^ALTER\s+TABLE\s+[A-Za-z0-9_]+\s+ADD\s+COLUMN\s+[A-Za-z0-9_]+/i.test(String(statement).trim());
 }
 
 export async function migrateAutonomiaSchema(query: any) {
@@ -316,19 +338,42 @@ export async function migrateAutonomiaSchema(query: any) {
       [migration.version],
     );
     if (rows(alreadyRecorded).length) continue;
-    for (const statement of migration.statements) {
-      await query(statement);
-    }
-    const recorded = await query(
-      "INSERT INTO autonomia_ai_schema_migrations (version, name) VALUES (?, ?) " +
-        "ON CONFLICT (version) DO UPDATE SET " +
-        "name = EXCLUDED.name " +
-        "RETURNING version",
-      [migration.version, migration.name],
-    );
-    if (Number(rows(recorded)[0]?.version || 0) !== migration.version) {
-      throw new Error(`Autonomia schema migration ${migration.version} was not recorded.`);
-    }
+    // F-04 修復:全部語句與版號寫入包進同一筆交易。修復前逐句執行、版號
+    // 後置寫入 —— 程序在 ALTER 落地後、版號 INSERT 前中斷(OOM、kill、
+    // 部署器逾時)會留下「已套用未記錄」的狀態,重啟重跑同一版回
+    // duplicate column name,之後每一次啟動都在同一處失敗。SQLite 與
+    // PostgreSQL 的 DDL 皆可交易,交易保證「要嘛整版完成、要嘛全未發生」。
+    await withMigrationTransaction(query, async () => {
+      for (const statement of migration.statements) {
+        // SQLite 自癒防護:修復前版本留下的部分套用資料庫(版號未記錄、
+        // 欄位已存在)在升級後首次重跑時,SQLite 對已存在的 ADD COLUMN 回
+        // duplicate column name —— 將其視為「已滿足」繼續。SQLite 的單一
+        // 語句失敗不會中止交易;PG 方言以 IF NOT EXISTS 從源頭冪等,不進
+        // 此分支。其他錯誤(如表不存在)原樣重抛。
+        try {
+          await query(statement);
+        } catch (error) {
+          if (
+            dialect === "sqlite" &&
+            sqliteAddColumnStatement(statement) &&
+            /duplicate\s+column/i.test(String((error as Error)?.message || ""))
+          ) {
+            continue;
+          }
+          throw error;
+        }
+      }
+      const recorded = await query(
+        "INSERT INTO autonomia_ai_schema_migrations (version, name) VALUES (?, ?) " +
+          "ON CONFLICT (version) DO UPDATE SET " +
+          "name = EXCLUDED.name " +
+          "RETURNING version",
+        [migration.version, migration.name],
+      );
+      if (Number(rows(recorded)[0]?.version || 0) !== migration.version) {
+        throw new Error(`Autonomia schema migration ${migration.version} was not recorded.`);
+      }
+    });
   }
 
   if (!(await isAutonomiaSchemaReady(query))) {

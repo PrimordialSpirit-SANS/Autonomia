@@ -32,6 +32,10 @@ const ERROR_MESSAGE_KEYS = Object.freeze({
   authentication_required: "errors.authentication_required",
   insufficient_scope: "errors.insufficient_scope",
   access_denied: "errors.access_denied",
+  // S-16 修復:CSRF/Origin 拒絕不再是「功能不可用」——這兩個 403 是
+  // 部署設定問題(FRONTEND_ORIGINS 或同源代理),給出可行動的提示。
+  csrf_token_invalid: "errors.csrf_token_invalid",
+  origin_forbidden: "errors.origin_forbidden",
   model_not_found: "errors.model_not_found",
   model_not_allowed: "errors.model_not_allowed",
   spend_limit_exceeded: "errors.spend_limit_exceeded",

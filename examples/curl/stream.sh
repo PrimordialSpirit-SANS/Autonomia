@@ -5,7 +5,7 @@
 set -eu
 
 BASE_URL="${AUTONOMIA_BASE_URL:-http://localhost:8787/api/ai/v1}"
-MODEL="${AUTONOMIA_MODEL:-autonomia/gpt-5.2}"
+MODEL="${AUTONOMIA_MODEL:-autonomia/gpt-6.1-sol}"
 
 if [ -z "${AUTONOMIA_API_KEY:-}" ]; then
   echo "請先設定 AUTONOMIA_API_KEY(在控制台「金鑰」頁建立)" >&2

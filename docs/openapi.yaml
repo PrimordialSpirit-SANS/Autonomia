@@ -1239,6 +1239,9 @@ components:
         environment:
           type: string
           enum: [live, test]
+          description: >-
+            Identification marker only — billing, routing and rate limiting
+            treat live and test keys identically.
         key_prefix:
           type: string
         key_suffix:

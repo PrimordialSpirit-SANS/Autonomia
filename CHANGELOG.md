@@ -23,9 +23,55 @@ versioning follows [SemVer](https://semver.org/).
   workerd 1.20261006.1→1.20261019.1, with the `allowScripts` install-script
   allowlist updated to the new workerd pin). The Workers bundle still builds
   (`wrangler deploy --dry-run` verified).
+- **Audit remediation — authentication & session (S-01, S-08, S-09, S-17,
+  S-20, S-21).** The login dummy-hash now derives its PBKDF2 iterations from
+  `AUTONOMIA_PBKDF2_ITERATIONS` via a shared `configuredPbkdf2Iterations`
+  helper, closing a timing oracle that revealed which e-mails were
+  registered exactly in the low-iteration configuration `.dev.vars.example`
+  recommends for the Workers free tier (a timing-budget test pins the
+  parity). Logout now bumps the account's session epoch, so copied 30-day
+  JWTs die with the logout button instead of at natural expiry, and the
+  console reports a failed logout instead of pretending success. An
+  unparseable `AUTONOMIA_SIGNUP_BONUS_USD` falls back to 0 USD (not 5.00)
+  with a warning, a failed `BEGIN IMMEDIATE` no longer leaves the
+  per-database txOpen flag set (which wedged every subsequent
+  non-transactional query on that file), and missing/short `JWT_SECRET` /
+  `AUTONOMIA_API_KEY_PEPPER` produce a startup warning instead of failing
+  silently per-request.
+- **Audit remediation — transport & deployment posture (S-02, S-03, S-04,
+  S-11, S-22).** The credentialed CORS middleware now mounts only on the
+  cookie-carrying `/api/auth/*` and `/api/ai/developer/*` scopes, so
+  `AUTONOMIA_PUBLIC_ORIGINS` preflights on `/api/ai/v1/*` finally reach the
+  public CORS layer (browser integrations were silently broken before), and
+  `Access-Control-Allow-Credentials` no longer rides along on bearer-only
+  401/403 responses. Remote PostgreSQL hosts default to verify-full TLS,
+  with a startup warning when a connection is deliberately unverified;
+  `docker-compose.yml` makes `AUTONOMIA_TRUST_PROXY` overridable and warns
+  that direct port publishing requires `false`; the nginx console config
+  and the Cloudflare Pages `_headers` ship baseline security headers
+  (nosniff, `X-Frame-Options: DENY`, `Referrer-Policy`, a restrictive
+  CSP).
+- **Audit remediation — resource bounding (S-05, S-06).** Streaming
+  responses only collect replay frames when the key opts into idempotent
+  replay, and collection stops at the 2MB replay budget (previously every
+  connection buffered a full decoded copy of the response); the `model`
+  string echoed back in 404/400 errors is bounded and truncated.
 
 ### Added
 
+- **CSRF token bootstrap endpoint `GET /api/auth/csrf` (F-01, S-16).** In
+  the documented cross-host, same-site topology (`console.example.com` +
+  `api.example.com`) the host-only `csrf_token` cookie is unreadable from
+  the console origin, so every mutating console call failed with 403
+  `csrf_token_invalid` — a half-broken console that looks logged-in. The
+  new endpoint returns (or mints) the token with the same cookie
+  attributes as login, readable only from `FRONTEND_ORIGINS` via
+  credentialed CORS; the console fetch layer obtains the token when the
+  cookie is unreadable and retries once on `csrf_token_invalid` (the CSRF
+  middleware rejects before any handler runs, so the retry is safe).
+  `csrf_token_invalid` and `origin_forbidden` also gain actionable
+  six-language console messages instead of a generic "feature
+  unavailable".
 - **Cross-platform line endings enforced via `.gitattributes`.** All text
   files now check out with LF on every platform (`* text=auto eol=lf`, with
   binary exceptions and CRLF preserved for `*.bat`/`*.cmd`/`*.ps1`). Without
@@ -104,7 +150,6 @@ versioning follows [SemVer](https://semver.org/).
   sources inside. Shape drift fails the build before anything can be
   published; no upload happens in CI.
 
-### Fixed
 
 - **Windows: core dist build smoke-import now uses `file://` URLs
   (ECO-SUPPLY-1 follow-up).** `packages/core/scripts/build-dist.mjs` and
@@ -120,6 +165,31 @@ versioning follows [SemVer](https://semver.org/).
   parts) were rejected with a raw 413 by nginx before the gateway's precise
   error path could run. The proxy guard is now 32m — never tighter than the
   gateway contract.
+- **Audit remediation — functional batch (F-02, F-03, F-04, F-06, F-07,
+  F-08, F-09).** Embeddings over-limit input now returns 400
+  `context_length_exceeded` (param `input`) like chat, instead of a raw
+  `RangeError` the gateway mapped to 503 with `Retry-After` (F-02);
+  expired and long-released provider credential leases and inflight rows
+  are cleaned up by the maintenance loop instead of growing without
+  bound in the billing database (F-03); every schema migration runs in a
+  transaction with its version insert, PostgreSQL ALTERs are idempotent,
+  and a pre-fix partially-applied SQLite database self-heals on restart
+  (F-04); all 7 runnable examples default to a model that exists in both
+  catalogs, pinned by a contract test (F-06); the key-creation form
+  exposes RPM / concurrency / model-allowlist fields (F-07); React error
+  boundaries keep a component crash from blanking the whole console
+  (F-08); inline `data:image` vision inputs are accepted up to 4MB (F-09).
+- **Audit remediation — documentation & contract alignment (F-10, F-12,
+  F-15, F-16, F-19, F-20, F-21, F-25, F-26, S-14, S-23).** Docs no longer
+  claim unsupported endpoints return a distinguishable 400 (they 404
+  `route_not_found`); the conservative byte-based input estimation is
+  documented; the non-existent `insufficient_credits` code and the
+  misspelled `idempotent_request_conflict` are corrected to
+  `insufficient_balance` / `idempotency_conflict`; `AUTONOMIA_PORT` is
+  documented; `maskAutonomiaApiKey` keeps its promised prefix shape;
+  live/test key parity is stated up front; and the dangerous dead export
+  `invokeWithProviderFallback` is marked `@deprecated` in favor of the
+  supported `inference.ts` execution path.
 
 ## [0.1.0] - 2026-10-15
 

@@ -161,3 +161,58 @@ test("db helpers route to the installed adapter", async () => {
   assert.deepEqual(calls[0].slice(1), ["SELECT 1", [7]]);
   assert.deepEqual(calls[2].slice(1), ["core"]);
 });
+
+// ── S-08 修復釘死:BEGIN IMMEDIATE 拋出例外時,txOpen 旗標必須被清除 ──
+// 修復前 txOpenByDatabase.add(file) 在 try 之前、BEGIN 在 try 之外:外部
+// 寫入者持鎖超過 busy_timeout 時 BEGIN 拋 SQLITE_BUSY,finally 永不執行,
+// 旗標殘留 → 之後該資料庫的所有非交易查詢永久排隊(整庫卡死且無日誌)。
+// 對照組 worker/doDb.ts 的旗標生命週期(全程包在 try/finally)才是正確寫法。
+test("BEGIN IMMEDIATE failure must clear the txOpen flag instead of wedging the database", async () => {
+  const { DatabaseSync } = await import("node:sqlite");
+  const env = { AUTONOMIA_DB_PATH: ":memory:" };
+  await nodeDbQuery(env as any, "CREATE TABLE IF NOT EXISTS s08_probe (id INTEGER PRIMARY KEY, value TEXT)");
+
+  const originalExec = (DatabaseSync.prototype as any).exec;
+  let beginAttempts = 0;
+  try {
+    (DatabaseSync.prototype as any).exec = function patchedExec(this: any, sql: string) {
+      if (/^BEGIN\s+IMMEDIATE;?$/.test(String(sql).trim())) {
+        beginAttempts += 1;
+        throw new Error("simulated SQLITE_BUSY: BEGIN IMMEDIATE rejected by an external writer");
+      }
+      return originalExec.call(this, sql);
+    };
+
+    await assert.rejects(
+      nodeWithAutonomiaTransaction(env as any, async () => {
+        await nodeDbQuery(env as any, "INSERT INTO s08_probe (value) VALUES ('never')");
+      }),
+      /simulated SQLITE_BUSY/,
+    );
+    assert.ok(beginAttempts > 0, "BEGIN IMMEDIATE must have been attempted");
+
+    // 旗標必須已被清除:非交易查詢立即可用。修復前此查詢會永久排隊,
+    // 以 2 秒逾時把「卡死」轉成明確的測試失敗而非整個套件掛起。
+    const probe = (
+      (await Promise.race([
+        nodeDbQuery(env as any, "SELECT COUNT(*) AS n FROM s08_probe"),
+        new Promise((_, reject) =>
+          setTimeout(
+            () => reject(new Error("non-transactional queries are wedged after a failed BEGIN (S-08)")),
+            2_000,
+          ),
+        ),
+      ])) as any
+    ).rows;
+    assert.equal(Number(probe[0]?.n ?? 0), 0, "failed transaction must not leave committed rows");
+  } finally {
+    (DatabaseSync.prototype as any).exec = originalExec;
+  }
+
+  // 原型復原後交易路徑可正常提交(回歸保護)。
+  const done = await nodeWithAutonomiaTransaction(env as any, async () => {
+    await nodeDbQuery(env as any, "INSERT INTO s08_probe (value) VALUES ('ok')");
+    return "done";
+  });
+  assert.equal(done, "done");
+});

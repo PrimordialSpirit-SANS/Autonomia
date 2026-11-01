@@ -79,3 +79,14 @@ export async function reconcileAutonomiaProviderInFlight(env: AutonomiaRuntimeEn
   const store = await ready(env);
   return store.reconcileInFlight();
 }
+
+// F-03 修復:租約表清理入口。已釋放列保留預設 24 小時供診斷,逾期未歸還
+// (程序崩潰)的列立即清除——排入 runAutonomiaMaintenance 週期執行,資料庫
+// 不再隨流量無限增長。
+export async function cleanupAutonomiaProviderLeases(
+  env: AutonomiaRuntimeEnv,
+  retentionMs?: number,
+): Promise<number> {
+  const store = await ready(env);
+  return store.cleanupExpiredLeases(retentionMs);
+}

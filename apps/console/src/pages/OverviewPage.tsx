@@ -13,16 +13,29 @@ export function OverviewPage() {
   const { t } = useI18n();
   const [usage, setUsage] = React.useState<AutonomiaUsageSummary | null>(null);
   const [error, setError] = React.useState("");
+  const [reloading, setReloading] = React.useState(false);
 
-  React.useEffect(() => {
+  // F-13 修復:載入失敗的「重試」原本是 Link 到="/",而根路徑會重定向到
+  // 公開行銷頁 /home —— 使用者按重試卻被登出到行銷頁,重試從未發生。
+  // 改為可重呼叫的載入函數(比照 KeysPage 的模式),按鈕直接重觸發。
+  const reload = React.useCallback(() => {
     const controller = new AbortController();
+    setReloading(true);
     getAutonomiaUsageSummary(controller.signal)
-      .then(setUsage)
+      .then((loaded) => {
+        setUsage(loaded);
+        setError("");
+      })
       .catch((cause) => {
         if (cause.name !== "AbortError") setError(cause.message);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setReloading(false);
       });
     return () => controller.abort();
   }, []);
+
+  React.useEffect(() => reload(), [reload]);
 
   const metrics: Array<[string, string | null]> = [
     [t("overview.metricBalance"), usage ? formatUsd(usage.balance_usd) : null],
@@ -45,9 +58,9 @@ export function OverviewPage() {
       {error && (
         <Alert tone="error">
           {error}
-          <Link className="btn btn-sm" to="/">
+          <button className="btn btn-sm" type="button" onClick={reload} disabled={reloading}>
             {t("common.retry")}
-          </Link>
+          </button>
         </Alert>
       )}
       <section className="metric-grid" aria-label={t("overview.metricsAria")}>

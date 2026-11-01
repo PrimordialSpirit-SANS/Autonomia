@@ -475,3 +475,79 @@ test("lease bookkeeping failure after provider success never repeats inference",
   assert.equal(providerCalls, 1);
   assert.deepEqual(billingCalls, ["settle"]);
 });
+
+// ── F-03 修復釘死:租約表清理 ──────────────────────────────────────────────
+// 修復前整個倉庫不存在任何針對 ai_provider_credential_leases 的 DELETE,
+// release 僅標記 released_at —— 每筆推理請求 1~8 列永久留存,資料庫隨
+// 流量無限膨脹。清理條件:逾期未歸還(程序崩潰)立即刪;已釋放列保留
+// 24 小時供診斷,過保留期即刪;進行中與近期已釋放列不得誤刪。
+test("cleanupExpiredLeases removes crashed and past-retention rows, keeps active and recent ones (F-03)", async () => {
+  assert.match(AUTONOMIA_PROVIDER_POOL_SQL.cleanupExpiredLeases, /DELETE FROM ai_provider_credential_leases/);
+  assert.match(AUTONOMIA_PROVIDER_POOL_SQL.cleanupExpiredLeases, /expires_at <= \? AND released_at IS NULL/);
+  assert.match(
+    AUTONOMIA_PROVIDER_POOL_SQL.cleanupExpiredLeases,
+    /released_at IS NOT NULL AND released_at <= \?/,
+  );
+
+  const { query } = createSqliteTestDb();
+  await migrateAutonomiaSchema(query);
+  const store = createAutonomiaProviderPoolStore(query);
+  await (store as any).sync();
+
+  const crashedClaim: any = await store.claim({
+    poolId: "cloudflare-workers-ai-production",
+    requestId: "req_f03_crashed",
+    leaseTtlMs: 90_000,
+    leaseId: "00000000-0000-4000-8000-0000000000f01",
+  });
+  const activeClaim: any = await store.claim({
+    poolId: "cloudflare-workers-ai-production",
+    requestId: "req_f03_active",
+    leaseTtlMs: 600_000,
+    leaseId: "00000000-0000-4000-8000-0000000000f02",
+  });
+  const recentReleaseClaim: any = await store.claim({
+    poolId: "cloudflare-workers-ai-production",
+    requestId: "req_f03_recent",
+    leaseTtlMs: 600_000,
+    leaseId: "00000000-0000-4000-8000-0000000000f03",
+  });
+  assert.ok(crashedClaim && activeClaim && recentReleaseClaim);
+
+  // 已釋放(近期):released_at = 現在,保留供診斷。
+  await store.release({
+    leaseId: recentReleaseClaim.leaseId,
+    success: true,
+    selection: crashedClaim.selection,
+  });
+  // 已釋放(超過保留期):released_at = 48 小時前,應被清除。
+  const oldReleaseClaim: any = await store.claim({
+    poolId: "cloudflare-workers-ai-production",
+    requestId: "req_f03_old",
+    leaseTtlMs: 600_000,
+    leaseId: "00000000-0000-4000-8000-0000000000f04",
+  });
+  await store.release({ leaseId: oldReleaseClaim.leaseId, success: true, selection: crashedClaim.selection });
+  await query(`UPDATE ai_provider_credential_leases SET released_at = ? WHERE lease_id = ?`, [
+    new Date(Date.now() - 48 * 3_600_000).toISOString(),
+    oldReleaseClaim.leaseId,
+  ]);
+  // 崩潰租約:逾期未歸還(expires_at 已成過去)。
+  await query(`UPDATE ai_provider_credential_leases SET expires_at = ? WHERE lease_id = ?`, [
+    new Date(Date.now() - 1_000).toISOString(),
+    crashedClaim.leaseId,
+  ]);
+
+  const removed = await store.cleanupExpiredLeases(86_400_000);
+  assert.equal(removed, 2, "must remove exactly the crashed lease and the past-retention released lease");
+
+  const remaining = await query(`SELECT lease_id FROM ai_provider_credential_leases ORDER BY lease_id`);
+  assert.deepEqual(
+    remaining.rows.map((row: any) => row.lease_id).sort(),
+    [activeClaim.leaseId, recentReleaseClaim.leaseId].sort(),
+    "active and recently-released leases must survive cleanup",
+  );
+
+  // 冪等:清完再跑一次,無列可刪。
+  assert.equal(await store.cleanupExpiredLeases(86_400_000), 0);
+});

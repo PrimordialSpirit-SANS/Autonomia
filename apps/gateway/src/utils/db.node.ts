@@ -161,8 +161,13 @@ export async function withAutonomiaTransaction<T>(
   const file = resolveDatabasePath(env);
   const run = (txChainByDatabase.get(file) ?? Promise.resolve()).then(async () => {
     txOpenByDatabase.add(file);
-    database.exec("BEGIN IMMEDIATE");
     try {
+      // S-08 修復:BEGIN IMMEDIATE 必須在 try 區塊內 —— 外部寫入者持鎖超過
+      // busy_timeout 時它會拋出 SQLITE_BUSY;若在旗標標記後、try 之前拋出,
+      // finally 永不執行,txOpen 旗標殘留,之後該資料庫的所有非交易查詢
+      // 永久排隊(整庫卡死且無日誌可循)。對照組 worker/doDb.ts 的旗標
+      // 生命週期即為正確寫法(全程包在 try/finally 內)。
+      database.exec("BEGIN IMMEDIATE");
       const result = await txStorage.run({ depth: 1 }, fn);
       database.exec("COMMIT");
       return result;

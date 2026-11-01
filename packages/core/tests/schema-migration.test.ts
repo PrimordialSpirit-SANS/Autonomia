@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   AUTONOMIA_MIGRATIONS,
   AUTONOMIA_SCHEMA_VERSION,
+  autonomiaMigrations,
   isAutonomiaSchemaReady,
   migrateAutonomiaSchema,
 } from "../src/schemaMigration.ts";
@@ -142,4 +143,81 @@ test("v3 to v4 upgrade adds users.session_epoch without touching existing rows",
   // 升級後重跑不再遷移(冪等,不重複 ALTER)。
   const again = await migrateAutonomiaSchema(query);
   assert.deepEqual(again, { version: AUTONOMIA_SCHEMA_VERSION, migrated: false });
+});
+
+// ── F-04 修復釘死:遷移必須以交易包裹、可自癒、PG 冪等 ─────────────────────
+// 修復前逐句執行且版號後置寫入:程序在 ALTER 落地後、版號 INSERT 前中斷
+// (OOM、kill、部署器逾時),重啟重跑同一版回 duplicate column name,
+// 之後每一次啟動都在同一處失敗(Workers 首請求遷移暴露面最大)。
+test("F-04: each migration's statements and version insert run inside one transaction", async () => {
+  const { query } = createSqliteTestDb();
+  let transactionCount = 0;
+  let insideTransaction = false;
+  let versionInsertsInside = 0;
+  const wrapped: any = (sql: string, params: any[] = []) => {
+    if (/INSERT INTO autonomia_ai_schema_migrations/.test(sql) && insideTransaction) {
+      versionInsertsInside += 1;
+    }
+    return query(sql, params);
+  };
+  wrapped.dialect = query.dialect;
+  wrapped.transaction = async (fn: () => Promise<any>) => {
+    transactionCount += 1;
+    const previous = insideTransaction;
+    insideTransaction = true;
+    try {
+      return await fn();
+    } finally {
+      insideTransaction = previous;
+    }
+  };
+
+  const result = await migrateAutonomiaSchema(wrapped);
+  assert.equal(result.migrated, true);
+  assert.equal(transactionCount, AUTONOMIA_MIGRATIONS.length, "one transaction per migration version");
+  assert.equal(
+    versionInsertsInside,
+    AUTONOMIA_MIGRATIONS.length,
+    "version insert must execute inside the same transaction as the statements",
+  );
+});
+
+test("F-04: interrupted (partially applied) migrations self-heal instead of wedging startup", async () => {
+  const { query } = createSqliteTestDb();
+  await migrateAutonomiaSchema(query);
+
+  // 模擬修復前版本的「中斷現場」:v3/v4 的 ALTER 已落地,但版號未寫入,
+  // v3 後半的表未建立 —— 修復前的執行器重跑會回 duplicate column name,
+  // 每一次啟動都在同一處失敗。
+  await query(`DELETE FROM autonomia_ai_schema_migrations WHERE version >= 3`);
+  await query(`DROP TABLE ai_idempotency_replays`);
+  assert.equal(await isAutonomiaSchemaReady(query), false);
+
+  const result = await migrateAutonomiaSchema(query);
+  assert.deepEqual(result, { version: AUTONOMIA_SCHEMA_VERSION, migrated: true });
+  assert.equal(await isAutonomiaSchemaReady(query), true);
+  const replayTable = await query(
+    `SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'ai_idempotency_replays'`,
+  );
+  assert.equal(replayTable.rows.length, 1, "the replay store must be recreated");
+});
+
+test("F-04: postgres ALTERs are idempotent; sqlite statements keep the pinned shape", () => {
+  const pgAlters = autonomiaMigrations("postgres").flatMap((migration: any) =>
+    migration.statements.filter((statement: string) => /^ALTER\s+TABLE/i.test(statement)),
+  );
+  assert.equal(pgAlters.length, 3);
+  assert.ok(
+    pgAlters.every((statement: string) => /ADD\s+COLUMN\s+IF\s+NOT\s+EXISTS/.test(statement)),
+    "postgres ADD COLUMN statements must be idempotent",
+  );
+
+  const sqliteAlters = AUTONOMIA_MIGRATIONS.flatMap((migration: any) =>
+    migration.statements.filter((statement: string) => /^ALTER\s+TABLE/i.test(statement)),
+  );
+  assert.equal(sqliteAlters.length, 3);
+  assert.ok(
+    sqliteAlters.every((statement: string) => !/IF\s+NOT\s+EXISTS/.test(statement)),
+    "sqlite statements must keep the contract-pinned syntax",
+  );
 });

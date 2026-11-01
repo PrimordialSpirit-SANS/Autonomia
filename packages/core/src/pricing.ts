@@ -99,7 +99,8 @@ export function getModelPricing(modelId: any, config: any = BACKEND_PRICING) {
 
 export function requireModelPricing(modelId: any, config: any = BACKEND_PRICING) {
   const model = getModelPricing(modelId, config);
-  if (!model) throw new RangeError(`Unknown or disabled Autonomia model: ${String(modelId)}`);
+  // S-06:內部錯誤訊息同步截斷 —— 模型原文可能極長,進日誌前先夾制。
+  if (!model) throw new RangeError(`Unknown or disabled Autonomia model: ${String(modelId).slice(0, 64)}`);
   return model;
 }
 

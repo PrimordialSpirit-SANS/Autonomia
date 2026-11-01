@@ -7,7 +7,7 @@
 //               (X-Autonomia-Idempotent-Replay: true),不重新執行、不重複計費
 //
 // 進行中的鍵重送 → 409 idempotent_request_in_progress
-// 同鍵不同請求體 → 409 idempotent_request_conflict
+// 同鍵不同請求體 → 409 idempotency_conflict
 import OpenAI from "openai";
 
 const baseURL = process.env.AUTONOMIA_BASE_URL ?? "http://localhost:8787/api/ai/v1";
@@ -21,7 +21,7 @@ const client = new OpenAI({ baseURL, apiKey });
 
 const idempotencyKey = `demo-${Date.now()}`;
 const request = {
-  model: process.env.AUTONOMIA_MODEL ?? "autonomia/gpt-5.2",
+  model: process.env.AUTONOMIA_MODEL ?? "autonomia/gpt-6.1-sol",
   messages: [{ role: "user", content: "回覆「好的」兩個字就好。" }],
 };
 

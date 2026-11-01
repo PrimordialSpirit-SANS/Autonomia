@@ -7,6 +7,7 @@ import {
   type AutonomiaPgLikePool,
   createAutonomiaPgAdapter,
   defaultPgPoolMax,
+  isInsecurePublicPgTls,
   isPrivatePgHost,
   normalizePgParam,
   postgresPlaceholders,
@@ -94,7 +95,10 @@ test("isWorkerPgRuntime switches the Workers entry off the Durable Object path",
 
 test("resolvePgSslOptions infers TLS from remote hosts and honors explicit modes", () => {
   const remote = "postgres://user@db.managed.example.com:5432/autonomia";
-  assert.deepEqual(resolvePgSslOptions(remote), { rejectUnauthorized: false });
+  // S-03 修復:遠端主機的啟發式預設從「有加密但不驗證身分」升級為 verify-full;
+  // 主流受管服務的憑證由公用 CA 簽發,開箱即用。
+  assert.deepEqual(resolvePgSslOptions(remote), { rejectUnauthorized: true });
+  // 顯式 require(自簽/私有 CA 部署的逃生口):維持舊行為,但啟動時會警告。
   assert.deepEqual(resolvePgSslOptions(`${remote}?sslmode=require`), { rejectUnauthorized: false });
   assert.deepEqual(resolvePgSslOptions(`${remote}?sslmode=verify-full`), { rejectUnauthorized: true });
   assert.equal(resolvePgSslOptions(`${remote}?sslmode=disable`), false);
@@ -108,6 +112,14 @@ test("resolvePgSslOptions infers TLS from remote hosts and honors explicit modes
   assert.deepEqual(resolvePgSslOptions(remote, { env: { AUTONOMIA_PG_SSL: "verify-full" } }), {
     rejectUnauthorized: true,
   });
+  // 明確退回 require 時可辨識為「公開主機且未驗身分」(S-03 啟動警告的判定)。
+  assert.equal(isInsecurePublicPgTls(remote, { rejectUnauthorized: false }), true);
+  assert.equal(isInsecurePublicPgTls(remote, resolvePgSslOptions(remote)), false);
+  assert.equal(isInsecurePublicPgTls(remote, false), false);
+  assert.equal(
+    isInsecurePublicPgTls("postgres://user@10.1.2.3:5432/db", { rejectUnauthorized: false }),
+    false,
+  );
 });
 
 test("resolvePgSslOptions keeps local and private hosts plaintext", () => {
@@ -135,7 +147,8 @@ test("resolvePgSslOptions parses pg keyword/value connection strings and Hyperdr
   const keyword = "host=db.managed.example.com port=5432 user=autonomia sslmode=require";
   assert.deepEqual(resolvePgSslOptions(keyword), { rejectUnauthorized: false });
   const keywordRemote = "host=db.managed.example.com port=5432 user=autonomia";
-  assert.deepEqual(resolvePgSslOptions(keywordRemote), { rejectUnauthorized: false });
+  // S-03:keyword/value 形式的遠端主機同樣預設 verify-full。
+  assert.deepEqual(resolvePgSslOptions(keywordRemote), { rejectUnauthorized: true });
   // Hyperdrive 的本地通道:對外 TLS 由 Hyperdrive 代管,client 不加密。
   assert.equal(
     resolvePgSslOptions("postgres://user@hyperdrive.local:5432/db", { viaHyperdrive: true }),

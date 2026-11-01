@@ -86,11 +86,11 @@ export async function cleanupAutonomiaRateLimitBuckets(env: AutonomiaRuntimeEnv)
     env,
     `
     DELETE FROM ai_api_inflight_leases
-    WHERE expires_at <= ?
-      AND released_at IS NULL
+    WHERE (expires_at <= ? AND released_at IS NULL)
+       OR (released_at IS NOT NULL AND released_at <= ?)
     RETURNING request_id
   `,
-    [new Date().toISOString()],
+    [new Date().toISOString(), new Date(Date.now() - 86_400_000).toISOString()],
   );
   return { expiredLeases: expiredLeases.rows?.length || 0 };
 }

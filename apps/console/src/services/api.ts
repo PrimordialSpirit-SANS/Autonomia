@@ -22,16 +22,65 @@ function readCookie(name: string): string | null {
   return match ? decodeURIComponent(match[1]) : null;
 }
 
+// F-01 fix:跨主機(同站)拓撲下,host-only 的 csrf_token cookie 設在閘道主機
+// 上,本頁面的 document.cookie 讀不到。向 GET /auth/csrf 以帶憑證請求
+// 取得 token(瀏覽器會把同站 cookie 帶上;回應僅 FRONTEND_ORIGINS 內的
+// 來源可讀)。以模組級 promise 去重;403 csrf_token_invalid 時失效重取
+// (登出後重新登入會換發新 token)。
+let csrfTokenPromise: Promise<string | null> | null = null;
+
+function fetchCsrfToken(): Promise<string | null> {
+  if (!csrfTokenPromise) {
+    csrfTokenPromise = fetch(`${API_BASE}/auth/csrf`, { credentials: "include" })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((body: unknown) => {
+        const token = (body as { token?: unknown } | null)?.token;
+        return typeof token === "string" && token.length > 0 ? token : null;
+      })
+      .catch(() => null);
+  }
+  return csrfTokenPromise;
+}
+
+function invalidateCsrfTokenCache() {
+  csrfTokenPromise = null;
+}
+
 export async function apiFetch(path: string, init: RequestInit = {}): Promise<Response> {
   const headers = new Headers(init.headers);
   const method = (init.method ?? "GET").toUpperCase();
+  let usedFetchedToken = false;
   if (method !== "GET" && method !== "HEAD") {
-    const csrf = readCookie("csrf_token") ?? readCookie("XSRF-TOKEN");
+    let csrf = readCookie("csrf_token") ?? readCookie("XSRF-TOKEN");
+    if (!csrf) {
+      csrf = await fetchCsrfToken();
+      usedFetchedToken = csrf !== null;
+    }
     if (csrf && !headers.has("X-CSRF-Token")) {
       headers.set("X-CSRF-Token", csrf);
     }
   }
-  return fetch(`${API_BASE}${path}`, { ...init, headers, credentials: "include" });
+  const response = await fetch(`${API_BASE}${path}`, { ...init, headers, credentials: "include" });
+  // 僅對 csrf_token_invalid 重試:此 403 由中介層在路由處理前產生,動作
+  // 保證未執行,重試安全;其他 403(授權、Origin 閘門)原樣回傳。
+  if (response.status === 403 && usedFetchedToken) {
+    let code: string | null = null;
+    try {
+      code = (((await response.clone().json()) as { code?: unknown })?.code as string) ?? null;
+    } catch {
+      code = null;
+    }
+    if (code === "csrf_token_invalid") {
+      invalidateCsrfTokenCache();
+      const fresh = await fetchCsrfToken();
+      if (fresh) {
+        const retryHeaders = new Headers(init.headers);
+        retryHeaders.set("X-CSRF-Token", fresh);
+        return fetch(`${API_BASE}${path}`, { ...init, headers: retryHeaders, credentials: "include" });
+      }
+    }
+  }
+  return response;
 }
 
 export function getExternalDeveloperApiBase(): string {

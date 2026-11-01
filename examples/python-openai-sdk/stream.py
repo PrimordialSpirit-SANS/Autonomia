@@ -13,7 +13,7 @@ if not api_key:
 client = OpenAI(base_url=base_url, api_key=api_key)
 
 stream = client.chat.completions.create(
-    model=os.environ.get("AUTONOMIA_MODEL", "autonomia/gpt-5.2"),
+    model=os.environ.get("AUTONOMIA_MODEL", "autonomia/gpt-6.1-sol"),
     messages=[{"role": "user", "content": "從 1 數到 10,每個數字一行。"}],
     stream=True,
     stream_options={"include_usage": True},

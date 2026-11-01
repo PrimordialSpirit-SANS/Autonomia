@@ -426,3 +426,108 @@ test("developer face rejects cross-site Origin headers (SN-15, audit N2)", async
   });
   assert.equal(get.status, 401);
 });
+
+// ── F-01 修復釘死:GET /api/auth/csrf 讓跨主機(同站)拓撲取得 token ──
+// host-only 的 csrf cookie 設在閘道主機上,console.example.com 的
+// document.cookie 讀不到 → apiFetch 附不上 X-CSRF-Token → 所有變更操作
+// 403。此端點回傳現有 cookie 值(沒有則建立),使同站跨主機控制台可用;
+// 回應僅 FRONTEND_ORIGINS 內來源可經帶憑證 CORS 讀取,雙提交前提不變。
+test("GET /api/auth/csrf bootstraps and echoes the double-submit CSRF token (F-01)", async () => {
+  const env = { AUTONOMIA_ENABLED: "true", JWT_SECRET: SECRET };
+
+  // 1. 無 cookie:建立新 token 並設 cookie(64 hex = 256-bit)。
+  const first = await aiRequest("/api/auth/csrf", env);
+  assert.equal(first.status, 200);
+  const firstBody = (await first.json()) as any;
+  assert.match(firstBody.token, /^[0-9a-f]{64}$/);
+  const setCookieHeader = first.headers.get("set-cookie") || "";
+  assert.ok(setCookieHeader.includes(`${AUTONOMIA_CSRF_COOKIE}=${firstBody.token}`));
+  assert.ok(!setCookieHeader.includes("HttpOnly"), "CSRF cookie must stay readable by design");
+  assert.ok(setCookieHeader.includes("SameSite=Lax"));
+
+  // 2. 帶既有 cookie:回傳同一個值,且不得重設(冪等)。
+  const second = await aiRequest("/api/auth/csrf", env, {
+    headers: { Cookie: `${AUTONOMIA_CSRF_COOKIE}=${firstBody.token}` },
+  });
+  assert.equal(second.status, 200);
+  assert.equal(((await second.json()) as any).token, firstBody.token);
+  assert.equal(second.headers.get("set-cookie"), null, "existing token must be echoed, not re-set");
+
+  // 3. 端到端:以端點取得的 token 通過 requireCsrfToken 雙提交比對
+  //    (對照:缺標頭的 mutating 請求 403 csrf_token_invalid)。
+  const protectedApp = new Hono();
+  protectedApp.use("*", requireCsrfToken);
+  protectedApp.post("/mutate", (c: any) => c.json({ ok: true }));
+  const cookie = `${AUTONOMIA_CSRF_COOKIE}=${firstBody.token}`;
+
+  const withoutHeader = await protectedApp.request("/mutate", {
+    method: "POST",
+    headers: { Cookie: cookie },
+  });
+  assert.equal(withoutHeader.status, 403);
+
+  const withHeader = await protectedApp.request("/mutate", {
+    method: "POST",
+    headers: { Cookie: cookie, "X-CSRF-Token": firstBody.token },
+  });
+  assert.equal(withHeader.status, 200);
+});
+
+// ── S-02 + S-22 修復釘死:CORS 掛載點與 AUTONOMIA_PUBLIC_ORIGINS 預檢 ──
+// 修復前:全域 credentialed 中介層先註冊、對 OPTIONS 一律短路,僅列於
+// AUTONOMIA_PUBLIC_ORIGINS 的來源預檢拿不到 ACAO(瀏覽器整合靜默失效),
+// 且所有回應都噴 Access-Control-Allow-Credentials。修復後:公開中介層
+// 統一處理 /api/ai/v1/* 的預檢;credentialed CORS 只掛在 cookie 會話
+// 實際使用的 /api/auth/* 與 /api/ai/developer/*。
+test("AUTONOMIA_PUBLIC_ORIGINS receive working preflight approval on the public inference face (S-02)", async () => {
+  const env = {
+    AUTONOMIA_ENABLED: "true",
+    AUTONOMIA_PUBLIC_ORIGINS: "https://docs.example.com",
+    FRONTEND_ORIGINS: "https://console.example.com",
+  };
+
+  // 1. 預檢:ACAO 必須回附 public 來源(AI 呼叫必帶 Authorization → 必觸發預檢)。
+  const preflight = await aiRequest("/api/ai/v1/chat/completions", env, {
+    method: "OPTIONS",
+    headers: {
+      Origin: "https://docs.example.com",
+      "Access-Control-Request-Method": "POST",
+      "Access-Control-Request-Headers": "authorization, content-type",
+    },
+  });
+  assert.equal(preflight.status, 204);
+  assert.equal(preflight.headers.get("access-control-allow-origin"), "https://docs.example.com");
+  // 公開推理面不使用 cookie:不得附帶 Allow-Credentials(S-22)。
+  assert.equal(preflight.headers.get("access-control-allow-credentials"), null);
+  assert.match(preflight.headers.get("access-control-allow-headers") || "", /authorization/i);
+
+  // 2. 非預檢請求(直接 GET)仍正確回附 ACAO(修復前這條反而是對的)。
+  const direct = await aiRequest("/api/ai/v1/models", env, {
+    headers: { Origin: "https://docs.example.com" },
+  });
+  assert.equal(direct.status, 401);
+  assert.equal(direct.headers.get("access-control-allow-origin"), "https://docs.example.com");
+  assert.equal(direct.headers.get("access-control-allow-credentials"), null);
+
+  // 3. 未列名的來源預檢:回 204 但不附 ACAO(fail-closed,瀏覽器擋下實際請求)。
+  const denied = await aiRequest("/api/ai/v1/chat/completions", env, {
+    method: "OPTIONS",
+    headers: { Origin: "https://evil.example", "Access-Control-Request-Method": "POST" },
+  });
+  assert.equal(denied.status, 204);
+  assert.equal(denied.headers.get("access-control-allow-origin"), null);
+
+  // 4. 回歸保護:cookie 會話面的 credentialed 預檢保持原契約。
+  const credentialed = await aiRequest("/api/auth/login", env, {
+    method: "OPTIONS",
+    headers: {
+      Origin: "https://console.example.com",
+      "Access-Control-Request-Method": "POST",
+      "Access-Control-Request-Headers": "content-type, x-csrf-token",
+    },
+  });
+  assert.equal(credentialed.status, 204);
+  assert.equal(credentialed.headers.get("access-control-allow-origin"), "https://console.example.com");
+  assert.equal(credentialed.headers.get("access-control-allow-credentials"), "true");
+  assert.match(credentialed.headers.get("access-control-allow-headers") || "", /x-csrf-token/i);
+});

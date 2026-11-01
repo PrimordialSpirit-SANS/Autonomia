@@ -215,10 +215,25 @@ function validateFunctionCall(
   return { name: value.name, arguments: value.arguments };
 }
 
+// S-06 修復:model 欄位的錯誤回顯截斷。找不到模型/不支援參數的錯誤訊息
+// 不得把客戶端送來的原文(請求體上限 32MB,理論上可達兆級字元)整段回送
+// —— 那是約 1:1 的頻寬與 CPU 放大。回顯上限 64 字元,超過即截斷。
+const MODEL_ECHO_MAX_CHARS = 64;
+
+function modelEchoForError(modelId: string): string {
+  const value = modelId && modelId.length > 0 ? modelId : "unknown";
+  return value.length > MODEL_ECHO_MAX_CHARS ? `${value.slice(0, MODEL_ECHO_MAX_CHARS)}...` : value;
+}
+
 // ECO-03:vision 輸入的 content parts 上限。每 part 文字 ≤100k(沿用純文字
-// 訊息上限)、URL ≤8k、parts ≤64,總體沿用 HTTP 層 32MB body 上限。
+// 訊息上限)、parts ≤64,總體沿用 HTTP 層 32MB body 上限。
 const MAX_MESSAGE_CONTENT_PARTS = 64;
 const MAX_IMAGE_URL_CHARS = 8 * 1024;
+// F-09 修復:data:image/ URL 承載的是影像本體(base64),8KB 只容得下
+// 約 6KB 的二進位 —— OpenAI SDK 傳圖的主流用法(data URL)實質全部被拒,
+// 只有 https:// 外連影像可用。放寬到 4MB(約 3MB 二進位),與 32MB 請求
+// 體上限成比例;https:// 外連 URL 維持 8KB(那只是位址,不是酬載)。
+const MAX_DATA_IMAGE_URL_CHARS = 4 * 1024 * 1024;
 // 每個 image part 以固定保守值計入輸入 token 估計(起跳 1,000;URL 位元組
 // 已在 JSON 序列化估計內,此值補上「圖片本體」未被 URL 長度反映的成本),
 // 依解析度精化留待後續。預留額邏輯沿用,確保不高估不足額。
@@ -254,8 +269,17 @@ function validateContentParts(value: unknown, label: string): any[] {
         throw invalidRequest("Image parts must only contain an image_url object with a url.", partLabel);
       }
       const url = part.image_url.url;
-      if (typeof url !== "string" || url.length === 0 || url.length > MAX_IMAGE_URL_CHARS) {
-        throw invalidRequest("Image URLs must contain 1-8192 characters.", `${partLabel}.image_url.url`);
+      // F-09:data URL 與外連 URL 各自上限;錯誤訊息指明實際限制,不再
+      // 籠統地說「1-8192 字元」誤導真正原因。
+      const isDataImageUrl = typeof url === "string" && url.startsWith("data:image/");
+      const maxUrlChars = isDataImageUrl ? MAX_DATA_IMAGE_URL_CHARS : MAX_IMAGE_URL_CHARS;
+      if (typeof url !== "string" || url.length === 0 || url.length > maxUrlChars) {
+        throw invalidRequest(
+          isDataImageUrl
+            ? "data:image URLs must contain 1-4194304 characters (about 3MB of binary image data)."
+            : "https image URLs must contain 1-8192 characters.",
+          `${partLabel}.image_url.url`,
+        );
       }
       if (!url.startsWith("https://") && !url.startsWith("data:image/")) {
         throw invalidRequest(
@@ -584,11 +608,16 @@ export async function prepareAutonomiaEmbeddingsRequest({
     );
   }
   const modelId = typeof body.model === "string" ? body.model.trim() : "";
+  // S-06 修復:預先以 200 字元上限拒絕超長 model 字串(與 schema 的
+  // public_model VARCHAR(200) 一致)—— 不讓超長原文進入任何錯誤回顯。
+  if (modelId.length > 200) {
+    throw invalidRequest("model must contain at most 200 characters.", "model");
+  }
   let model: ReturnType<typeof requireModelPricing>;
   try {
     model = requireModelPricing(modelId);
   } catch {
-    throw new AutonomiaError(`The model '${modelId || "unknown"}' does not exist or is disabled.`, {
+    throw new AutonomiaError(`The model '${modelEchoForError(modelId)}' does not exist or is disabled.`, {
       status: 404,
       type: "invalid_request_error",
       code: "model_not_found",
@@ -631,8 +660,25 @@ export async function prepareAutonomiaEmbeddingsRequest({
     ...(dimensions !== undefined ? { dimensions } : {}),
     ...(body.encoding_format !== undefined ? { encoding_format: encodingFormat } : {}),
   };
-  const estimatedInputTokens = estimateInputTokens({ input });
-  const reservedCostMicros = calculateReservationCostMicros(model, estimatedInputTokens, 0);
+  // F-02 修復:比照 chat 路徑,把「輸入估計」與「預留成本」包進防護——
+  // 超過模型 context 上限時 RangeError 必須轉為結構化 400
+  // context_length_exceeded;裸拋會被閘道錯誤映射改寫成 503
+  // service_unavailable(誤導重試與監控)。embeddings 的對應欄位是 input。
+  let estimatedInputTokens: ReturnType<typeof estimateInputTokens>;
+  let reservedCostMicros: ReturnType<typeof calculateReservationCostMicros>;
+  try {
+    estimatedInputTokens = estimateInputTokens({ input });
+    reservedCostMicros = calculateReservationCostMicros(model, estimatedInputTokens, 0);
+  } catch (error) {
+    if (error instanceof RangeError) {
+      throw invalidRequest(
+        "The request exceeds this Autonomia model context limit.",
+        "input",
+        "context_length_exceeded",
+      );
+    }
+    throw error;
+  }
   if (
     aiKey?.spend_limit_usd_micros !== null &&
     aiKey?.spend_limit_usd_micros !== undefined &&
@@ -730,11 +776,16 @@ async function prepareAutonomiaChatBody({
     );
   }
   const modelId = typeof body.model === "string" ? body.model.trim() : "";
+  // S-06 修復:預先以 200 字元上限拒絕超長 model 字串(與 schema 的
+  // public_model VARCHAR(200) 一致)—— 不讓超長原文進入任何錯誤回顯。
+  if (modelId.length > 200) {
+    throw invalidRequest("model must contain at most 200 characters.", "model");
+  }
   let model: ReturnType<typeof requireModelPricing>;
   try {
     model = requireModelPricing(modelId);
   } catch {
-    throw new AutonomiaError(`The model '${modelId || "unknown"}' does not exist or is disabled.`, {
+    throw new AutonomiaError(`The model '${modelEchoForError(modelId)}' does not exist or is disabled.`, {
       status: 404,
       type: "invalid_request_error",
       code: "model_not_found",
@@ -1079,11 +1130,16 @@ export async function prepareAutonomiaResponsesRequest({
     );
   }
   const modelId = typeof body.model === "string" ? body.model.trim() : "";
+  // S-06 修復:預先以 200 字元上限拒絕超長 model 字串(與 schema 的
+  // public_model VARCHAR(200) 一致)—— 不讓超長原文進入任何錯誤回顯。
+  if (modelId.length > 200) {
+    throw invalidRequest("model must contain at most 200 characters.", "model");
+  }
   let model: ReturnType<typeof requireModelPricing>;
   try {
     model = requireModelPricing(modelId);
   } catch {
-    throw new AutonomiaError(`The model '${modelId || "unknown"}' does not exist or is disabled.`, {
+    throw new AutonomiaError(`The model '${modelEchoForError(modelId)}' does not exist or is disabled.`, {
       status: 404,
       type: "invalid_request_error",
       code: "model_not_found",

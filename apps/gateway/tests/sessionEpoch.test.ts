@@ -252,3 +252,42 @@ test("jwt epv roundtrip keeps the fixed-claim contract strict", async () => {
     );
   }
 });
+
+// ── S-20 修復釘死:登出必須撤銷伺服端會話 ───────────────────────────────────
+// 修復前登出只刪 cookie —— 被複製的 autonomia_token 在「登出」後仍可用至
+// 自然到期(最長 30 天)。現在登出驗證當前會話後 bump session_epoch,
+// 舊 token(含被複製者)隨即 401 session_revoked。
+test("logout revokes the server-side session, not just the cookies (S-20)", async () => {
+  await installNodeAutonomiaDbAdapter();
+  const env = await createSchemaReadyEnv();
+  const app = createTestApp(env);
+
+  const email = "logout-revoke@example.com";
+  const token = await registerAndLogin(app, email, "longenough1");
+
+  // 登入回應同時設置 csrf cookie;logout 是 mutating 請求,雙提交比對需要它。
+  const login = await app.request("/api/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ email, password: "longenough1" }),
+    headers: { "Content-Type": "application/json" },
+  });
+  const setCookie = login.headers.get("set-cookie") || "";
+  const csrfToken = /csrf_token=([^;]+)/.exec(setCookie)?.[1] || "";
+  assert.ok(csrfToken, "csrf cookie is present after login");
+
+  const logout = await app.request("/api/auth/logout", {
+    method: "POST",
+    headers: { Cookie: `autonomia_token=${token}; csrf_token=${csrfToken}`, "X-CSRF-Token": csrfToken },
+  });
+  assert.equal(logout.status, 200);
+
+  // 被複製的舊 token 在登出後必須失效(共用電腦情境)。
+  const stolen = await app.request("/api/auth/me", meRequest(token));
+  assert.equal(stolen.status, 401, "copied token must be revoked by logout");
+  assert.equal(((await stolen.json()) as any).code, "session_revoked");
+
+  // 未附 token 的 logout 仍可完成(冪等清 cookie),不得 500。
+  const bare = await app.request("/api/auth/logout", { method: "POST" });
+  assert.equal(bare.status, 200);
+  assert.equal(((await bare.json()) as any).ok, true);
+});

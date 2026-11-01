@@ -7,7 +7,7 @@ OpenAI baseURL 的工具,就能指向 Autonomia**。本文列出已驗證的主�
 | 項目 | 值 |
 | --- | --- |
 | Base URL | `https://<你的網域>/api/ai/v1`(本地開發 `http://localhost:8787/api/ai/v1`) |
-| API Key | `sk-autonomia-live_*` / `sk-autonomia-test_*`(控制台建立,只顯示一次) |
+| API Key | `sk-autonomia-live_*` / `sk-autonomia-test_*`(控制台建立,只顯示一次;兩種 environment 的計費、選路與限流行為完全相同,標記僅供識別) |
 | 模型名稱 | `autonomia/<model>`(如 `autonomia/gpt-6.1-sol`;清單見 `GET /models`) |
 | 串流 | OpenAI SSE 形態,`data: [DONE]` 終止 |
 | 冪等 | `Idempotency-Key` 標頭;語義見下文與 `docs/openapi.yaml` |
@@ -120,7 +120,7 @@ console/nginx 與 LobeChat 各自持有獨立金鑰,用量與限流完全分帳�
 `Content-Type: application/json`、串流加 `Accept: text/event-stream`,
 就這三件事。錯誤回應是 OpenAI 形態的 JSON,錯誤碼可程式化判別
 (`unsupported_feature`、`unsupported_parameter`、`rate_limit_exceeded`、
-`insufficient_credits` 等,全清單見 `docs/openapi.yaml`)。
+`insufficient_balance` 等,全清單見 `docs/openapi.yaml`)。
 
 ## 跨框架的三個語義差異(必讀)
 
@@ -132,6 +132,6 @@ console/nginx 與 LobeChat 各自持有獨立金鑰,用量與限流完全分帳�
 2. **端點覆蓋**:`chat/completions`、`embeddings`、`responses`(橋接子集)、
    `models` 之外不支援(`images`、`audio`、`moderations`、`files`、`batches`、
    legacy `completions`、`realtime`)。依賴這些端點的整合會收到可分辨的
-   `400`,不會沉默失敗。
+   `404 route_not_found`(`400` 僅用於不支援的「參數」層級),不會沉默失敗。
 3. **`n > 1`**:回 `400 unsupported_feature` 並提示改送獨立請求——平行取樣
    請用多個獨立請求(各自帶冪等鍵),而不是 OpenAI 的 `n` 參數。

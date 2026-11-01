@@ -93,7 +93,12 @@ Workers-specific caveats:
   build command `npm run build --workspace @autonomia/console`, output
   directory `apps/console/dist`, `VITE_AUTONOMIA_API_BASE` pointing at the
   Worker URL; set `FRONTEND_ORIGINS` on the Worker to the Pages origin.
-  SPA fallback (`apps/console/public/_redirects`) is included in the build.
+  SPA fallback (`apps/console/public/_redirects`) is included in the build,
+  and `apps/console/public/_headers` ships baseline security headers
+  (CSP, `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy`,
+  `Permissions-Policy`); on the cross-host topology append the gateway
+  origin to `connect-src` in that file. The nginx variant
+  (`deploy/nginx-console.conf`) carries the same headers.
   - SN-4 caveat: session cookies are `SameSite=Lax`, so a cross-site fetch
     from `*.pages.dev` to `*.workers.dev` (different sites under the public
     suffix list) never carries the cookie — the login response succeeds but
@@ -101,6 +106,15 @@ Workers-specific caveats:
     1. Host console and gateway under the same registrable domain
        (eTLD+1), e.g. `console.example.com` + `api.example.com`, with
        `VITE_AUTONOMIA_API_BASE=https://api.example.com/api`.
+       - CSRF note (F-01 fix): the `csrf_token` cookie is host-only on
+         the gateway host, so console JavaScript cannot read it through
+         `document.cookie` in this topology. The console therefore
+         bootstraps the token with a credentialed `GET /api/auth/csrf`
+         (readable only from origins listed in `FRONTEND_ORIGINS`) and
+         attaches it as `X-CSRF-Token` automatically. No configuration
+         is required; if you observe `403 csrf_token_invalid` on every
+         mutation, check that the console origin is listed in
+         `FRONTEND_ORIGINS`.
     2. Serve the console from Pages and proxy `/api/*` same-origin via
        Pages Functions or a reverse proxy, leaving
        `VITE_AUTONOMIA_API_BASE` empty (same-origin `/api`).
@@ -130,10 +144,17 @@ Driver selection (`AUTONOMIA_PG_DRIVER=auto`, the default):
 
 `AUTONOMIA_PG_DRIVER=pg-pool|neon` forces a driver (aliases: `pg`, `tcp`,
 `neon-ws`, `serverless`); unknown values fail fast at startup. TLS is
-inferred: remote hosts get `sslmode=require` semantics automatically (URL
-`sslmode`/`ssl` params are honored; `AUTONOMIA_PG_SSL=disable|require|
-verify-full` overrides), while loopback/private/unix-socket hosts stay
-plaintext. Pool size defaults to 1 connection per instance on serverless
+inferred: **remote hosts default to full certificate verification
+(`verify-full`)** — managed providers (Neon, Supabase, Render, RDS) use
+publicly CA-signed certificates, so this works out of the box; URL
+`sslmode`/`ssl` params are honored and `AUTONOMIA_PG_SSL=disable|require|
+verify-full` overrides, while loopback/private/unix-socket hosts stay
+plaintext. If your database uses a self-signed or private-CA certificate,
+set `sslmode=require` in the connection string (or
+`AUTONOMIA_PG_SSL=require`) to fall back to encryption without identity
+verification — the gateway logs an `autonomia_pg_tls_unverified` warning
+once at startup so the posture stays visible. Pool size defaults to 1
+connection per instance on serverless
 runtimes (Vercel, Netlify, Lambda, Workers isolates) and 10 on long-lived
 processes; `AUTONOMIA_PG_POOL_MAX` overrides both.
 

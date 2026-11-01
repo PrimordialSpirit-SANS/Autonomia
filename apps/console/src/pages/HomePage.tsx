@@ -10,56 +10,24 @@ import {
   loadAutonomiaBrandManifest,
   loadAutonomiaModels,
 } from "../lib/autonomia/catalog/loadAutonomiaCatalog";
-import { buildCodeExamples } from "../lib/autonomia/utils/buildCodeExamples";
 import { formatModelLimit, formatUsd } from "../lib/autonomia/utils/formatAutonomia";
 
 // 首頁(/home):公開的產品落地頁,不依附任何 layout,自帶頂欄與頁尾。
 // 模型與供應商資料來自 public/data/autonomia 目錄(動態載入、fail-soft),
 // 目錄不可用時頁面仍完整呈現,僅數據退為「—」。
+//
+// 版面走「工程規格表」路線:左對齊敘事 + hero 右側的真實終端機示範、
+// 體驗事實以髮絲線列出、模型以定價表格呈現、端點與特色皆為清單而非卡片牆。
 
 type BrandAsset = { display_asset_url: string | null; name: string; fallback_label: string };
 
-function FeatureIcon({ name }: { name: "api" | "route" | "billing" | "shield" }) {
-  const paths: Record<string, React.ReactNode> = {
-    api: (
-      <>
-        <path d="M7 8H5a3 3 0 0 0-3 3v2a3 3 0 0 0 3 3h2" />
-        <path d="M17 8h2a3 3 0 0 1 3 3v2a3 3 0 0 1-3 3h-2" />
-        <path d="M8 12h8" />
-      </>
-    ),
-    route: (
-      <>
-        <circle cx="5" cy="12" r="2.2" />
-        <circle cx="19" cy="6" r="2.2" />
-        <circle cx="19" cy="18" r="2.2" />
-        <path d="M7.2 12H10m0 0c2.6 0 3.8-2.6 6.6-5M10 12c2.6 0 3.8 2.6 6.6 5" />
-      </>
-    ),
-    billing: <path d="M12 3v18M17 5.5H9.8a3 3 0 0 0 0 6h4.4a3 3 0 0 1 0 6H7" />,
-    shield: (
-      <>
-        <path d="M12 3l8 4v5c0 4.4-3.2 8.2-8 9-4.8-.8-8-4.6-8-9V7l8-4Z" />
-        <path d="M9 12l2 2 4-4" />
-      </>
-    ),
-  };
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      {paths[name]}
-    </svg>
-  );
-}
-
 const HOME_MODEL_COUNT = 6;
+
+const HOME_ENDPOINTS = [
+  { path: "/api/ai/v1/chat/completions", descKey: "home.endpointChatDesc" },
+  { path: "/api/ai/v1/embeddings", descKey: "home.endpointEmbeddingsDesc" },
+  { path: "/api/ai/v1/responses", descKey: "home.endpointResponsesDesc" },
+] as const;
 
 export function HomePage() {
   const { t } = useI18n();
@@ -96,12 +64,26 @@ export function HomePage() {
   }, [models]);
 
   const featured = (models ?? []).slice(0, HOME_MODEL_COUNT);
-  const code = buildCodeExamples(
-    getAutonomiaPublicApiRoot(),
-    models?.[0]?.id ?? "autonomia/gpt-6-astra",
-  ).curl;
+  const apiRoot = getAutonomiaPublicApiRoot();
+  const modelId = models?.[0]?.id ?? "autonomia/gpt-6-astra";
   const consoleHref = user ? "/overview" : "/login";
   const dash = "—";
+
+  // 終端機示範:命令可整段複製;行結構用於上色(註解/命令/串流回應)。
+  const terminalLines: Array<{ id: string; kind: "comment" | "cmd" | "out"; text: string }> = [
+    { id: "comment-1", kind: "comment", text: "# 1 — create a key in the console" },
+    { id: "export", kind: "cmd", text: '$ export AUTONOMIA_API_KEY="sk-autonomia-live-…"' },
+    { id: "blank-1", kind: "comment", text: "" },
+    { id: "comment-2", kind: "comment", text: "# 2 — point the OpenAI SDK at the gateway" },
+    { id: "curl", kind: "cmd", text: `$ curl ${apiRoot}/chat/completions \\` },
+    { id: "curl-auth", kind: "cmd", text: '    -H "Authorization: Bearer $AUTONOMIA_API_KEY" \\' },
+    { id: "curl-body", kind: "cmd", text: `    -d '{"model":"${modelId}","stream":true,` },
+    { id: "curl-body-2", kind: "cmd", text: '         "messages":[{"role":"user","content":"hello"}]}' },
+    { id: "blank-2", kind: "comment", text: "" },
+    { id: "comment-3", kind: "comment", text: "# 3 — same SDK, same request shapes" },
+    { id: "response", kind: "out", text: 'data: {"choices":[{"delta":{"content":"Hello"}}]}' },
+  ];
+  const terminalCode = terminalLines.map((line) => line.text).join("\n");
 
   return (
     <div className="home">
@@ -122,61 +104,68 @@ export function HomePage() {
 
       <main className="home-main">
         <section className="home-hero">
-          <span className="home-badge">{t("home.badge")}</span>
-          <h1>
-            {t("home.heroTitleLead")}
-            <em className="home-hero-em">{t("home.heroTitleEm")}</em>
-          </h1>
-          <p>{t("home.heroLead")}</p>
-          <div className="home-cta">
-            <Link className="btn btn-primary" to={consoleHref}>
-              {user ? t("home.ctaConsole") : t("home.ctaStart")}
-            </Link>
-            <Link className="btn" to="/docs">
-              {t("home.ctaDocs")}
-            </Link>
+          <div className="home-hero-copy">
+            <p className="home-kicker">{t("home.badge")}</p>
+            <h1>
+              {t("home.heroTitleLead")}
+              <em className="home-hero-em">{t("home.heroTitleEm")}</em>
+            </h1>
+            <p className="home-hero-lead">{t("home.heroLead")}</p>
+            <div className="home-cta">
+              <Link className="btn btn-primary" to={consoleHref}>
+                {user ? t("home.ctaConsole") : t("home.ctaStart")}
+              </Link>
+              <Link className="btn" to="/docs">
+                {t("home.ctaDocs")}
+              </Link>
+            </div>
           </div>
+          <figure className="home-terminal">
+            <div className="home-terminal-bar">
+              <span className="home-terminal-dots" aria-hidden="true">
+                <i />
+                <i />
+                <i />
+              </span>
+              <span className="home-terminal-title">~ — sh</span>
+              <CopyButton value={terminalCode} compact label={t("common.copy")} />
+            </div>
+            <pre>
+              <code>
+                {terminalLines.map((line) => (
+                  <span className={`home-terminal-${line.kind}`} key={line.id}>
+                    {line.text || "\u00A0"}
+                  </span>
+                ))}
+              </code>
+            </pre>
+            <figcaption>{t("home.quickstartDesc")}</figcaption>
+          </figure>
         </section>
 
-        <div className="home-metrics">
-          <div className="home-metric">
+        <ul className="home-facts" aria-label={t("home.factsLabel")}>
+          <li className="home-fact">
             <strong>{models?.length ?? dash}</strong>
-            <span>{t("home.metricModels")}</span>
-          </div>
-          <div className="home-metric">
+            <span className="home-fact-label">{t("home.metricModels")}</span>
+          </li>
+          <li className="home-fact">
             <strong>{providers.length > 0 ? providers.length : dash}</strong>
-            <span>{t("home.metricProviders")}</span>
-          </div>
-          <div className="home-metric">
+            <span className="home-fact-label">{t("home.metricProviders")}</span>
+          </li>
+          <li className="home-fact">
             <strong>100%</strong>
-            <span>{t("home.metricCompat")}</span>
-          </div>
-          <div className="home-metric">
+            <span className="home-fact-label">{t("home.metricCompat")}</span>
+          </li>
+          <li className="home-fact">
             <strong>MIT</strong>
-            <span>{t("home.metricLicense")}</span>
-          </div>
-        </div>
-
-        <section className="home-features" aria-label={t("home.featuresLabel")}>
-          {(
-            [
-              { icon: "api", title: "home.feature1Title", body: "home.feature1Body" },
-              { icon: "route", title: "home.feature2Title", body: "home.feature2Body" },
-              { icon: "billing", title: "home.feature3Title", body: "home.feature3Body" },
-              { icon: "shield", title: "home.feature4Title", body: "home.feature4Body" },
-            ] as const
-          ).map((feature) => (
-            <article className="home-feature" key={feature.title}>
-              <FeatureIcon name={feature.icon} />
-              <h3>{t(feature.title)}</h3>
-              <p>{t(feature.body)}</p>
-            </article>
-          ))}
-        </section>
+            <span className="home-fact-label">{t("home.metricLicense")}</span>
+          </li>
+        </ul>
 
         <section className="home-section" aria-label={t("home.modelsTitle")}>
           <div className="home-section-head">
             <div>
+              <p className="home-section-kicker">{t("home.catalogLabel")}</p>
               <h2>{t("home.modelsTitle")}</h2>
               <p>{t("home.modelsDesc")}</p>
             </div>
@@ -185,77 +174,122 @@ export function HomePage() {
             </Link>
           </div>
           {featured.length > 0 && (
-            <div className="home-model-grid">
-              {featured.map((model) => {
-                const brand = brandAssets.get(model.owner_brand_asset_id);
-                return (
-                  <article className="home-model-card" key={model.id}>
-                    <div className="home-model-head">
-                      <BrandMark
-                        assetUrl={brand?.display_asset_url}
-                        fallback={model.owner}
-                        alt={brand?.name || model.owner}
-                      />
-                      <div className="home-model-title">
-                        <h3>{model.display_name}</h3>
-                        <span>{model.owner}</span>
-                      </div>
-                    </div>
-                    <dl className="home-model-stats">
-                      <div>
-                        <dt>{t("home.modelContext")}</dt>
-                        <dd>{formatModelLimit(model.context_window_tokens)}</dd>
-                      </div>
-                      <div>
-                        <dt>{t("models.billingInput")}</dt>
-                        <dd>{formatUsd(model.billing.input_usd_per_million_tokens)}</dd>
-                      </div>
-                      <div>
-                        <dt>{t("models.billingOutput")}</dt>
-                        <dd>{formatUsd(model.billing.output_usd_per_million_tokens)}</dd>
-                      </div>
-                    </dl>
-                  </article>
-                );
-              })}
+            <div className="home-table-wrap">
+              <table className="home-table">
+                <thead>
+                  <tr>
+                    <th className="home-table-head-cell">{t("home.tableModel")}</th>
+                    <th className="home-table-head-cell">{t("home.tableProvider")}</th>
+                    <th className="home-table-head-cell">{t("models.contextLabel")}</th>
+                    <th className="home-table-head-cell num">{t("models.billingInput")}</th>
+                    <th className="home-table-head-cell num">{t("models.billingOutput")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {featured.map((model) => {
+                    const brand = brandAssets.get(model.owner_brand_asset_id);
+                    return (
+                      <tr className="home-table-row" key={model.id}>
+                        <td className="home-table-cell">
+                          <div className="home-table-model">
+                            <strong>{model.display_name}</strong>
+                            <span className="home-table-model-id">{model.id}</span>
+                          </div>
+                        </td>
+                        <td className="home-table-cell">
+                          <span className="home-table-provider">
+                            <BrandMark
+                              assetUrl={brand?.display_asset_url}
+                              fallback={model.owner}
+                              alt={brand?.name || model.owner}
+                            />
+                            {model.owner}
+                          </span>
+                        </td>
+                        <td className="home-table-cell num">
+                          {formatModelLimit(model.context_window_tokens)}
+                        </td>
+                        <td className="home-table-cell num">
+                          {formatUsd(model.billing.input_usd_per_million_tokens)}
+                        </td>
+                        <td className="home-table-cell num">
+                          {formatUsd(model.billing.output_usd_per_million_tokens)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
           {providers.length > 0 && (
-            <ul className="home-providers" aria-label={t("home.providersLabel")}>
+            <p className="home-providers">
+              <span className="home-providers-label">{t("home.providersLabel")}</span>
               {providers.map((provider) => {
                 const brand = brandAssets.get(provider.assetId);
                 return (
-                  <li className="home-provider" key={provider.owner}>
+                  <span className="home-provider" key={provider.owner}>
                     {brand?.display_asset_url ? (
                       <img src={brand.display_asset_url} alt="" loading="lazy" />
                     ) : (
                       <span aria-hidden="true">{(brand?.fallback_label || provider.owner).slice(0, 1)}</span>
                     )}
                     <span>{brand?.name || provider.owner}</span>
-                  </li>
+                  </span>
                 );
               })}
-            </ul>
+            </p>
           )}
         </section>
 
-        <section className="home-quickstart" id="quickstart">
-          <h2>{t("home.quickstartTitle")}</h2>
-          <p>{t("home.quickstartDesc")}</p>
-          <div className="home-code">
-            <div className="home-code-head">
-              <span>{code.label}</span>
-              <CopyButton value={code.code} label={t("common.copy")} compact />
+        <section className="home-section" aria-label={t("home.surfaceTitle")}>
+          <div className="home-section-head">
+            <div>
+              <p className="home-section-kicker">{t("home.surfaceLabel")}</p>
+              <h2>{t("home.surfaceTitle")}</h2>
+              <p>{t("home.surfaceDesc")}</p>
             </div>
-            <pre>
-              <code>{code.code}</code>
-            </pre>
+          </div>
+          <div className="home-endpoints">
+            {HOME_ENDPOINTS.map((endpoint) => (
+              <div className="home-endpoint" key={endpoint.path}>
+                <code>
+                  <span className="home-endpoint-method">POST</span> {endpoint.path}
+                </code>
+                <p>{t(endpoint.descKey)}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="home-section" aria-label={t("home.featuresLabel")}>
+          <div className="home-section-head">
+            <div>
+              <p className="home-section-kicker">{t("home.featuresLabel")}</p>
+              <h2>{t("home.whyTitle")}</h2>
+            </div>
+          </div>
+          <div className="home-feature-list">
+            {(
+              [
+                { title: "home.feature1Title", body: "home.feature1Body" },
+                { title: "home.feature2Title", body: "home.feature2Body" },
+                { title: "home.feature3Title", body: "home.feature3Body" },
+                { title: "home.feature4Title", body: "home.feature4Body" },
+              ] as const
+            ).map((feature) => (
+              <article className="home-feature" key={feature.title}>
+                <h3>{t(feature.title)}</h3>
+                <p>{t(feature.body)}</p>
+              </article>
+            ))}
           </div>
         </section>
 
         <section className="home-section" aria-label={t("home.stepsLabel")}>
           <div className="home-section-head">
             <div>
+              <p className="home-section-kicker">{t("home.stepsLabel")}</p>
               <h2>{t("home.stepsTitle")}</h2>
               <p>{t("home.stepsDesc")}</p>
             </div>
@@ -280,8 +314,10 @@ export function HomePage() {
         </section>
 
         <section className="home-final">
-          <h2>{t("home.finalTitle")}</h2>
-          <p>{t("home.finalBody")}</p>
+          <div className="home-final-copy">
+            <h2>{t("home.finalTitle")}</h2>
+            <p>{t("home.finalBody")}</p>
+          </div>
           <div className="home-cta">
             <Link className="btn btn-primary" to={consoleHref}>
               {user ? t("home.ctaConsole") : t("home.ctaStart")}

@@ -29,11 +29,13 @@ const de: Dictionary = {
     ctaConsole: "Konsole öffnen",
     ctaDocs: "Dokumentation lesen",
     ctaModels: "Modelle ansehen",
+    factsLabel: "Kernzahlen",
     metricModels: "Modelle",
     metricProviders: "Anbieter",
     metricCompat: "OpenAI-kompatibel",
     metricLicense: "Open-Source-Lizenz",
     featuresLabel: "Kernfunktionen",
+    whyTitle: "Gebaut wie Infrastruktur",
     feature1Title: "OpenAI-kompatible API",
     feature1Body:
       "Bestehende OpenAI-SDKs und Tools bleiben unverändert — baseURL austauschen, fertig. Streaming, Tool-Aufrufe, Embeddings und die Responses-Schnittstelle funktionieren wie zuvor.",
@@ -46,13 +48,24 @@ const de: Dictionary = {
     feature4Title: "Self-hosted, deine Daten",
     feature4Body:
       "Mit einer einzigen SQLite-Datei starten; auf PostgreSQL oder Cloudflare Workers wachsen. Prompts und Antworten landen standardmäßig nie auf der Festplatte, Schlüssel liegen nur als Hash.",
+    catalogLabel: "Katalog",
     modelsTitle: "Modelle und Preise",
     modelsDesc:
       "Ein Gateway, das die Grenzmodelle aller Anbieter verbindet. Transparente Preise, Abrechnung nach tatsächlicher Nutzung.",
     modelsLink: "Alle Modelle ansehen",
+    tableModel: "Modell",
+    tableProvider: "Anbieter",
     modelContext: "Kontext",
     providersLabel: "Unterstützte Modellanbieter",
-    quickstartTitle: "Schnellstart",
+    surfaceLabel: "API-Oberfläche",
+    surfaceTitle: "Drei Endpunkte, keine Überraschungen",
+    surfaceDesc:
+      "Alles, was das Gateway heute bereitstellt. Nicht unterstützte Routen antworten mit einem klaren 404 — nichts wird stillschweigend nach oben weitergeleitet.",
+    endpointChatDesc:
+      "Streaming, Tool-Aufrufe, Vision-Teile und JSON-Modus — alles, was das OpenAI-SDK sendet.",
+    endpointEmbeddingsDesc: "Text-Embeddings für Vektor-Workloads, abgerechnet nur nach Input-Tokens.",
+    endpointResponsesDesc:
+      "Die Responses-Schnittstelle, überbrückt auf dieselbe Routing- und Abrechnungspipeline.",
     quickstartDesc: "baseURL auf dein Gateway zeigen — nichts anderes am Code ändert sich.",
     stepsLabel: "Erste Schritte",
     stepsTitle: "Integration in drei Schritten",

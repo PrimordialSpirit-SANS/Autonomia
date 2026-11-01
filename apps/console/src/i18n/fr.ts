@@ -29,11 +29,13 @@ const fr: Dictionary = {
     ctaConsole: "Ouvrir la console",
     ctaDocs: "Lire la documentation",
     ctaModels: "Voir les modèles",
+    factsLabel: "Chiffres clés",
     metricModels: "modèles",
     metricProviders: "fournisseurs",
     metricCompat: "compatible OpenAI",
     metricLicense: "licence open source",
     featuresLabel: "Fonctions clés",
+    whyTitle: "Conçu comme une infrastructure",
     feature1Title: "API compatible OpenAI",
     feature1Body:
       "Gardez vos SDK OpenAI et vos outils existants — changez baseURL et c'est fait. Streaming, appels d'outils, embeddings et interface responses fonctionnent comme avant.",
@@ -46,13 +48,24 @@ const fr: Dictionary = {
     feature4Title: "Auto-hébergé, vos données",
     feature4Body:
       "Commencez avec un simple fichier SQLite ; évoluez vers PostgreSQL ou Cloudflare Workers. Prompts et réponses ne touchent jamais le disque par défaut, et les clés ne sont stockées qu'en hachage.",
+    catalogLabel: "Catalogue",
     modelsTitle: "Modèles et tarifs",
     modelsDesc:
       "Une passerelle reliant les modèles de pointe de chaque fournisseur. Tarifs publics, facturés à l'usage réel.",
     modelsLink: "Voir tous les modèles",
+    tableModel: "Modèle",
+    tableProvider: "Fournisseur",
     modelContext: "Contexte",
     providersLabel: "Fournisseurs de modèles pris en charge",
-    quickstartTitle: "Démarrage rapide",
+    surfaceLabel: "Surface d'API",
+    surfaceTitle: "Trois points de terminaison, aucune surprise",
+    surfaceDesc:
+      "Tout ce que la passerelle sert aujourd'hui. Les routes non prises en charge répondent par un 404 précis — rien n'est transmis silencieusement en amont.",
+    endpointChatDesc:
+      "Streaming, appels d'outils, parties vision et mode JSON — tout ce que le SDK OpenAI envoie.",
+    endpointEmbeddingsDesc:
+      "Embeddings de texte pour les charges vectorielles, facturés uniquement sur les tokens d'entrée.",
+    endpointResponsesDesc: "L'interface Responses, reliée au même pipeline de routage et de facturation.",
     quickstartDesc: "Pointez baseURL vers votre passerelle — rien d'autre ne change dans votre code.",
     stepsLabel: "Premiers pas",
     stepsTitle: "Intégration en trois étapes",

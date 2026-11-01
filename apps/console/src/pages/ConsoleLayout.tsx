@@ -1,5 +1,6 @@
 import React from "react";
 import { Link, Navigate, NavLink, Outlet, useNavigate } from "react-router-dom";
+import { ErrorBoundary } from "../components/ErrorBoundary";
 import { AutonomiaIcon } from "../components/AutonomiaIcon";
 import { LanguageSwitcher } from "../components/LanguageSwitcher";
 import { useSession } from "../components/session";
@@ -163,7 +164,10 @@ function ConsoleShell({ user }: { user: AutonomiaConsoleUser }) {
       </aside>
       <main className="main">
         <div className="main-inner">
-          <Outlet />
+          {/* F-08:路由內的崩潰就地呈現,不吞掉側邊欄等外框 */}
+          <ErrorBoundary variant="route">
+            <Outlet />
+          </ErrorBoundary>
         </div>
       </main>
     </div>
@@ -210,7 +214,9 @@ function PublicShell() {
         </nav>
       </header>
       <main className="home-main">
-        <Outlet />
+        <ErrorBoundary variant="route">
+          <Outlet />
+        </ErrorBoundary>
       </main>
       <footer className="home-footer">
         <span>

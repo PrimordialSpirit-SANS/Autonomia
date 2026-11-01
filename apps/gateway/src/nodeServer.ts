@@ -9,7 +9,10 @@ import { serve } from "@hono/node-server";
 import dotenv from "dotenv";
 import { createApp } from "./app.ts";
 import type { AutonomiaRuntimeEnv } from "./types.ts";
-import { assertAutonomiaConfigBundleAtStartup } from "./utils/configGuard.ts";
+import {
+  assertAutonomiaConfigBundleAtStartup,
+  warnOnMissingAutonomiaSecrets,
+} from "./utils/configGuard.ts";
 import { dbQuery, installNodeAutonomiaDbAdapter } from "./utils/db.ts";
 import { logAutonomiaEvent } from "./utils/logger.ts";
 import { runAutonomiaMaintenance } from "./utils/maintenance.ts";
@@ -66,6 +69,9 @@ function socketRemoteAddress(incoming: unknown): string {
 // 配置與 GC 的浪費。env 為 process.env 的活引用,設定仍即時生效。
 // FN-7 fix:啟動時強制驗證設定檔(原本只有測試會驗證),壞設定 fail-fast。
 assertAutonomiaConfigBundleAtStartup();
+// S-21 fix:已啟用但 JWT_SECRET / pepper 缺失或過短時輸出啟動警告
+// (行為本身 fail-closed,但原本連一條日誌都沒有)。
+warnOnMissingAutonomiaSecrets(env as unknown as Record<string, unknown>);
 const app = createApp(env);
 
 // /metrics 是 Node 拓撲限定的維運端點(Prometheus 文字格式):程序內計數器

@@ -9,13 +9,17 @@ import {
   resolveQuarantinedAutonomiaReservations,
 } from "./aiBilling.ts";
 import { cleanupAutonomiaIdempotentReplays } from "./aiIdempotency.ts";
-import { reconcileAutonomiaProviderInFlight } from "./aiProviderPool.ts";
+import {
+  cleanupAutonomiaProviderLeases,
+  reconcileAutonomiaProviderInFlight,
+} from "./aiProviderPool.ts";
 
 export async function runAutonomiaMaintenance(env: AutonomiaRuntimeEnv): Promise<{
   staleReservations: number;
   quarantinedReservations: number;
   expiredReplays: number;
   inFlightReconciled: number;
+  providerLeasesCleaned: number;
 }> {
   const limit = Number(env?.AUTONOMIA_RECONCILE_LIMIT) || 50;
   await cleanupAutonomiaRateLimitBuckets(env);
@@ -28,10 +32,15 @@ export async function runAutonomiaMaintenance(env: AutonomiaRuntimeEnv): Promise
   const inFlightReconciled = await reconcileAutonomiaProviderInFlight(env)
     .then((reconciled: Array<{ credentialId: string }>) => reconciled.length)
     .catch(() => 0);
+  // F-03 修復:清理供應商租約表——release 僅標記 released_at,從不刪列
+  // 的話,每筆推理請求 1~8 列永久留存,與金額資料同檔無限膨脹;已釋放列
+  // 保留 24 小時供診斷。失敗不阻斷其他工作,下個週期再試。
+  const providerLeasesCleaned = await cleanupAutonomiaProviderLeases(env).catch(() => 0);
   return {
     staleReservations: stale.length,
     quarantinedReservations: quarantined.length,
     expiredReplays,
     inFlightReconciled,
+    providerLeasesCleaned,
   };
 }

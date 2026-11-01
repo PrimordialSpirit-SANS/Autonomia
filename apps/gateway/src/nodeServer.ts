@@ -9,10 +9,7 @@ import { serve } from "@hono/node-server";
 import dotenv from "dotenv";
 import { createApp } from "./app.ts";
 import type { AutonomiaRuntimeEnv } from "./types.ts";
-import {
-  assertAutonomiaConfigBundleAtStartup,
-  warnOnMissingAutonomiaSecrets,
-} from "./utils/configGuard.ts";
+import { assertAutonomiaConfigBundleAtStartup, warnOnMissingAutonomiaSecrets } from "./utils/configGuard.ts";
 import { dbQuery, installNodeAutonomiaDbAdapter } from "./utils/db.ts";
 import { logAutonomiaEvent } from "./utils/logger.ts";
 import { runAutonomiaMaintenance } from "./utils/maintenance.ts";

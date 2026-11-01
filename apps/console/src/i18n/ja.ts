@@ -81,7 +81,8 @@ const ja: Dictionary = {
     quickstart: "クイックスタート",
     balance: "残高 {amount}",
     logout: "ログアウト",
-    logoutFailed: "ログアウトが完了しませんでした。セッション cookie はまだ有効です。もう一度お試しください。",
+    logoutFailed:
+      "ログアウトが完了しませんでした。セッション cookie はまだ有効です。もう一度お試しください。",
     home: "ホーム",
     docs: "ドキュメント",
     login: "ログイン",
@@ -390,10 +391,13 @@ const ja: Dictionary = {
     authentication_required: "Autonomia を使用するには先にログインしてください。",
     insufficient_scope: "この API キーには必要な Autonomia 権限がありません。",
     access_denied: "この Autonomia 機能は現在利用できません。",
-    csrf_token_invalid: "クロスサイトリクエストが拒否されました(CSRF)。ページを再読み込みしてください。解消しない場合はゲートウェイの FRONTEND_ORIGINS を確認してください。",
-    origin_forbidden: "リクエスト元が許可されていません。このコンソールのオリジンをゲートウェイの FRONTEND_ORIGINS に追加してください。",
+    csrf_token_invalid:
+      "クロスサイトリクエストが拒否されました(CSRF)。ページを再読み込みしてください。解消しない場合はゲートウェイの FRONTEND_ORIGINS を確認してください。",
+    origin_forbidden:
+      "リクエスト元が許可されていません。このコンソールのオリジンをゲートウェイの FRONTEND_ORIGINS に追加してください。",
     unexpectedError: "予期しないエラー",
-    unexpectedErrorBody: "ページの表示中に問題が発生しました。再読み込みすると利用を続けられます。サーバー上のデータには影響しません。",
+    unexpectedErrorBody:
+      "ページの表示中に問題が発生しました。再読み込みすると利用を続けられます。サーバー上のデータには影響しません。",
     reloadPage: "ページを再読み込み",
     model_not_found: "指定された Autonomia モデルが見つかりません。",
     model_not_allowed: "この API キーは指定された Autonomia モデルを利用できません。",

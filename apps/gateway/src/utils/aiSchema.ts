@@ -9,9 +9,7 @@ function databaseKey(env: AutonomiaRuntimeEnv) {
   // —— 涵蓋 AUTONOMIA_DB_PATH。修復前只認 DATABASE_URL:單一程序服務兩個
   // SQLite 路徑時,第二個路徑的就緒檢查被第一個路徑的快取短路,查詢打到
   // 未遷移的資料庫並回 500(SN-13 修的是其他模組,此處是同一模式的漏網)。
-  return (
-    env?.DATABASE_URL?.trim() || env?.AUTONOMIA_DB_PATH?.trim() || "unconfigured-main"
-  );
+  return env?.DATABASE_URL?.trim() || env?.AUTONOMIA_DB_PATH?.trim() || "unconfigured-main";
 }
 
 export function ensureAiSchema(env: AutonomiaRuntimeEnv) {

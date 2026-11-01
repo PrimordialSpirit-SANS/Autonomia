@@ -193,15 +193,17 @@ test("BEGIN IMMEDIATE failure must clear the txOpen flag instead of wedging the 
 
     // 旗標必須已被清除:非交易查詢立即可用。修復前此查詢會永久排隊,
     // 以 2 秒逾時把「卡死」轉成明確的測試失敗而非整個套件掛起。
-    const probe = (await Promise.race([
-      nodeDbQuery(env as any, "SELECT COUNT(*) AS n FROM s08_probe"),
-      new Promise((_, reject) =>
-        setTimeout(
-          () => reject(new Error("non-transactional queries are wedged after a failed BEGIN (S-08)")),
-          2_000,
+    const probe = (
+      (await Promise.race([
+        nodeDbQuery(env as any, "SELECT COUNT(*) AS n FROM s08_probe"),
+        new Promise((_, reject) =>
+          setTimeout(
+            () => reject(new Error("non-transactional queries are wedged after a failed BEGIN (S-08)")),
+            2_000,
+          ),
         ),
-      ),
-    ]) as any).rows;
+      ])) as any
+    ).rows;
     assert.equal(Number(probe[0]?.n ?? 0), 0, "failed transaction must not leave committed rows");
   } finally {
     (DatabaseSync.prototype as any).exec = originalExec;

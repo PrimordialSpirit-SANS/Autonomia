@@ -484,7 +484,10 @@ test("lease bookkeeping failure after provider success never repeats inference",
 test("cleanupExpiredLeases removes crashed and past-retention rows, keeps active and recent ones (F-03)", async () => {
   assert.match(AUTONOMIA_PROVIDER_POOL_SQL.cleanupExpiredLeases, /DELETE FROM ai_provider_credential_leases/);
   assert.match(AUTONOMIA_PROVIDER_POOL_SQL.cleanupExpiredLeases, /expires_at <= \? AND released_at IS NULL/);
-  assert.match(AUTONOMIA_PROVIDER_POOL_SQL.cleanupExpiredLeases, /released_at IS NOT NULL AND released_at <= \?/);
+  assert.match(
+    AUTONOMIA_PROVIDER_POOL_SQL.cleanupExpiredLeases,
+    /released_at IS NOT NULL AND released_at <= \?/,
+  );
 
   const { query } = createSqliteTestDb();
   await migrateAutonomiaSchema(query);
@@ -512,7 +515,11 @@ test("cleanupExpiredLeases removes crashed and past-retention rows, keeps active
   assert.ok(crashedClaim && activeClaim && recentReleaseClaim);
 
   // 已釋放(近期):released_at = 現在,保留供診斷。
-  await store.release({ leaseId: recentReleaseClaim.leaseId, success: true, selection: crashedClaim.selection });
+  await store.release({
+    leaseId: recentReleaseClaim.leaseId,
+    success: true,
+    selection: crashedClaim.selection,
+  });
   // 已釋放(超過保留期):released_at = 48 小時前,應被清除。
   const oldReleaseClaim: any = await store.claim({
     poolId: "cloudflare-workers-ai-production",

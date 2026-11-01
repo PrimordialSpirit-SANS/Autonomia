@@ -151,10 +151,7 @@ export function resolvePgSslOptions(
 }
 
 /** S-03:「加密但不驗證身分」且對象是公開主機 —— 供啟動警告與測試釘死。 */
-export function isInsecurePublicPgTls(
-  connectionString: string,
-  sslOption: AutonomiaPgSslOption,
-): boolean {
+export function isInsecurePublicPgTls(connectionString: string, sslOption: AutonomiaPgSslOption): boolean {
   if (sslOption === false) return false;
   if (sslOption.rejectUnauthorized === true) return false;
   let host = "";

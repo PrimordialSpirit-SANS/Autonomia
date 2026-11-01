@@ -335,7 +335,11 @@ export function KeysPage() {
               >
                 {t("keys.rpmUseDefault")}
               </button>
-              <button type="button" className={rpmMode === "custom" ? "active" : ""} onClick={() => setRpmMode("custom")}>
+              <button
+                type="button"
+                className={rpmMode === "custom" ? "active" : ""}
+                onClick={() => setRpmMode("custom")}
+              >
                 {t("keys.setCustom")}
               </button>
             </fieldset>

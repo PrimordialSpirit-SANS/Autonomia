@@ -84,7 +84,8 @@ const de: Dictionary = {
     quickstart: "Schnellstart",
     balance: "Guthaben {amount}",
     logout: "Abmelden",
-    logoutFailed: "Die Abmeldung wurde nicht abgeschlossen — das Sitzungs-Cookie ist noch aktiv. Bitte erneut versuchen.",
+    logoutFailed:
+      "Die Abmeldung wurde nicht abgeschlossen — das Sitzungs-Cookie ist noch aktiv. Bitte erneut versuchen.",
     home: "Startseite",
     docs: "Dokumentation",
     login: "Anmelden",
@@ -403,10 +404,13 @@ const de: Dictionary = {
     authentication_required: "Melden Sie sich zuerst an, um Autonomia zu verwenden.",
     insufficient_scope: "Dieser API-Schlüssel verfügt nicht über die erforderliche Autonomia-Berechtigung.",
     access_denied: "Diese Autonomia-Funktion ist derzeit nicht verfügbar.",
-    csrf_token_invalid: "Cross-Site-Anfrage abgelehnt (CSRF) — bitte laden Sie die Seite neu; falls es bestehen bleibt, prüfen Sie FRONTEND_ORIGINS am Gateway.",
-    origin_forbidden: "Anfrage-Ursprung nicht erlaubt — fügen Sie die Herkunft dieser Konsole zu FRONTEND_ORIGINS am Gateway hinzu.",
+    csrf_token_invalid:
+      "Cross-Site-Anfrage abgelehnt (CSRF) — bitte laden Sie die Seite neu; falls es bestehen bleibt, prüfen Sie FRONTEND_ORIGINS am Gateway.",
+    origin_forbidden:
+      "Anfrage-Ursprung nicht erlaubt — fügen Sie die Herkunft dieser Konsole zu FRONTEND_ORIGINS am Gateway hinzu.",
     unexpectedError: "Unerwarteter Fehler",
-    unexpectedErrorBody: "Beim Rendern dieser Seite ist ein Problem aufgetreten. Laden Sie die Seite neu, um fortzufahren — Ihre Daten sind serverseitig sicher.",
+    unexpectedErrorBody:
+      "Beim Rendern dieser Seite ist ein Problem aufgetreten. Laden Sie die Seite neu, um fortzufahren — Ihre Daten sind serverseitig sicher.",
     reloadPage: "Seite neu laden",
     model_not_found: "Das angeforderte Autonomia-Modell wurde nicht gefunden.",
     model_not_allowed: "Dieser API-Schlüssel darf das angeforderte Autonomia-Modell nicht verwenden.",

@@ -204,7 +204,10 @@ test("S-01: dummy hash iterations must follow AUTONOMIA_PBKDF2_ITERATIONS (anti-
 
   // 資料層(對照組):真實帳號的雜湊字串本身記錄設定值 10,000。
   const stored = await findUserPasswordHash(env, "timing@example.com");
-  assert.ok(stored?.startsWith("pbkdf2$10000$"), `real-account hash must embed configured iterations: ${stored}`);
+  assert.ok(
+    stored?.startsWith("pbkdf2$10000$"),
+    `real-account hash must embed configured iterations: ${stored}`,
+  );
 
   const loginRequest = (email: string, password: string) => ({
     method: "POST",

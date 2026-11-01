@@ -49,8 +49,12 @@ describe("normalizeAutonomiaError", () => {
       "origin_forbidden",
     );
     // 兩個新碼的 i18n 鍵必須存在(否則渲染為空字串)。
-    expect(normalizeAutonomiaError({ code: "csrf_token_invalid" }, { status: 403 }).message.length).toBeGreaterThan(0);
-    expect(normalizeAutonomiaError({ code: "origin_forbidden" }, { status: 403 }).message.length).toBeGreaterThan(0);
+    expect(
+      normalizeAutonomiaError({ code: "csrf_token_invalid" }, { status: 403 }).message.length,
+    ).toBeGreaterThan(0);
+    expect(
+      normalizeAutonomiaError({ code: "origin_forbidden" }, { status: 403 }).message.length,
+    ).toBeGreaterThan(0);
     // 未知/缺碼的 403 仍走原狀態碼 fallback(回歸保護)。
     expect(normalizeAutonomiaError(null, { status: 403, context: "developer" }).code).toBe("access_denied");
   });

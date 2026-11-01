@@ -85,7 +85,8 @@ const fr: Dictionary = {
     quickstart: "Démarrage rapide",
     balance: "Solde {amount}",
     logout: "Se déconnecter",
-    logoutFailed: "La déconnexion n'a pas abouti — le cookie de session est encore actif. Veuillez réessayer.",
+    logoutFailed:
+      "La déconnexion n'a pas abouti — le cookie de session est encore actif. Veuillez réessayer.",
     home: "Accueil",
     docs: "Documentation",
     login: "Se connecter",
@@ -200,7 +201,8 @@ const fr: Dictionary = {
     metaAllowlist: "Modèles : {value}",
     allowlistModelCount: "{count} autorisés",
     allowlistAllModels: "tous",
-    errorAllowlist: "La liste de modèles autorisés est invalide — uniquement des ids séparés par des virgules.",
+    errorAllowlist:
+      "La liste de modèles autorisés est invalide — uniquement des ids séparés par des virgules.",
     replayOffShort: "Désactivé",
     replayHours: "{hours} h",
     rotate: "Pivoter",
@@ -401,10 +403,13 @@ const fr: Dictionary = {
     authentication_required: "Connectez-vous d'abord pour utiliser Autonomia.",
     insufficient_scope: "Cette clé API ne dispose pas de l'autorisation Autonomia requise.",
     access_denied: "Cette fonctionnalité Autonomia est actuellement indisponible.",
-    csrf_token_invalid: "Requête intersite rejetée (CSRF) — actualisez la page ; si le problème persiste, vérifiez FRONTEND_ORIGINS sur la passerelle.",
-    origin_forbidden: "Origine de la requête non autorisée — ajoutez l'origine de cette console à FRONTEND_ORIGINS sur la passerelle.",
+    csrf_token_invalid:
+      "Requête intersite rejetée (CSRF) — actualisez la page ; si le problème persiste, vérifiez FRONTEND_ORIGINS sur la passerelle.",
+    origin_forbidden:
+      "Origine de la requête non autorisée — ajoutez l'origine de cette console à FRONTEND_ORIGINS sur la passerelle.",
     unexpectedError: "Erreur inattendue",
-    unexpectedErrorBody: "Un problème est survenu lors de l'affichage de cette page. Actualisez pour continuer — vos données sont en sécurité sur le serveur.",
+    unexpectedErrorBody:
+      "Un problème est survenu lors de l'affichage de cette page. Actualisez pour continuer — vos données sont en sécurité sur le serveur.",
     reloadPage: "Actualiser la page",
     model_not_found: "Le modèle Autonomia demandé est introuvable.",
     model_not_allowed: "Cette clé API n'est pas autorisée à utiliser le modèle Autonomia demandé.",

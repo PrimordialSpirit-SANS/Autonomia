@@ -9,10 +9,7 @@ import {
   resolveQuarantinedAutonomiaReservations,
 } from "./aiBilling.ts";
 import { cleanupAutonomiaIdempotentReplays } from "./aiIdempotency.ts";
-import {
-  cleanupAutonomiaProviderLeases,
-  reconcileAutonomiaProviderInFlight,
-} from "./aiProviderPool.ts";
+import { cleanupAutonomiaProviderLeases, reconcileAutonomiaProviderInFlight } from "./aiProviderPool.ts";
 
 export async function runAutonomiaMaintenance(env: AutonomiaRuntimeEnv): Promise<{
   staleReservations: number;

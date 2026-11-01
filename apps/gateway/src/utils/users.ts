@@ -35,7 +35,9 @@ export interface AutonomiaAccount {
  */
 export function configuredPbkdf2Iterations(env: AutonomiaRuntimeEnv): number {
   const configured = Number(env?.AUTONOMIA_PBKDF2_ITERATIONS);
-  return Number.isSafeInteger(configured) && configured >= 10_000 ? configured : AUTONOMIA_PASSWORD_ITERATIONS;
+  return Number.isSafeInteger(configured) && configured >= 10_000
+    ? configured
+    : AUTONOMIA_PASSWORD_ITERATIONS;
 }
 
 export async function hashPassword(password: string, env: AutonomiaRuntimeEnv): Promise<string> {

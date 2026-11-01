@@ -318,9 +318,7 @@ async function withMigrationTransaction<T>(query: any, fn: () => Promise<T>): Pr
 // SQLite 無 ADD COLUMN IF NOT EXISTS;識別 ALTER 語句以供執行器做自癒防護
 // (僅識別開發者撰寫的語句形狀,不插值任何外部輸入)。
 function sqliteAddColumnStatement(statement: string): boolean {
-  return /^ALTER\s+TABLE\s+[A-Za-z0-9_]+\s+ADD\s+COLUMN\s+[A-Za-z0-9_]+/i.test(
-    String(statement).trim(),
-  );
+  return /^ALTER\s+TABLE\s+[A-Za-z0-9_]+\s+ADD\s+COLUMN\s+[A-Za-z0-9_]+/i.test(String(statement).trim());
 }
 
 export async function migrateAutonomiaSchema(query: any) {

@@ -7,10 +7,10 @@ import {
   type AutonomiaPgLikePool,
   createAutonomiaPgAdapter,
   defaultPgPoolMax,
+  isInsecurePublicPgTls,
   isPrivatePgHost,
   normalizePgParam,
   postgresPlaceholders,
-  isInsecurePublicPgTls,
   resolvePgSslOptions,
 } from "../src/utils/db.pg.shared.ts";
 import { isWorkerPgRuntime, selectAutonomiaPgDriver } from "../src/utils/db.ts";

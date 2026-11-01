@@ -1,7 +1,7 @@
 import React from "react";
 import { Link, Navigate, NavLink, Outlet, useNavigate } from "react-router-dom";
-import { ErrorBoundary } from "../components/ErrorBoundary";
 import { AutonomiaIcon } from "../components/AutonomiaIcon";
+import { ErrorBoundary } from "../components/ErrorBoundary";
 import { LanguageSwitcher } from "../components/LanguageSwitcher";
 import { useSession } from "../components/session";
 import { Alert, StateBlock } from "../components/ui";

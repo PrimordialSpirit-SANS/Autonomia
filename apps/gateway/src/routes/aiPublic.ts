@@ -452,7 +452,13 @@ export async function handleAutonomiaChatCompletions(
           } else if (replaySink.frames.length > 0) {
             // 結算已完成,整串(含結尾 [DONE])落地供完成鍵重放。
             replaySink.push("data: [DONE]\n\n");
-            await saveReplayForPrepared(c.env, aiKey, prepared, "text/event-stream", replaySink.frames.join(""));
+            await saveReplayForPrepared(
+              c.env,
+              aiKey,
+              prepared,
+              "text/event-stream",
+              replaySink.frames.join(""),
+            );
           }
           controller.enqueue(encoder.encode("data: [DONE]\n\n"));
         } catch (error) {
@@ -693,7 +699,13 @@ export async function handleAutonomiaResponses(
               tombstone: true,
             });
           } else if (replaySink.frames.length > 0) {
-            await saveReplayForPrepared(c.env, aiKey, prepared, "text/event-stream", replaySink.frames.join(""));
+            await saveReplayForPrepared(
+              c.env,
+              aiKey,
+              prepared,
+              "text/event-stream",
+              replaySink.frames.join(""),
+            );
           }
         } catch (error) {
           try {

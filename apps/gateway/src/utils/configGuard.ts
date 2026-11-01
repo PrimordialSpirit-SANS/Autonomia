@@ -30,7 +30,12 @@ export function assertAutonomiaConfigBundleAtStartup(
  * healthz-first 契約(先起來、可診斷),警告讓維運在第一位使用者之前看到。
  */
 export function warnOnMissingAutonomiaSecrets(env: Record<string, unknown> = {}) {
-  if (String(env.AUTONOMIA_ENABLED || "").trim().toLowerCase() !== "true") return;
+  if (
+    String(env.AUTONOMIA_ENABLED || "")
+      .trim()
+      .toLowerCase() !== "true"
+  )
+    return;
   const jwtSecret = String(env.JWT_SECRET || "");
   if (jwtSecret.length < 32) {
     logAutonomiaEvent("warn", "autonomia_jwt_secret_missing_or_short", {

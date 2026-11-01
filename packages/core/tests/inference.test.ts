@@ -1784,14 +1784,18 @@ test("data:image URLs accept realistic inline images while https URLs stay cappe
         messages: [
           {
             role: "user",
-            content: [{ type: "image_url", image_url: { url: `data:image/png;base64,${"A".repeat(4 * 1024 * 1024 + 1)}` } }],
+            content: [
+              {
+                type: "image_url",
+                image_url: { url: `data:image/png;base64,${"A".repeat(4 * 1024 * 1024 + 1)}` },
+              },
+            ],
           },
         ],
       }),
       aiKey: aiKey(),
     }),
-    (error: any) =>
-      error.status === 400 && /data:image URLs must contain 1-4194304/.test(error.message),
+    (error: any) => error.status === 400 && /data:image URLs must contain 1-4194304/.test(error.message),
   );
 
   // https:// 外連 URL:8KB 上限維持(那是位址,不是酬載),訊息分開表述。
@@ -1801,7 +1805,9 @@ test("data:image URLs accept realistic inline images while https URLs stay cappe
         messages: [
           {
             role: "user",
-            content: [{ type: "image_url", image_url: { url: `https://example.com/${"a".repeat(9 * 1024)}.png` } }],
+            content: [
+              { type: "image_url", image_url: { url: `https://example.com/${"a".repeat(9 * 1024)}.png` } },
+            ],
           },
         ],
       }),
@@ -1828,7 +1834,7 @@ test("overlong model ids are rejected up front and never echoed in full (S-06)",
   );
 
   // 2) 200 字元內、目錄外:仍是 404 model_not_found,但回顯被截斷。
-  const missing = "autonomia/" + "y".repeat(150);
+  const missing = `autonomia/${"y".repeat(150)}`;
   await assert.rejects(
     prepareAutonomiaChatRequest({ body: body({ model: missing }), aiKey: aiKey() }),
     (error: any) => {

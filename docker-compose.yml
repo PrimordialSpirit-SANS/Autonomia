@@ -25,17 +25,26 @@ services:
       # The compose nginx proxy overwrites identity headers (see
       # deploy/nginx-console.conf), so trusting it is required for
       # per-client login rate limiting instead of one shared bucket
-      # (README: AUTONOMIA_TRUST_PROXY).
-      AUTONOMIA_TRUST_PROXY: "true"
+      # (README: AUTONOMIA_TRUST_PROXY). Default true fits THIS topology
+      # (gateway reachable only inside the compose network).
+      # S-04: overridable from .env — when you publish 8787 directly below,
+      # you MUST set AUTONOMIA_TRUST_PROXY=false in .env, otherwise every
+      # request can forge its source IP (cf-connecting-ip) and the login /
+      # signup rate limit collapses to one shared bucket per forged IP —
+      # unlimited password brute force and signup-bonus farming.
+      AUTONOMIA_TRUST_PROXY: "${AUTONOMIA_TRUST_PROXY:-true}"
       # The console is served from this compose network on port 8080.
-      FRONTEND_ORIGINS: "http://localhost:8080"
+      FRONTEND_ORIGINS: "${FRONTEND_ORIGINS:-http://localhost:8080}"
     env_file:
       - path: .env
         required: false
     volumes:
       - autonomia-data:/data
-    # Gateway stays on the compose network only; publish it directly (e.g.
-    # for SDK traffic without the console) by uncommenting:
+    # ⚠ S-04 WARNING: publishing 8787 directly bypasses the bundled nginx
+    # proxy. If you uncomment this, the traffic reaching the gateway is NOT
+    # coming from a trusted proxy — set AUTONOMIA_TRUST_PROXY=false in .env
+    # or attackers forge a fresh source IP per request and defeat the login
+    # rate limit entirely.
     # ports:
     #   - "8787:8787"
     healthcheck:

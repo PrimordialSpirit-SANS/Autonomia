@@ -93,7 +93,12 @@ Workers-specific caveats:
   build command `npm run build --workspace @autonomia/console`, output
   directory `apps/console/dist`, `VITE_AUTONOMIA_API_BASE` pointing at the
   Worker URL; set `FRONTEND_ORIGINS` on the Worker to the Pages origin.
-  SPA fallback (`apps/console/public/_redirects`) is included in the build.
+  SPA fallback (`apps/console/public/_redirects`) is included in the build,
+  and `apps/console/public/_headers` ships baseline security headers
+  (CSP, `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy`,
+  `Permissions-Policy`); on the cross-host topology append the gateway
+  origin to `connect-src` in that file. The nginx variant
+  (`deploy/nginx-console.conf`) carries the same headers.
   - SN-4 caveat: session cookies are `SameSite=Lax`, so a cross-site fetch
     from `*.pages.dev` to `*.workers.dev` (different sites under the public
     suffix list) never carries the cookie — the login response succeeds but

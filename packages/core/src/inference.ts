@@ -631,8 +631,25 @@ export async function prepareAutonomiaEmbeddingsRequest({
     ...(dimensions !== undefined ? { dimensions } : {}),
     ...(body.encoding_format !== undefined ? { encoding_format: encodingFormat } : {}),
   };
-  const estimatedInputTokens = estimateInputTokens({ input });
-  const reservedCostMicros = calculateReservationCostMicros(model, estimatedInputTokens, 0);
+  // F-02 修復:比照 chat 路徑,把「輸入估計」與「預留成本」包進防護——
+  // 超過模型 context 上限時 RangeError 必須轉為結構化 400
+  // context_length_exceeded;裸拋會被閘道錯誤映射改寫成 503
+  // service_unavailable(誤導重試與監控)。embeddings 的對應欄位是 input。
+  let estimatedInputTokens: ReturnType<typeof estimateInputTokens>;
+  let reservedCostMicros: ReturnType<typeof calculateReservationCostMicros>;
+  try {
+    estimatedInputTokens = estimateInputTokens({ input });
+    reservedCostMicros = calculateReservationCostMicros(model, estimatedInputTokens, 0);
+  } catch (error) {
+    if (error instanceof RangeError) {
+      throw invalidRequest(
+        "The request exceeds this Autonomia model context limit.",
+        "input",
+        "context_length_exceeded",
+      );
+    }
+    throw error;
+  }
   if (
     aiKey?.spend_limit_usd_micros !== null &&
     aiKey?.spend_limit_usd_micros !== undefined &&

@@ -228,3 +228,31 @@ test("embeddings base64 vectors and missing usage settle conservatively", async 
   assert.equal(settle[1].usageSource, "estimated");
   assert.equal(settle[1].outputTokens, 0);
 });
+
+// ── F-02 修復釘死:embeddings 超量輸入必須回 400 context_length_exceeded ──
+// 修復前:prepareAutonomiaEmbeddingsRequest 對超量輸入裸拋 RangeError
+// (無 status、無 code),閘道 publicProviderError 將其誤映射為 503
+// service_unavailable + Retry-After: 5,誤導客戶端重試與監控。
+test("embeddings input above model context limit returns structured 400, not a raw RangeError", async () => {
+  // 9KB 輸入 > text-embedding-3-small 的 8,191 token 上限
+  // (估計 = JSON 位元組數 + 常數開銷)。
+  const oversized = "x".repeat(9 * 1024);
+
+  await assert.rejects(
+    prepareAutonomiaEmbeddingsRequest({ body: embeddingsBody({ input: oversized }), aiKey: aiKey() }),
+    (error: any) => {
+      assert.ok(!(error instanceof RangeError), "must be a structured AutonomiaError, not a raw RangeError");
+      assert.equal(error.status, 400);
+      assert.equal(error.code, "context_length_exceeded");
+      assert.equal(error.param, "input");
+      return true;
+    },
+  );
+
+  // 對照組:合理輸入仍正常準備(回歸保護)。
+  const prepared = await prepareAutonomiaEmbeddingsRequest({
+    body: embeddingsBody({ input: "hello" }),
+    aiKey: aiKey(),
+  });
+  assert.equal(prepared.modelId, "autonomia/text-embedding-3-small");
+});

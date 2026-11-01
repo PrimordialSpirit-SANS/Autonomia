@@ -37,7 +37,18 @@ function createAutonomiaGate(env: AutonomiaRuntimeEnv) {
 export function createApp(env: AutonomiaRuntimeEnv = {}) {
   const app = new Hono<AutonomiaEnv>();
 
-  app.use("*", createCorsMiddleware());
+  // S-02 + S-22 fix:CORS 掛載點重整。
+  // 修復前:全域 credentialed CORS(app.use("*"))先註冊,Hono cors() 對
+  // OPTIONS 預檢一律短路回 204 —— 僅列於 AUTONOMIA_PUBLIC_ORIGINS 的來源
+  // 在預檢拿不到 ACAO,瀏覽器整合(API 遊樂場、文件站)整個靜默失效;
+  // 同時所有回應(含 /api/ai/v1、401、404)都噴
+  // Access-Control-Allow-Credentials: true 卻無 ACAO,徒增掃描噪音。
+  // 修復:credentialed CORS 只掛在實際以 cookie 會話呼叫的兩個前綴
+  // (/api/auth/* 與 /api/ai/developer/*,含帳號模式 playground);
+  // /api/ai/v1/*(Authorization bearer 金鑰、無 cookie)交給公開中介層
+  // 統一處理,預檢短路不再被攔走。
+  app.use("/api/auth/*", createCorsMiddleware());
+  app.use("/api/ai/developer/*", createCorsMiddleware());
 
   // /healthz 是維運探針,不受 AUTONOMIA_ENABLED fail-closed 閘門管轄:
   // 負載平衡器/監控需要它即使服務尚未啟用也能分辨「活著但未就緒」。

@@ -17,6 +17,7 @@ import {
   findUserById,
   findUserPasswordHash,
   hashPassword,
+  revokeAutonomiaSessions,
   verifyPassword,
 } from "../utils/users.ts";
 
@@ -566,6 +567,26 @@ authRoutes.post("/login", async (c: AutonomiaContext) => {
 });
 
 authRoutes.post("/logout", async (c: AutonomiaContext) => {
+  // S-20 修復:登出原本只刪 cookie、不撤銷伺服端會話 —— 被複製的
+  // autonomia_token 在「登出」後仍可用至自然到期(最長 30 天)。會話撤銷
+  // 機制(session_epoch,SEC-01)早已存在且有測試釘死,這裡把它接上登出:
+  // 驗證當前會話確實有效後 bump epoch,所有已簽發的 token(含被複製者)
+  // 隨即失效。撤銷失敗不擋登出:cookie 仍會刪除,錯誤進日誌由維運處理。
+  const secret = String(c.env?.JWT_SECRET || "");
+  const sessionToken = getCookie(c, AUTONOMIA_SESSION_COOKIE) || "";
+  const payload = secret.length >= 32 && sessionToken ? await verifyAutonomiaJwt(sessionToken, secret) : null;
+  if (payload?.sub) {
+    try {
+      const user = await findUserById(c.env, String(payload.sub));
+      if (user && !user.is_banned && (payload.epv ?? 0) === user.sessionEpoch) {
+        await revokeAutonomiaSessions(c.env, { userId: user.id });
+      }
+    } catch (error: any) {
+      logAutonomiaEvent("error", "autonomia_logout_revocation_failed", {
+        detail: String(error?.message || error),
+      });
+    }
+  }
   deleteCookie(c, AUTONOMIA_SESSION_COOKIE, { path: "/" });
   deleteCookie(c, AUTONOMIA_CSRF_COOKIE, { path: "/" });
   return c.json({ ok: true });

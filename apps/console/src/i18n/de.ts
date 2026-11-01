@@ -84,6 +84,7 @@ const de: Dictionary = {
     quickstart: "Schnellstart",
     balance: "Guthaben {amount}",
     logout: "Abmelden",
+    logoutFailed: "Die Abmeldung wurde nicht abgeschlossen — das Sitzungs-Cookie ist noch aktiv. Bitte erneut versuchen.",
     home: "Startseite",
     docs: "Dokumentation",
     login: "Anmelden",

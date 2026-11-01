@@ -77,6 +77,7 @@ const zhCN: Dictionary = {
     quickstart: "快速开始",
     balance: "余额 {amount}",
     logout: "退出登录",
+    logoutFailed: "登出未完成——会话 cookie 仍在生效,请再试一次。",
     home: "首页",
     docs: "文档",
     login: "登录",

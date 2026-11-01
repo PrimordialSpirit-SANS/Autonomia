@@ -85,6 +85,7 @@ const fr: Dictionary = {
     quickstart: "Démarrage rapide",
     balance: "Solde {amount}",
     logout: "Se déconnecter",
+    logoutFailed: "La déconnexion n'a pas abouti — le cookie de session est encore actif. Veuillez réessayer.",
     home: "Accueil",
     docs: "Documentation",
     login: "Se connecter",

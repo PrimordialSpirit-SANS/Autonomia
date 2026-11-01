@@ -81,6 +81,7 @@ export const en = {
     quickstart: "Quick start",
     balance: "Balance {amount}",
     logout: "Sign out",
+    logoutFailed: "Sign-out did not complete — the session cookie is still active. Please try again.",
     home: "Home",
     docs: "Docs",
     login: "Sign in",

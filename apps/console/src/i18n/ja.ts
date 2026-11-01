@@ -81,6 +81,7 @@ const ja: Dictionary = {
     quickstart: "クイックスタート",
     balance: "残高 {amount}",
     logout: "ログアウト",
+    logoutFailed: "ログアウトが完了しませんでした。セッション cookie はまだ有効です。もう一度お試しください。",
     home: "ホーム",
     docs: "ドキュメント",
     login: "ログイン",

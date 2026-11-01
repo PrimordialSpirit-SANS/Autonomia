@@ -4,7 +4,7 @@ import { ErrorBoundary } from "../components/ErrorBoundary";
 import { AutonomiaIcon } from "../components/AutonomiaIcon";
 import { LanguageSwitcher } from "../components/LanguageSwitcher";
 import { useSession } from "../components/session";
-import { StateBlock } from "../components/ui";
+import { Alert, StateBlock } from "../components/ui";
 import { type TranslationKey, useI18n } from "../i18n";
 import { logoutAutonomiaAccount } from "../lib/autonomia/api/autonomiaAuthApi";
 import type { AutonomiaConsoleUser } from "../lib/autonomia/types";
@@ -106,13 +106,18 @@ function ConsoleShell({ user }: { user: AutonomiaConsoleUser }) {
   const { t } = useI18n();
   const navigate = useNavigate();
 
+  // S-17 修復:登出失敗(網路閃斷、403、5xx)時 cookie 仍在 —— 不得假裝
+  // 已登出;顯示「登出未完成」讓使用者重試,成功才清空會話並跳轉。
+  const [logoutFailed, setLogoutFailed] = React.useState(false);
   const logout = async () => {
+    setLogoutFailed(false);
     try {
       await logoutAutonomiaAccount();
-    } finally {
       // 先清空 context,否則 /login 會因為殘留的 session 被彈回控制台。
       setUser(null);
       navigate("/login", { replace: true });
+    } catch {
+      setLogoutFailed(true);
     }
   };
 
@@ -164,6 +169,11 @@ function ConsoleShell({ user }: { user: AutonomiaConsoleUser }) {
       </aside>
       <main className="main">
         <div className="main-inner">
+          {logoutFailed && (
+            <div style={{ marginBottom: 12 }}>
+              <Alert tone="error">{t("nav.logoutFailed")}</Alert>
+            </div>
+          )}
           {/* F-08:路由內的崩潰就地呈現,不吞掉側邊欄等外框 */}
           <ErrorBoundary variant="route">
             <Outlet />

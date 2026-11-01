@@ -78,6 +78,7 @@ const zhTW: Dictionary = {
     quickstart: "快速開始",
     balance: "餘額 {amount}",
     logout: "登出",
+    logoutFailed: "登出未完成——會話 cookie 仍在生效,請再試一次。",
     home: "首頁",
     docs: "文件",
     login: "登入",

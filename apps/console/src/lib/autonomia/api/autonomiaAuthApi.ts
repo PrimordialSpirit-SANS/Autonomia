@@ -76,6 +76,10 @@ export async function registerAutonomiaAccount(
   return (payload?.user as AutonomiaConsoleUser | undefined) ?? null;
 }
 
+// S-17 修復:登出原為 fire-and-forget —— 伺服器端失敗(網路閃斷、403
+// origin 設定錯、5xx)時 cookie 並未刪除,UI 卻假裝已登出;下一次整頁載入
+// 又自動恢復登入。失敗必須讓呼叫端知道,由 UI 提示「登出未完成」。
 export async function logoutAutonomiaAccount(): Promise<void> {
-  await apiFetch("/auth/logout", { method: "POST" });
+  const response = await apiFetch("/auth/logout", { method: "POST" });
+  if (!response.ok) throw new AutonomiaAuthError(await readAuthError(response));
 }

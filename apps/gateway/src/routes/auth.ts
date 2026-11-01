@@ -351,13 +351,21 @@ function registrationDisabled(env: AutonomiaRuntimeEnv): boolean {
 }
 
 function signupBonusUsdMicros(env: AutonomiaRuntimeEnv): string {
+  const configured = env?.AUTONOMIA_SIGNUP_BONUS_USD;
+  if (configured === undefined || configured === null || String(configured).trim() === "") {
+    return parseUsdToMicros("5.00", "AUTONOMIA_SIGNUP_BONUS_USD").toString();
+  }
   try {
-    return parseUsdToMicros(
-      env?.AUTONOMIA_SIGNUP_BONUS_USD ?? "5.00",
-      "AUTONOMIA_SIGNUP_BONUS_USD",
-    ).toString();
-  } catch {
-    return "5000000";
+    return parseUsdToMicros(configured, "AUTONOMIA_SIGNUP_BONUS_USD").toString();
+  } catch (error: any) {
+    // S-09 修復:修復前解析失敗一律靜默回退 5 美元 —— 公開註冊(無信箱
+    // 驗證)的部署上,一個打錯的環境變數讓每個機器人帳號自動獲得 5 美元
+    // 推理額度且無任何信號。改為安全側 0 元 + 警告日誌。
+    logAutonomiaEvent("warn", "autonomia_signup_bonus_misconfigured", {
+      hint: "AUTONOMIA_SIGNUP_BONUS_USD could not be parsed; falling back to 0 USD (not 5.00)",
+      detail: String(error?.message || error),
+    });
+    return "0";
   }
 }
 

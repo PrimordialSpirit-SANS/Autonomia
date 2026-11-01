@@ -4,7 +4,7 @@ import { Hono } from "hono";
 import { createApp } from "../src/app.ts";
 import { ensureAutonomiaSchemaReady } from "../src/utils/bootstrap.ts";
 import { installNodeAutonomiaDbAdapter } from "../src/utils/db.ts";
-import { configuredPbkdf2Iterations, findUserPasswordHash } from "../src/utils/users.ts";
+import { configuredPbkdf2Iterations, findUserByEmail, findUserPasswordHash } from "../src/utils/users.ts";
 
 // 註冊防帳號枚舉的真實 DB 行為(時序等化 + 重複信箱隱匿):
 // - 預設:重複信箱回 202 受理訊息,不發 session、不揭露 email_taken。
@@ -238,4 +238,47 @@ test("S-01: dummy hash iterations must follow AUTONOMIA_PBKDF2_ITERATIONS (anti-
   // 正確密碼登入仍可用(10,000 迭代產生的雜湊可通過驗證)。
   const ok = await app.request("/api/auth/login", loginRequest("timing@example.com", "longenough1"));
   assert.equal(ok.status, 200);
+});
+
+// ── S-09 修復釘死:註冊贈點的解析失敗必須回退到安全側(0 元)─────
+// 修復前 catch 一律回傳 5 美元 —— 公開註冊部署上一個打錯的
+// AUTONOMIA_SIGNUP_BONUS_USD 讓每個機器人帳號自動獲得 5 美元且無信號。
+test("S-09: unparseable signup bonus falls back to 0 USD, not 5.00", async () => {
+  await installNodeAutonomiaDbAdapter();
+  const env = await createSchemaReadyEnv({
+    AUTONOMIA_SIGNUP_ANTI_ENUMERATION: "false",
+    AUTONOMIA_SIGNUP_BONUS_USD: "0.0.0",
+  });
+  const app = createTestApp(env);
+
+  const registered = await app.request(
+    "/api/auth/register",
+    registerRequest("bonus-typo@example.com", "bonus", "longenough1"),
+  );
+  assert.equal(registered.status, 201);
+  const account = await findUserByEmail(env, "bonus-typo@example.com");
+  assert.equal(account?.balanceUsdMicros, "0", "misconfigured bonus must fall back to 0");
+
+  // 合法值照常生效。
+  const validEnv = await createSchemaReadyEnv({
+    AUTONOMIA_SIGNUP_ANTI_ENUMERATION: "false",
+    AUTONOMIA_SIGNUP_BONUS_USD: "1.23",
+  });
+  const validApp = createTestApp(validEnv);
+  const ok = await validApp.request(
+    "/api/auth/register",
+    registerRequest("bonus-valid@example.com", "bonus", "longenough1"),
+  );
+  assert.equal(ok.status, 201);
+  assert.equal((await findUserByEmail(validEnv, "bonus-valid@example.com"))?.balanceUsdMicros, "1230000");
+
+  // 未設定:保留 5 美元預設(回歸保護)。
+  const defaultEnv = await createSchemaReadyEnv({ AUTONOMIA_SIGNUP_ANTI_ENUMERATION: "false" });
+  const defaultApp = createTestApp(defaultEnv);
+  const byDefault = await defaultApp.request(
+    "/api/auth/register",
+    registerRequest("bonus-default@example.com", "bonus", "longenough1"),
+  );
+  assert.equal(byDefault.status, 201);
+  assert.equal((await findUserByEmail(defaultEnv, "bonus-default@example.com"))?.balanceUsdMicros, "5000000");
 });

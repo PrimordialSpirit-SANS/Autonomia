@@ -143,6 +143,11 @@ export interface AutonomiaKeyCreateOptions {
   expires_at?: string | null;
   spend_limit_usd?: string | null;
   idempotency_replay_ttl_seconds?: number;
+  // F-07 修復:後端(packages/core/src/apiKeys.ts)早已支援這三個金鑰屬性
+  // 且 INTEGRATIONS.md 教使用者設定;補進建立選項型別,讓控制台得以操作。
+  rpm_limit?: number;
+  max_in_flight?: number;
+  model_allowlist?: string[];
 }
 
 export interface AutonomiaKeyMutationResult {

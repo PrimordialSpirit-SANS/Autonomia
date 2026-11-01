@@ -38,6 +38,13 @@ export function KeysPage() {
   const [pointLimitValue, setPointLimitValue] = React.useState("50.00");
   const [replayMode, setReplayMode] = React.useState<"off" | "on">("off");
   const [replayHours, setReplayHours] = React.useState("24");
+  // F-07 修復:RPM / 併發 / 模型白名單 —— INTEGRATIONS.md 教使用者設定、
+  // 後端早已支援,但表單一直沒有這三個欄位。
+  const [rpmMode, setRpmMode] = React.useState<"default" | "custom">("default");
+  const [rpmValue, setRpmValue] = React.useState("60");
+  const [inFlightMode, setInFlightMode] = React.useState<"default" | "custom">("default");
+  const [inFlightValue, setInFlightValue] = React.useState("4");
+  const [allowlistValue, setAllowlistValue] = React.useState("");
   const [secret, setSecret] = React.useState("");
   const [busy, setBusy] = React.useState("");
   const [pendingRevoke, setPendingRevoke] = React.useState<AutonomiaApiKey | null>(null);
@@ -107,6 +114,37 @@ export function KeysPage() {
       replayTtlSeconds = Math.round(hours * 3600);
     }
 
+    // F-07:RPM / 併發 / 白名單驗證(範圍與後端 optionalBoundedInteger 一致)。
+    let rpmLimit: number | undefined;
+    if (rpmMode === "custom") {
+      const rpm = Number(rpmValue);
+      if (!Number.isSafeInteger(rpm) || rpm < 1 || rpm > 6000 || rpmValue.trim() === "") {
+        setError(t("keys.errorRange", { field: t("keys.rpmLabel"), min: 1, max: 6000 }));
+        return;
+      }
+      rpmLimit = rpm;
+    }
+    let maxInFlight: number | undefined;
+    if (inFlightMode === "custom") {
+      const inFlight = Number(inFlightValue);
+      if (!Number.isSafeInteger(inFlight) || inFlight < 1 || inFlight > 100 || inFlightValue.trim() === "") {
+        setError(t("keys.errorRange", { field: t("keys.inFlightLabel"), min: 1, max: 100 }));
+        return;
+      }
+      maxInFlight = inFlight;
+    }
+    let modelAllowlist: string[] | undefined;
+    if (allowlistValue.trim()) {
+      modelAllowlist = allowlistValue
+        .split(",")
+        .map((entry) => entry.trim())
+        .filter(Boolean);
+      if (!modelAllowlist.length || modelAllowlist.some((entry) => entry.includes(" "))) {
+        setError(t("keys.errorAllowlist"));
+        return;
+      }
+    }
+
     setBusy("create");
     setError("");
     try {
@@ -115,6 +153,9 @@ export function KeysPage() {
         expires_at: expiresAt,
         spend_limit_usd: spendLimitUsd,
         idempotency_replay_ttl_seconds: replayTtlSeconds,
+        ...(rpmLimit !== undefined ? { rpm_limit: rpmLimit } : {}),
+        ...(maxInFlight !== undefined ? { max_in_flight: maxInFlight } : {}),
+        ...(modelAllowlist !== undefined ? { model_allowlist: modelAllowlist } : {}),
       });
       setSecret(result.api_key);
       await reload();
@@ -284,6 +325,87 @@ export function KeysPage() {
               <small>{t("keys.replayOffHint")}</small>
             )}
           </div>
+          <div className="field">
+            <span>{t("keys.rpmLabel")}</span>
+            <fieldset className="choice" aria-label={t("keys.rpmLabel")}>
+              <button
+                type="button"
+                className={rpmMode === "default" ? "active" : ""}
+                onClick={() => setRpmMode("default")}
+              >
+                {t("keys.rpmUseDefault")}
+              </button>
+              <button type="button" className={rpmMode === "custom" ? "active" : ""} onClick={() => setRpmMode("custom")}>
+                {t("keys.setCustom")}
+              </button>
+            </fieldset>
+            {rpmMode === "custom" ? (
+              <>
+                <input
+                  className="input"
+                  aria-label={t("keys.rpmLabel")}
+                  type="number"
+                  min={1}
+                  max={6000}
+                  step={1}
+                  value={rpmValue}
+                  onChange={(event) => setRpmValue(event.target.value)}
+                  required
+                />
+                <small>{t("keys.rangeHint", { min: 1, max: 6000 })}</small>
+              </>
+            ) : (
+              <small>{t("keys.rpmDefaultHint")}</small>
+            )}
+          </div>
+          <div className="field">
+            <span>{t("keys.inFlightLabel")}</span>
+            <fieldset className="choice" aria-label={t("keys.inFlightLabel")}>
+              <button
+                type="button"
+                className={inFlightMode === "default" ? "active" : ""}
+                onClick={() => setInFlightMode("default")}
+              >
+                {t("keys.inFlightUseDefault")}
+              </button>
+              <button
+                type="button"
+                className={inFlightMode === "custom" ? "active" : ""}
+                onClick={() => setInFlightMode("custom")}
+              >
+                {t("keys.setCustom")}
+              </button>
+            </fieldset>
+            {inFlightMode === "custom" ? (
+              <>
+                <input
+                  className="input"
+                  aria-label={t("keys.inFlightLabel")}
+                  type="number"
+                  min={1}
+                  max={100}
+                  step={1}
+                  value={inFlightValue}
+                  onChange={(event) => setInFlightValue(event.target.value)}
+                  required
+                />
+                <small>{t("keys.rangeHint", { min: 1, max: 100 })}</small>
+              </>
+            ) : (
+              <small>{t("keys.inFlightDefaultHint")}</small>
+            )}
+          </div>
+          <div className="field">
+            <span>{t("keys.allowlistLabel")}</span>
+            <input
+              className="input"
+              aria-label={t("keys.allowlistLabel")}
+              value={allowlistValue}
+              onChange={(event) => setAllowlistValue(event.target.value)}
+              placeholder="autonomia/gpt-6.1-sol, autonomia/text-embedding-3-small"
+            />
+            <small>{t("keys.allowlistHint")}</small>
+          </div>
         </div>
         <div
           style={{
@@ -361,6 +483,20 @@ export function KeysPage() {
                   </span>
                   <span>
                     {t("keys.metaReplay", { value: formatReplayTtl(key.idempotency_replay_ttl_seconds) })}
+                  </span>
+                  <span>
+                    {t("keys.metaLimits", {
+                      rpm: key.rpm_limit ?? 60,
+                      inFlight: key.max_in_flight ?? 4,
+                    })}
+                  </span>
+                  <span>
+                    {t("keys.metaAllowlist", {
+                      value:
+                        key.model_allowlist && key.model_allowlist.length > 0
+                          ? t("keys.allowlistModelCount", { count: key.model_allowlist.length })
+                          : t("keys.allowlistAllModels"),
+                    })}
                   </span>
                 </div>
                 <div className="key-actions">

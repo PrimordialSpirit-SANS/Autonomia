@@ -7,7 +7,7 @@
 //               (X-Autonomia-Idempotent-Replay: true),不重新執行、不重複計費
 //
 // 進行中的鍵重送 → 409 idempotent_request_in_progress
-// 同鍵不同請求體 → 409 idempotent_request_conflict
+// 同鍵不同請求體 → 409 idempotency_conflict
 import OpenAI from "openai";
 
 const baseURL = process.env.AUTONOMIA_BASE_URL ?? "http://localhost:8787/api/ai/v1";

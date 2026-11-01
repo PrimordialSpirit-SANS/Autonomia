@@ -7,7 +7,7 @@ Autonomia Gateway 的前端(React + Vite + TypeScript)。`src/pages/` 與 `src/c
 ```bash
 npm install        # 建議在 repo 根目錄執行(npm workspaces)
 npm run dev        # 開發伺服器:http://localhost:5173
-npm test           # vitest 單元測試(邏輯層 66 個測試)
+npm test           # vitest 單元測試(邏輯層)
 npm run build      # 型別檢查 + 生產建置到 dist/
 npm run preview    # 預覽生產建置
 ```

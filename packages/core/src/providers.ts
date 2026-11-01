@@ -1139,6 +1139,17 @@ export async function invokeProviderRoute({
   return { stream: false, provider: route.provider, ...normalized };
 }
 
+/**
+ * S-14:DEPRECATED — 請勿用於新程式碼。
+ *
+ * 此公開匯出跳過租約帳務(不做 claim/release:max_in_flight 與健康冷卻
+ * 全部失效)、未提供選擇函式時只取第一個啟用憑證,且任何非
+ * AutonomiaProviderError 例外都被視為 fallbackAllowed: true —— 接上它
+ * 的任何呼叫者都會靜默繞過正式執行路徑(inference.ts)的所有防護。
+ * 閘道自身的推理執行一律走 inference.ts 的 claimConfiguredAutonomia
+ * ProviderCredential + attempts 稽核路徑;本函式僅為歷史相容保留,
+ * 未來的 major 版本將移除。
+ */
 export async function invokeWithProviderFallback({
   routes,
   body,

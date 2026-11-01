@@ -48,9 +48,16 @@ export OPENAI_API_KEY="sk-autonomia-live_…"
 
 **5. 不支援的端點。** 遷移前對照 README 的相容性矩陣:`images`、`audio`、
 `moderations`、`files`、`batches`、legacy `completions`、`realtime` 會收到
-`400 unsupported_feature`(帶明確錯誤碼)。LiteLLM 的 router fallback /
+`404 route_not_found`(帶明確錯誤碼;`400` 僅用於不支援的「參數」層級)。LiteLLM 的 router fallback /
 cooldown 语义由 Autonomia 的 Provider Pool 內建(in-flight lease、健康冷卻、
 自動 failover),不需要客戶端 retry 層的配合。
+
+**6. 輸入長度上限是保守估計。** Autonomia 以「請求體 JSON 位元組數 +
+常數」估計輸入 token 並以此預檢上限(fail-safe:絕不多收,但對英文文字
+約為真實 token 數的 3 倍保守)。宣稱 `max_input_tokens` 991,808 的旗艦
+模型,實際會拒絕請求體大於約 992KB 的請求(`400 context_length_exceeded`)
+,儘管真實 token 數遠在額度內。大 context 用戶請以「請求體大小 ≈ 1/3 額度」
+估算可用空間;結算永遠以供應商回報的實際 usage 計費。
 
 ## 從 one-api 遷移
 

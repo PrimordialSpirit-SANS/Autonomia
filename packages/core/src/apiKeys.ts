@@ -101,9 +101,10 @@ export function isAutonomiaApiKey(value: any) {
 export function maskAutonomiaApiKey(value: any) {
   const secret = String(value || "");
   return {
-    // 僅保留固定的環境前綴(sk-autonomia-live_ / sk-autonomia-test_,13 字)+ 4 個
-    // 秘密字元,足以辨識金鑰;再長就會不必要地洩漏 token 前段。
-    key_prefix: secret.slice(0, 17),
+    // F-25 fix:保留「固定環境前綴 + 底線分隔符」(sk-autonomia-live_ /
+    // sk-autonomia-test_,18 字),不含任何秘密字元 —— 與註解宣稱的
+    // 遮蔽語意一致(修復前 slice(0, 17) 恰切在 live,註解與實作差一碼)。
+    key_prefix: secret.slice(0, 18),
     key_suffix: secret.slice(-4),
   };
 }

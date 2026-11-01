@@ -12,6 +12,9 @@ AUTONOMIA_DB_PATH=./autonomia.db
 # 0.0.0.0 或特定介面位址,並自行確保前方有適當的存取控制(防火牆/代理規則)。
 # 亦可使用標準 HOST 變數,AUTONOMIA_HOST 優先。Cloudflare Workers 部署不適用。
 AUTONOMIA_HOST=127.0.0.1
+# Node 自架的監聽連接埠。解析順序:AUTONOMIA_PORT || PORT || 8787。
+# Cloudflare Workers 部署不適用(埠由平台決定)。
+AUTONOMIA_PORT=
 
 # 資料庫(Node):改用 PostgreSQL 時,把 DATABASE_URL 設為 postgres:// 連線字串
 # (AUTONOMIA_DB_PATH 即不生效;migrate 與 server 會自動切換到 PG adapter)。

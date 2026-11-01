@@ -104,7 +104,6 @@ versioning follows [SemVer](https://semver.org/).
   sources inside. Shape drift fails the build before anything can be
   published; no upload happens in CI.
 
-### Fixed
 
 - **Windows: core dist build smoke-import now uses `file://` URLs
   (ECO-SUPPLY-1 follow-up).** `packages/core/scripts/build-dist.mjs` and

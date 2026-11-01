@@ -24,5 +24,5 @@ export AUTONOMIA_API_KEY=sk-autonomia-live_...               # 在控制台「�
 對照 OpenAI 官方 API 的三個語義差異(詳見 [docs/INTEGRATIONS.md](../docs/INTEGRATIONS.md) 與 `docs/openapi.yaml`):
 
 - **冪等重放**:已完成的 `Idempotency-Key` 重送預設回 `409 idempotent_request_replayed`,不重播回應;需要 OpenAI 式重放可在金鑰上 opt-in TTL(見 `node-openai-sdk/idempotency.mjs`)。
-- **不支援的端點**(`images`、`audio`、`moderations`、legacy `completions` 等)回 `400` 並帶可分辨的錯誤碼,不會沉默失敗。
+- **不支援的端點**(`images`、`audio`、`moderations`、legacy `completions` 等)回 `404 route_not_found` 並帶可分辨的錯誤碼(`400` 僅用於不支援的「參數」層級),不會沉默失敗。
 - **`n > 1`** 回 `400 unsupported_feature`,請改送獨立請求(各自冪等)。

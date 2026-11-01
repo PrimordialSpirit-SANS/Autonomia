@@ -11,7 +11,7 @@ import { signAutonomiaJwt, verifyAutonomiaJwt } from "../utils/jwt.ts";
 import { logAutonomiaEvent } from "../utils/logger.ts";
 import type { AutonomiaAccount } from "../utils/users.ts";
 import {
-  AUTONOMIA_PASSWORD_ITERATIONS,
+  configuredPbkdf2Iterations,
   createUser,
   findUserByEmail,
   findUserById,
@@ -540,11 +540,13 @@ authRoutes.post("/login", async (c: AutonomiaContext) => {
   const password = String(body?.password || "");
 
   // 帳號不存在時仍執行一次雜湊驗證,讓回應時間不洩漏帳號存在性。
-  // dummy hash 的迭代數必須跟著預設值走,兩條路徑的運算成本才會一致。
+  // dummy hash 的迭代數必須與「設定值」同一來源(S-01):hashPassword 對真實
+  // 帳號使用 configuredPbkdf2Iterations(env),這裡若寫死常數,自訂迭代數
+  // 的部署下兩條路徑成本不一致,登入延遲即成為帳號枚舉 oracle。
   const storedHash = await findUserPasswordHash(c.env, email);
   const passwordOk = await verifyPassword(
     password,
-    storedHash || `pbkdf2$${AUTONOMIA_PASSWORD_ITERATIONS}$00$00`,
+    storedHash || `pbkdf2$${configuredPbkdf2Iterations(c.env)}$00$00`,
   );
   const user = passwordOk ? await findUserByEmail(c.env, email) : null;
   if (!user || user.is_banned || !passwordOk) {

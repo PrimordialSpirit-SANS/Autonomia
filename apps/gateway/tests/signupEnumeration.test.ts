@@ -4,6 +4,7 @@ import { Hono } from "hono";
 import { createApp } from "../src/app.ts";
 import { ensureAutonomiaSchemaReady } from "../src/utils/bootstrap.ts";
 import { installNodeAutonomiaDbAdapter } from "../src/utils/db.ts";
+import { configuredPbkdf2Iterations, findUserPasswordHash } from "../src/utils/users.ts";
 
 // 註冊防帳號枚舉的真實 DB 行為(時序等化 + 重複信箱隱匿):
 // - 預設:重複信箱回 202 受理訊息,不發 session、不揭露 email_taken。
@@ -178,4 +179,63 @@ test("session cookie Secure attribute follows the trust-proxy boundary (SN-5)", 
   assert.equal(trusted.status, 200);
   // 宣告信任代理(前方有 TLS 終止的受信賴代理):採信 https,cookie 帶 Secure。
   assert.equal(trusted.headers.get("set-cookie")?.includes("Secure"), true);
+});
+
+// ── S-01 修復釘死:登入兩條路徑(dummy hash 與真實雜湊)的 PBKDF2 迭代數 ──
+// 必須來自同一個設定來源,否則自訂 AUTONOMIA_PBKDF2_ITERATIONS 的部署下,
+// 量測 /api/auth/login 回應延遲即可枚舉已註冊信箱(修復前差異約 60 倍)。
+test("S-01: dummy hash iterations must follow AUTONOMIA_PBKDF2_ITERATIONS (anti-enumeration timing parity)", async () => {
+  await installNodeAutonomiaDbAdapter();
+  const env = await createSchemaReadyEnv({
+    AUTONOMIA_SIGNUP_ANTI_ENUMERATION: "false",
+    AUTONOMIA_PBKDF2_ITERATIONS: "10000",
+  });
+  const app = createTestApp(env);
+
+  // 單元層:解析函數必須採用設定值(下限 10,000 之上才採信)。
+  assert.equal(configuredPbkdf2Iterations(env), 10_000);
+  assert.equal(configuredPbkdf2Iterations({}), 600_000, "unset config must fall back to the default");
+
+  const registered = await app.request(
+    "/api/auth/register",
+    registerRequest("timing@example.com", "carol", "longenough1"),
+  );
+  assert.equal(registered.status, 201);
+
+  // 資料層(對照組):真實帳號的雜湊字串本身記錄設定值 10,000。
+  const stored = await findUserPasswordHash(env, "timing@example.com");
+  assert.ok(stored?.startsWith("pbkdf2$10000$"), `real-account hash must embed configured iterations: ${stored}`);
+
+  const loginRequest = (email: string, password: string) => ({
+    method: "POST",
+    body: JSON.stringify({ email, password }),
+    headers: { "Content-Type": "application/json" },
+  });
+
+  // 暖身兩次:預載 WebCrypto 模組與路由,避免首次呼叫的固定成本污染量測。
+  await app.request("/api/auth/login", loginRequest("warmup@example.com", "irrelevant0"));
+  await app.request("/api/auth/login", loginRequest("warmup@example.com", "irrelevant0"));
+
+  // 量測層:不存在的帳號走 dummy hash 路徑,迭代數必須是 10,000 而非
+  // 修復前寫死的 600,000。600k 次 PBKDF2-SHA256 即使在快機上也遠超
+  // 90ms;10k 次(含請求開銷)通常 < 10ms。
+  const missingStart = performance.now();
+  const missing = await app.request("/api/auth/login", loginRequest("nobody@example.com", "whatever12"));
+  const missingMs = performance.now() - missingStart;
+  assert.equal(missing.status, 401);
+  assert.ok(
+    missingMs < 90,
+    `dummy hash must burn configured (10k) iterations, took ${missingMs.toFixed(1)}ms — likely regressed to the 600k constant`,
+  );
+
+  // 回歸保護:低於下限的設定值不得被採信(防止弱雜湊被寫入)。
+  const weak = await createSchemaReadyEnv({
+    AUTONOMIA_SIGNUP_ANTI_ENUMERATION: "false",
+    AUTONOMIA_PBKDF2_ITERATIONS: "1000",
+  });
+  assert.equal(configuredPbkdf2Iterations(weak), 600_000, "iterations below the 10k floor must be ignored");
+
+  // 正確密碼登入仍可用(10,000 迭代產生的雜湊可通過驗證)。
+  const ok = await app.request("/api/auth/login", loginRequest("timing@example.com", "longenough1"));
+  assert.equal(ok.status, 200);
 });

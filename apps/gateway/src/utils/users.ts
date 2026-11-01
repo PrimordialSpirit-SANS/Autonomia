@@ -25,10 +25,21 @@ export interface AutonomiaAccount {
 }
 
 // PBKDF2-SHA256。格式:pbkdf2$<iterations>$<salt_hex>$<hash_hex>
-export async function hashPassword(password: string, env: AutonomiaRuntimeEnv): Promise<string> {
+
+/**
+ * S-01 修復:統一「有效 PBKDF2 迭代數」的解析來源。
+ * 真實帳號雜湊(hashPassword)與登入時帳號不存在的 dummy hash
+ * 必須走同一個解析函數,兩條路徑的運算成本才會一致——
+ * 否則自訂 AUTONOMIA_PBKDF2_ITERATIONS 的部署下,
+ * 量測 /api/auth/login 的回應延遲即可枚舉已註冊信箱。
+ */
+export function configuredPbkdf2Iterations(env: AutonomiaRuntimeEnv): number {
   const configured = Number(env?.AUTONOMIA_PBKDF2_ITERATIONS);
-  const iterations =
-    Number.isSafeInteger(configured) && configured >= 10_000 ? configured : AUTONOMIA_PASSWORD_ITERATIONS;
+  return Number.isSafeInteger(configured) && configured >= 10_000 ? configured : AUTONOMIA_PASSWORD_ITERATIONS;
+}
+
+export async function hashPassword(password: string, env: AutonomiaRuntimeEnv): Promise<string> {
+  const iterations = configuredPbkdf2Iterations(env);
   const salt = randomBytesHex(16);
   const derived = await derivePasswordBits(password, salt, iterations);
   return `pbkdf2$${iterations}$${salt}$${derived}`;

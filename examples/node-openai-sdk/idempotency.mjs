@@ -21,7 +21,7 @@ const client = new OpenAI({ baseURL, apiKey });
 
 const idempotencyKey = `demo-${Date.now()}`;
 const request = {
-  model: process.env.AUTONOMIA_MODEL ?? "autonomia/gpt-5.2",
+  model: process.env.AUTONOMIA_MODEL ?? "autonomia/gpt-6.1-sol",
   messages: [{ role: "user", content: "回覆「好的」兩個字就好。" }],
 };
 

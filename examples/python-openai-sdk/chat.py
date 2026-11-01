@@ -16,7 +16,7 @@ if not api_key:
 client = OpenAI(base_url=base_url, api_key=api_key)
 
 completion = client.chat.completions.create(
-    model=os.environ.get("AUTONOMIA_MODEL", "autonomia/gpt-5.2"),
+    model=os.environ.get("AUTONOMIA_MODEL", "autonomia/gpt-6.1-sol"),
     messages=[{"role": "user", "content": "用一句話介紹你自己。"}],
 )
 

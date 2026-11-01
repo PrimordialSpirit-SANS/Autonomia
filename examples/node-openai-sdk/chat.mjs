@@ -12,7 +12,7 @@ if (!apiKey) {
 const client = new OpenAI({ baseURL, apiKey });
 
 const completion = await client.chat.completions.create({
-  model: process.env.AUTONOMIA_MODEL ?? "autonomia/gpt-5.2",
+  model: process.env.AUTONOMIA_MODEL ?? "autonomia/gpt-6.1-sol",
   messages: [{ role: "user", content: "用一句話介紹你自己。" }],
 });
 

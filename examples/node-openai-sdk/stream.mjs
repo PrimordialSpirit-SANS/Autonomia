@@ -12,7 +12,7 @@ if (!apiKey) {
 const client = new OpenAI({ baseURL, apiKey });
 
 const stream = await client.chat.completions.create({
-  model: process.env.AUTONOMIA_MODEL ?? "autonomia/gpt-5.2",
+  model: process.env.AUTONOMIA_MODEL ?? "autonomia/gpt-6.1-sol",
   messages: [{ role: "user", content: "從 1 數到 10,每個數字一行。" }],
   stream: true,
   stream_options: { include_usage: true },

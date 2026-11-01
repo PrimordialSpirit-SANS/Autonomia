@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 import brands from "../../../apps/console/public/brand/autonomia/providers/manifest.v1.json" with {
   type: "json",
@@ -138,4 +139,38 @@ test("bundle validation catches revision and route-to-pool drift", () => {
       "$.models.autonomia/qwen-3.8-27b.routes.qwen-3.8-27b-cloudflare.provider: does not match its provider pool",
     ],
   });
+});
+
+// ── F-06 修復釘死:官方範例的預設模型必須存在於兩份目錄 ──
+// 修復前:7 個範例全部以 autonomia/gpt-5.2 為預設值,該型號不存在於
+// backend-pricing.v1.json 與 models.v1.json —— 新手第一次執行即 404
+// model_not_found。此測試讓目錄改版時的範例漂移直接擋下建置。
+test("example default models must exist in both catalogs (quickstart must not 404)", async () => {
+  const exampleFiles = [
+    "../../../examples/curl/chat.sh",
+    "../../../examples/curl/stream.sh",
+    "../../../examples/node-openai-sdk/chat.mjs",
+    "../../../examples/node-openai-sdk/stream.mjs",
+    "../../../examples/node-openai-sdk/idempotency.mjs",
+    "../../../examples/python-openai-sdk/chat.py",
+    "../../../examples/python-openai-sdk/stream.py",
+  ];
+  const referenced = new Set<string>();
+  for (const file of exampleFiles) {
+    const text = await readFile(new URL(file, import.meta.url), "utf8");
+    const matches = [...text.matchAll(/AUTONOMIA_MODEL[^\r\n]*?(autonomia\/[A-Za-z0-9._-]+)/g)];
+    assert.ok(matches.length > 0, `${file} must declare a default model via AUTONOMIA_MODEL`);
+    for (const match of matches) referenced.add(match[1]);
+  }
+  assert.ok(referenced.size > 0, "examples must reference at least one default model");
+  for (const modelId of referenced) {
+    assert.ok(
+      Boolean((BACKEND_PRICING.models as Record<string, unknown>)[modelId]),
+      `example default model ${modelId} is missing from backend-pricing.v1.json`,
+    );
+    assert.ok(
+      (publicModels.models as Array<{ id: string }>).some((model) => model.id === modelId),
+      `example default model ${modelId} is missing from models.v1.json`,
+    );
+  }
 });

@@ -1810,3 +1810,36 @@ test("data:image URLs accept realistic inline images while https URLs stay cappe
     (error: any) => error.status === 400 && /https image URLs must contain 1-8192/.test(error.message),
   );
 });
+
+// ── S-06 修復釘死:錯誤訊息不得整段回顯超長 model 原文 ─────────────────────
+// 修復前找不到模型的 404 會把整個字串原文嵌入訊息回送(請求體上限 32MB,
+// 約 1:1 的頻寬放大);現在預先以 200 字元拒絕,回顯亦截斷至 64 字元。
+test("overlong model ids are rejected up front and never echoed in full (S-06)", async () => {
+  const giant = "x".repeat(1024 * 1024); // 1MB 原文
+
+  // 1) 超過 200 字元:400 invalid_request,param=model,訊息不含原文。
+  await assert.rejects(
+    prepareAutonomiaChatRequest({ body: body({ model: giant }), aiKey: aiKey() }),
+    (error: any) =>
+      error.status === 400 &&
+      error.param === "model" &&
+      /at most 200 characters/.test(error.message) &&
+      !error.message.includes("xxx"),
+  );
+
+  // 2) 200 字元內、目錄外:仍是 404 model_not_found,但回顯被截斷。
+  const missing = "autonomia/" + "y".repeat(150);
+  await assert.rejects(
+    prepareAutonomiaChatRequest({ body: body({ model: missing }), aiKey: aiKey() }),
+    (error: any) => {
+      assert.equal(error.status, 404);
+      assert.equal(error.code, "model_not_found");
+      assert.ok(!error.message.includes("y".repeat(65)), "must not echo the full id");
+      assert.ok(
+        error.message.includes(`${missing.slice(0, 64)}...`),
+        "keeps a truncated (64-char + ellipsis) echo",
+      );
+      return true;
+    },
+  );
+});

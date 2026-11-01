@@ -215,6 +215,16 @@ function validateFunctionCall(
   return { name: value.name, arguments: value.arguments };
 }
 
+// S-06 修復:model 欄位的錯誤回顯截斷。找不到模型/不支援參數的錯誤訊息
+// 不得把客戶端送來的原文(請求體上限 32MB,理論上可達兆級字元)整段回送
+// —— 那是約 1:1 的頻寬與 CPU 放大。回顯上限 64 字元,超過即截斷。
+const MODEL_ECHO_MAX_CHARS = 64;
+
+function modelEchoForError(modelId: string): string {
+  const value = modelId && modelId.length > 0 ? modelId : "unknown";
+  return value.length > MODEL_ECHO_MAX_CHARS ? `${value.slice(0, MODEL_ECHO_MAX_CHARS)}...` : value;
+}
+
 // ECO-03:vision 輸入的 content parts 上限。每 part 文字 ≤100k(沿用純文字
 // 訊息上限)、parts ≤64,總體沿用 HTTP 層 32MB body 上限。
 const MAX_MESSAGE_CONTENT_PARTS = 64;
@@ -598,11 +608,16 @@ export async function prepareAutonomiaEmbeddingsRequest({
     );
   }
   const modelId = typeof body.model === "string" ? body.model.trim() : "";
+  // S-06 修復:預先以 200 字元上限拒絕超長 model 字串(與 schema 的
+  // public_model VARCHAR(200) 一致)—— 不讓超長原文進入任何錯誤回顯。
+  if (modelId.length > 200) {
+    throw invalidRequest("model must contain at most 200 characters.", "model");
+  }
   let model: ReturnType<typeof requireModelPricing>;
   try {
     model = requireModelPricing(modelId);
   } catch {
-    throw new AutonomiaError(`The model '${modelId || "unknown"}' does not exist or is disabled.`, {
+    throw new AutonomiaError(`The model '${modelEchoForError(modelId)}' does not exist or is disabled.`, {
       status: 404,
       type: "invalid_request_error",
       code: "model_not_found",
@@ -761,11 +776,16 @@ async function prepareAutonomiaChatBody({
     );
   }
   const modelId = typeof body.model === "string" ? body.model.trim() : "";
+  // S-06 修復:預先以 200 字元上限拒絕超長 model 字串(與 schema 的
+  // public_model VARCHAR(200) 一致)—— 不讓超長原文進入任何錯誤回顯。
+  if (modelId.length > 200) {
+    throw invalidRequest("model must contain at most 200 characters.", "model");
+  }
   let model: ReturnType<typeof requireModelPricing>;
   try {
     model = requireModelPricing(modelId);
   } catch {
-    throw new AutonomiaError(`The model '${modelId || "unknown"}' does not exist or is disabled.`, {
+    throw new AutonomiaError(`The model '${modelEchoForError(modelId)}' does not exist or is disabled.`, {
       status: 404,
       type: "invalid_request_error",
       code: "model_not_found",
@@ -1110,11 +1130,16 @@ export async function prepareAutonomiaResponsesRequest({
     );
   }
   const modelId = typeof body.model === "string" ? body.model.trim() : "";
+  // S-06 修復:預先以 200 字元上限拒絕超長 model 字串(與 schema 的
+  // public_model VARCHAR(200) 一致)—— 不讓超長原文進入任何錯誤回顯。
+  if (modelId.length > 200) {
+    throw invalidRequest("model must contain at most 200 characters.", "model");
+  }
   let model: ReturnType<typeof requireModelPricing>;
   try {
     model = requireModelPricing(modelId);
   } catch {
-    throw new AutonomiaError(`The model '${modelId || "unknown"}' does not exist or is disabled.`, {
+    throw new AutonomiaError(`The model '${modelEchoForError(modelId)}' does not exist or is disabled.`, {
       status: 404,
       type: "invalid_request_error",
       code: "model_not_found",

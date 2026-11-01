@@ -386,6 +386,8 @@ const de: Dictionary = {
     authentication_required: "Melden Sie sich zuerst an, um Autonomia zu verwenden.",
     insufficient_scope: "Dieser API-Schlüssel verfügt nicht über die erforderliche Autonomia-Berechtigung.",
     access_denied: "Diese Autonomia-Funktion ist derzeit nicht verfügbar.",
+    csrf_token_invalid: "Cross-Site-Anfrage abgelehnt (CSRF) — bitte laden Sie die Seite neu; falls es bestehen bleibt, prüfen Sie FRONTEND_ORIGINS am Gateway.",
+    origin_forbidden: "Anfrage-Ursprung nicht erlaubt — fügen Sie die Herkunft dieser Konsole zu FRONTEND_ORIGINS am Gateway hinzu.",
     model_not_found: "Das angeforderte Autonomia-Modell wurde nicht gefunden.",
     model_not_allowed: "Dieser API-Schlüssel darf das angeforderte Autonomia-Modell nicht verwenden.",
     spend_limit_exceeded: "Dieser API-Schlüssel hat sein Ausgabenlimit erreicht.",

@@ -363,6 +363,8 @@ const zhCN: Dictionary = {
     authentication_required: "请先登录以使用 Autonomia。",
     insufficient_scope: "此 API 密钥尚未获得所需的 Autonomia 权限。",
     access_denied: "目前无法使用此 Autonomia 功能。",
+    csrf_token_invalid: "跨站请求被拒(CSRF)——请刷新页面;若持续发生,请检查网关的 FRONTEND_ORIGINS 设置。",
+    origin_forbidden: "请求来源未获允许——请将此控制台来源加入网关的 FRONTEND_ORIGINS 设置。",
     model_not_found: "找不到指定的 Autonomia 模型。",
     model_not_allowed: "此 API 密钥未开放指定的 Autonomia 模型。",
     spend_limit_exceeded: "此 API 密钥已达消费上限。",

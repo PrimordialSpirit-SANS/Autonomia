@@ -563,6 +563,30 @@ authRoutes.post("/logout", async (c: AutonomiaContext) => {
   return c.json({ ok: true });
 });
 
+// F-01 修復:跨主機(同站)拓撲的 CSRF token 引導端點。
+// host-only 的 csrf cookie 設在閘道主機上,console.example.com 頁面的
+// document.cookie 讀不到它 → apiFetch 附不上 X-CSRF-Token → 所有
+// 變更操作一律 403 csrf_token_invalid(文件建議拓撲實質不可用)。
+// 本端點回傳「目前 cookie 內的 token」(沒有則建立一個):
+// - 回應只會被 FRONTEND_ORIGINS 白名單內的來源以帶憑證 CORS 讀到,
+//   跨站攻擊頁面讀不到 token;
+// - 表單 POST 本就無法附加自訂標頭;
+// 因此雙提交防護的兩個前提維持不變,而同站跨主機的控制台得以運作。
+authRoutes.get("/csrf", (c: AutonomiaContext) => {
+  let token = getCookie(c, AUTONOMIA_CSRF_COOKIE) || "";
+  if (!token) {
+    token = randomBytesHex(32);
+    setCookie(c, AUTONOMIA_CSRF_COOKIE, token, {
+      httpOnly: false,
+      sameSite: "Lax",
+      secure: isSecureRequest(c),
+      path: "/",
+      maxAge: AUTONOMIA_SESSION_TTL_SECONDS,
+    });
+  }
+  return c.json({ token });
+});
+
 authRoutes.get("/me", authenticateToken, async (c: AutonomiaContext) => {
   // authenticateToken 已設 c.set('user', …);重新讀取以取得最新點數。
   const user = await findUserById(c.env, c.get("user")?.id || "");

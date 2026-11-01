@@ -384,6 +384,8 @@ const fr: Dictionary = {
     authentication_required: "Connectez-vous d'abord pour utiliser Autonomia.",
     insufficient_scope: "Cette clé API ne dispose pas de l'autorisation Autonomia requise.",
     access_denied: "Cette fonctionnalité Autonomia est actuellement indisponible.",
+    csrf_token_invalid: "Requête intersite rejetée (CSRF) — actualisez la page ; si le problème persiste, vérifiez FRONTEND_ORIGINS sur la passerelle.",
+    origin_forbidden: "Origine de la requête non autorisée — ajoutez l'origine de cette console à FRONTEND_ORIGINS sur la passerelle.",
     model_not_found: "Le modèle Autonomia demandé est introuvable.",
     model_not_allowed: "Cette clé API n'est pas autorisée à utiliser le modèle Autonomia demandé.",
     spend_limit_exceeded: "Cette clé API a atteint sa limite de dépenses.",

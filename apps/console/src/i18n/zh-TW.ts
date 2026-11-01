@@ -364,6 +364,8 @@ const zhTW: Dictionary = {
     authentication_required: "請先登入以使用 Autonomia。",
     insufficient_scope: "此 API 金鑰尚未取得所需的 Autonomia 權限。",
     access_denied: "目前無法使用此 Autonomia 功能。",
+    csrf_token_invalid: "跨站請求被拒(CSRF)——請重新整理頁面;若持續發生,請檢查閘道的 FRONTEND_ORIGINS 設定。",
+    origin_forbidden: "請求來源未獲允許——請將此控制台來源加入閘道的 FRONTEND_ORIGINS 設定。",
     model_not_found: "找不到指定的 Autonomia 模型。",
     model_not_allowed: "此 API 金鑰未開放指定的 Autonomia 模型。",
     spend_limit_exceeded: "此 API 金鑰已達消費上限。",

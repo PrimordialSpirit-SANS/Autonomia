@@ -54,6 +54,8 @@ export type AutonomiaPublicErrorCode =
   | "authentication_required"
   | "insufficient_scope"
   | "access_denied"
+  | "csrf_token_invalid"
+  | "origin_forbidden"
   | "model_not_found"
   | "model_not_allowed"
   | "spend_limit_exceeded"

@@ -374,6 +374,8 @@ export const en = {
     authentication_required: "Sign in first to use Autonomia.",
     insufficient_scope: "This API key does not have the required Autonomia permission.",
     access_denied: "This Autonomia feature is currently unavailable.",
+    csrf_token_invalid: "Cross-site request rejected (CSRF) — reload the page; if it keeps happening, check FRONTEND_ORIGINS on the gateway.",
+    origin_forbidden: "Request origin not allowed — add this console origin to FRONTEND_ORIGINS on the gateway.",
     model_not_found: "The requested Autonomia model was not found.",
     model_not_allowed: "This API key is not allowed to use the requested Autonomia model.",
     spend_limit_exceeded: "This API key has reached its spend limit.",

@@ -39,6 +39,22 @@ describe("normalizeAutonomiaError", () => {
     expect(normalizeAutonomiaError(null, { status: 401, context: "inference" }).code).toBe("invalid_api_key");
   });
 
+  it("S-16: surfaces gateway CSRF / origin rejections as configuration errors", () => {
+    // 部署設定錯(FRONTEND_ORIGINS、同源代理)必須顯示為可行動的設定
+    // 提示,而不是籠統的「功能目前無法使用」(access_denied)。
+    expect(normalizeAutonomiaError({ code: "csrf_token_invalid" }, { status: 403 }).code).toBe(
+      "csrf_token_invalid",
+    );
+    expect(normalizeAutonomiaError({ error: { code: "origin_forbidden" } }, { status: 403 }).code).toBe(
+      "origin_forbidden",
+    );
+    // 兩個新碼的 i18n 鍵必須存在(否則渲染為空字串)。
+    expect(normalizeAutonomiaError({ code: "csrf_token_invalid" }, { status: 403 }).message.length).toBeGreaterThan(0);
+    expect(normalizeAutonomiaError({ code: "origin_forbidden" }, { status: 403 }).message.length).toBeGreaterThan(0);
+    // 未知/缺碼的 403 仍走原狀態碼 fallback(回歸保護)。
+    expect(normalizeAutonomiaError(null, { status: 403, context: "developer" }).code).toBe("access_denied");
+  });
+
   it("maps 402 to insufficient balance and 5xx to service unavailable", () => {
     expect(normalizeAutonomiaError(null, { status: 402 }).code).toBe("insufficient_balance");
     expect(normalizeAutonomiaError(null, { status: 503 }).code).toBe("service_unavailable");

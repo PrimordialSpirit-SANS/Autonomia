@@ -373,6 +373,8 @@ const ja: Dictionary = {
     authentication_required: "Autonomia を使用するには先にログインしてください。",
     insufficient_scope: "この API キーには必要な Autonomia 権限がありません。",
     access_denied: "この Autonomia 機能は現在利用できません。",
+    csrf_token_invalid: "クロスサイトリクエストが拒否されました(CSRF)。ページを再読み込みしてください。解消しない場合はゲートウェイの FRONTEND_ORIGINS を確認してください。",
+    origin_forbidden: "リクエスト元が許可されていません。このコンソールのオリジンをゲートウェイの FRONTEND_ORIGINS に追加してください。",
     model_not_found: "指定された Autonomia モデルが見つかりません。",
     model_not_allowed: "この API キーは指定された Autonomia モデルを利用できません。",
     spend_limit_exceeded: "この API キーは消費上限に達しました。",

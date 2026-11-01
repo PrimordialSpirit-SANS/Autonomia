@@ -426,3 +426,49 @@ test("developer face rejects cross-site Origin headers (SN-15, audit N2)", async
   });
   assert.equal(get.status, 401);
 });
+
+// ── F-01 修復釘死:GET /api/auth/csrf 讓跨主機(同站)拓撲取得 token ──
+// host-only 的 csrf cookie 設在閘道主機上,console.example.com 的
+// document.cookie 讀不到 → apiFetch 附不上 X-CSRF-Token → 所有變更操作
+// 403。此端點回傳現有 cookie 值(沒有則建立),使同站跨主機控制台可用;
+// 回應僅 FRONTEND_ORIGINS 內來源可經帶憑證 CORS 讀取,雙提交前提不變。
+test("GET /api/auth/csrf bootstraps and echoes the double-submit CSRF token (F-01)", async () => {
+  const env = { AUTONOMIA_ENABLED: "true", JWT_SECRET: SECRET };
+
+  // 1. 無 cookie:建立新 token 並設 cookie(64 hex = 256-bit)。
+  const first = await aiRequest("/api/auth/csrf", env);
+  assert.equal(first.status, 200);
+  const firstBody = (await first.json()) as any;
+  assert.match(firstBody.token, /^[0-9a-f]{64}$/);
+  const setCookieHeader = first.headers.get("set-cookie") || "";
+  assert.ok(setCookieHeader.includes(`${AUTONOMIA_CSRF_COOKIE}=${firstBody.token}`));
+  assert.ok(!setCookieHeader.includes("HttpOnly"), "CSRF cookie must stay readable by design");
+  assert.ok(setCookieHeader.includes("SameSite=Lax"));
+
+  // 2. 帶既有 cookie:回傳同一個值,且不得重設(冪等)。
+  const second = await aiRequest("/api/auth/csrf", env, {
+    headers: { Cookie: `${AUTONOMIA_CSRF_COOKIE}=${firstBody.token}` },
+  });
+  assert.equal(second.status, 200);
+  assert.equal(((await second.json()) as any).token, firstBody.token);
+  assert.equal(second.headers.get("set-cookie"), null, "existing token must be echoed, not re-set");
+
+  // 3. 端到端:以端點取得的 token 通過 requireCsrfToken 雙提交比對
+  //    (對照:缺標頭的 mutating 請求 403 csrf_token_invalid)。
+  const protectedApp = new Hono();
+  protectedApp.use("*", requireCsrfToken);
+  protectedApp.post("/mutate", (c: any) => c.json({ ok: true }));
+  const cookie = `${AUTONOMIA_CSRF_COOKIE}=${firstBody.token}`;
+
+  const withoutHeader = await protectedApp.request("/mutate", {
+    method: "POST",
+    headers: { Cookie: cookie },
+  });
+  assert.equal(withoutHeader.status, 403);
+
+  const withHeader = await protectedApp.request("/mutate", {
+    method: "POST",
+    headers: { Cookie: cookie, "X-CSRF-Token": firstBody.token },
+  });
+  assert.equal(withHeader.status, 200);
+});

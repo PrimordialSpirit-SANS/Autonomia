@@ -101,6 +101,15 @@ Workers-specific caveats:
     1. Host console and gateway under the same registrable domain
        (eTLD+1), e.g. `console.example.com` + `api.example.com`, with
        `VITE_AUTONOMIA_API_BASE=https://api.example.com/api`.
+       - CSRF note (F-01 fix): the `csrf_token` cookie is host-only on
+         the gateway host, so console JavaScript cannot read it through
+         `document.cookie` in this topology. The console therefore
+         bootstraps the token with a credentialed `GET /api/auth/csrf`
+         (readable only from origins listed in `FRONTEND_ORIGINS`) and
+         attaches it as `X-CSRF-Token` automatically. No configuration
+         is required; if you observe `403 csrf_token_invalid` on every
+         mutation, check that the console origin is listed in
+         `FRONTEND_ORIGINS`.
     2. Serve the console from Pages and proxy `/api/*` same-origin via
        Pages Functions or a reverse proxy, leaving
        `VITE_AUTONOMIA_API_BASE` empty (same-origin `/api`).

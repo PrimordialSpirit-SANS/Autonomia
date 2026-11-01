@@ -1755,3 +1755,58 @@ test("public provider errors never expose provider status, category, or identifi
     /cloudflare|credential|upstream|cf-ray|403/i,
   );
 });
+
+// ── F-09 修復釘死:data:image/ URL 上限放寬到 4MB ──────────────────────────
+// 修復前 8KB 上限只容得下約 6KB 二進位影像 —— OpenAI SDK 傳圖的主流用法
+// (data URL)實質全部被 400 拒絕;https:// 外連 URL 維持 8KB 不變。
+test("data:image URLs accept realistic inline images while https URLs stay capped at 8KB (F-09)", async () => {
+  // 512KB 的 data URL(base64 承載 ~380KB 二進位,真實照片量級):修復前
+  // 被 8KB 上限拒絕、修復後可用。輸入估計為位元組數(F-12 的保守估計),
+  // 故刻意低於 gpt-6-astra 的 991,808 token 估計上限。
+  const halfMegabyteDataUrl = `data:image/png;base64,${"A".repeat(512 * 1024)}`;
+  const accepted = await prepareAutonomiaChatRequest({
+    body: body({
+      messages: [
+        {
+          role: "user",
+          content: [{ type: "image_url", image_url: { url: halfMegabyteDataUrl } }],
+        },
+      ],
+    }),
+    aiKey: aiKey(),
+  });
+  assert.equal(accepted.body.messages[0].content[0].image_url.url.length, halfMegabyteDataUrl.length);
+
+  // 超過 4MB 的 data URL:400,錯誤訊息指明 data URL 的實際限制。
+  await assert.rejects(
+    prepareAutonomiaChatRequest({
+      body: body({
+        messages: [
+          {
+            role: "user",
+            content: [{ type: "image_url", image_url: { url: `data:image/png;base64,${"A".repeat(4 * 1024 * 1024 + 1)}` } }],
+          },
+        ],
+      }),
+      aiKey: aiKey(),
+    }),
+    (error: any) =>
+      error.status === 400 && /data:image URLs must contain 1-4194304/.test(error.message),
+  );
+
+  // https:// 外連 URL:8KB 上限維持(那是位址,不是酬載),訊息分開表述。
+  await assert.rejects(
+    prepareAutonomiaChatRequest({
+      body: body({
+        messages: [
+          {
+            role: "user",
+            content: [{ type: "image_url", image_url: { url: `https://example.com/${"a".repeat(9 * 1024)}.png` } }],
+          },
+        ],
+      }),
+      aiKey: aiKey(),
+    }),
+    (error: any) => error.status === 400 && /https image URLs must contain 1-8192/.test(error.message),
+  );
+});

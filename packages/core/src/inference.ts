@@ -216,9 +216,14 @@ function validateFunctionCall(
 }
 
 // ECO-03:vision 輸入的 content parts 上限。每 part 文字 ≤100k(沿用純文字
-// 訊息上限)、URL ≤8k、parts ≤64,總體沿用 HTTP 層 32MB body 上限。
+// 訊息上限)、parts ≤64,總體沿用 HTTP 層 32MB body 上限。
 const MAX_MESSAGE_CONTENT_PARTS = 64;
 const MAX_IMAGE_URL_CHARS = 8 * 1024;
+// F-09 修復:data:image/ URL 承載的是影像本體(base64),8KB 只容得下
+// 約 6KB 的二進位 —— OpenAI SDK 傳圖的主流用法(data URL)實質全部被拒,
+// 只有 https:// 外連影像可用。放寬到 4MB(約 3MB 二進位),與 32MB 請求
+// 體上限成比例;https:// 外連 URL 維持 8KB(那只是位址,不是酬載)。
+const MAX_DATA_IMAGE_URL_CHARS = 4 * 1024 * 1024;
 // 每個 image part 以固定保守值計入輸入 token 估計(起跳 1,000;URL 位元組
 // 已在 JSON 序列化估計內,此值補上「圖片本體」未被 URL 長度反映的成本),
 // 依解析度精化留待後續。預留額邏輯沿用,確保不高估不足額。
@@ -254,8 +259,17 @@ function validateContentParts(value: unknown, label: string): any[] {
         throw invalidRequest("Image parts must only contain an image_url object with a url.", partLabel);
       }
       const url = part.image_url.url;
-      if (typeof url !== "string" || url.length === 0 || url.length > MAX_IMAGE_URL_CHARS) {
-        throw invalidRequest("Image URLs must contain 1-8192 characters.", `${partLabel}.image_url.url`);
+      // F-09:data URL 與外連 URL 各自上限;錯誤訊息指明實際限制,不再
+      // 籠統地說「1-8192 字元」誤導真正原因。
+      const isDataImageUrl = typeof url === "string" && url.startsWith("data:image/");
+      const maxUrlChars = isDataImageUrl ? MAX_DATA_IMAGE_URL_CHARS : MAX_IMAGE_URL_CHARS;
+      if (typeof url !== "string" || url.length === 0 || url.length > maxUrlChars) {
+        throw invalidRequest(
+          isDataImageUrl
+            ? "data:image URLs must contain 1-4194304 characters (about 3MB of binary image data)."
+            : "https image URLs must contain 1-8192 characters.",
+          `${partLabel}.image_url.url`,
+        );
       }
       if (!url.startsWith("https://") && !url.startsWith("data:image/")) {
         throw invalidRequest(

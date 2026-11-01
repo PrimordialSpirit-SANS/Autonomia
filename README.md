@@ -180,7 +180,7 @@ GHCR(發佈管線已就緒,映像隨首個 tag 出現)。
 | `AUTONOMIA_SHUTDOWN_HARD_TIMEOUT_MS` | 選配 | 關機硬上限(預設 10000,自動保證 ≥ GRACE + 2000),限期內必退出、不掛死 |
 | `DATABASE_URL` | 選配 | 設為 `postgres://…`(或 `postgresql://…`)時改用 PostgreSQL(`npm run migrate` 同樣自動切換);未設或非 PG scheme 時走 SQLite。驅動自動選擇:`*.neon.tech` 主機或設有 `AUTONOMIA_PG_WS_PROXY` 時走 Neon 相容 WebSocket 無伺服器驅動,其餘走 TCP `pg` 連線池(Workers 部署可改設 Hyperdrive 綁定,見 `docs/DEPLOYMENT.md` Topology B/C)。限流與 schema 檢查一律優先使用已安裝的資料庫 adapter,連線失敗才降級 |
 | `AUTONOMIA_PG_DRIVER` | 選配 | PG 驅動總開關:`auto`(預設,依 URL 特徵自動選)| `pg-pool`(TCP `pg`,含 Hyperdrive)| `neon`(Neon 相容 WebSocket 無伺服器驅動;別名 `neon-ws`/`serverless`)。無效值 fail-fast |
-| `AUTONOMIA_PG_SSL` | 選配 | TLS 模式:`disable` \| `require` \| `verify-full`;預設 `auto`——沿用連線字串的 `sslmode`,遠端主機自動 `require`(不驗證),localhost/內網/unix socket 不加密 |
+| `AUTONOMIA_PG_SSL` | 選配 | TLS 模式:`disable` \| `require` \| `verify-full`;預設 `auto`——沿用連線字串的 `sslmode`,遠端主機自動 `verify-full`(完整驗證伺服器憑證;自簽/私有 CA 以 `require` 退回僅加密,啟動時輸出警告),localhost/內網/unix socket 不加密 |
 | `AUTONOMIA_PG_WS_PROXY` | 選配 | 自架 pg-gateway/supavisor 相容的 WebSocket 閘道位址(靜態 `host[:port][/path]` 或含 `{host}` 的模板);設定即改用 neon 驅動 |
 | `AUTONOMIA_PG_WS_SECURE` | 選配 | WS 閘道是否走 `wss`(預設 `true`;僅閘道位於 TLS 終結之後的本地開發場景設 `false`) |
 | `AUTONOMIA_PG_POOL_MAX` | 選配 | PG 連線池上限(無伺服器函式環境預設每實例 1 條,常駐程序預設 10) |

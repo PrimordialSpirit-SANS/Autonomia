@@ -133,7 +133,12 @@ export function resolvePgSslOptions(
     if (fromUrl !== null) return fromUrl;
   }
 
-  // 啟發式:遠端主機(受管 PG)自動 require;本機 / 內網維持明文。
+  // 啟發式:本機 / 內網維持明文;遠端(受管 PG)主機預設 verify-full
+  // (S-03 修復:修復前一律 rejectUnauthorized:false —— 有加密但從不
+  // 驗證伺服器身分,網路鄰接的 MITM 可冒充 PG 端點讀寫全部閘道資料)。
+  // Neon/Supabase/Render/RDS 等主流服務的憑證皆由公用 CA 簽發,verify-full
+  // 開箱即用;自簽/私有 CA 的部署以 sslmode=require 或 AUTONOMIA_PG_SSL
+  // =require 退回舊行為(啟動時會輸出警告)。
   let host = "";
   try {
     host = new URL(connectionString).hostname;
@@ -142,7 +147,24 @@ export function resolvePgSslOptions(
     host = hostMatch?.[1] ?? "";
   }
   if (isPrivatePgHost(host)) return false;
-  return { rejectUnauthorized: false };
+  return { rejectUnauthorized: true };
+}
+
+/** S-03:「加密但不驗證身分」且對象是公開主機 —— 供啟動警告與測試釘死。 */
+export function isInsecurePublicPgTls(
+  connectionString: string,
+  sslOption: AutonomiaPgSslOption,
+): boolean {
+  if (sslOption === false) return false;
+  if (sslOption.rejectUnauthorized === true) return false;
+  let host = "";
+  try {
+    host = new URL(connectionString).hostname;
+  } catch {
+    const hostMatch = /(?:^|\s)host\s*=\s*(\S+)/.exec(connectionString);
+    host = hostMatch?.[1] ?? "";
+  }
+  return !isPrivatePgHost(host);
 }
 
 // ---------------------------------------------------------------------------
@@ -175,12 +197,20 @@ export function pgPoolOptions(
   connectionString: string,
   options?: { env?: Record<string, unknown>; viaHyperdrive?: boolean },
 ): { max: number; ssl: AutonomiaPgSslOption; connectionTimeoutMillis: number } {
+  const ssl = resolvePgSslOptions(connectionString, {
+    env: options?.env as Pick<AutonomiaRuntimeEnv, "AUTONOMIA_PG_SSL">,
+    viaHyperdrive: options?.viaHyperdrive,
+  });
+  // S-03:操作者明確選擇 require/prefer(未驗證身分)且對象是公開主機時,
+  // 池建立時輸出一次警告——服務健康檢查不會反映這個風險,否則無任何信號。
+  if (isInsecurePublicPgTls(connectionString, ssl)) {
+    logAutonomiaEvent("warn", "autonomia_pg_tls_unverified", {
+      hint: "TLS encryption without server certificate verification for a public PostgreSQL host; set sslmode=verify-full (or install the CA) if possible",
+    });
+  }
   return {
     max: defaultPgPoolMax(options?.env),
-    ssl: resolvePgSslOptions(connectionString, {
-      env: options?.env as Pick<AutonomiaRuntimeEnv, "AUTONOMIA_PG_SSL">,
-      viaHyperdrive: options?.viaHyperdrive,
-    }),
+    ssl,
     // 健康的 PG 握手 < 1s;無伺服器冷啟時卡死連線會吃掉整個請求預算,
     // 10s 上限讓失敗及早暴露(逾時即錯誤,由上游重試)。
     connectionTimeoutMillis: 10_000,

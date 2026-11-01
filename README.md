@@ -30,7 +30,7 @@ See [Quick start](#快速開始) below, [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
 - **無伺服器 PostgreSQL**:`DATABASE_URL` 指向 PG 時,驅動依環境自動選擇——TCP `pg` 連線池(Node VPS、Render、Vercel/Netlify Node 函式,遠端主機自動 TLS、無伺服器環境每實例一條連線)或 Neon 相容 WebSocket 驅動(`*.neon.tech` 自動啟用;邊緣 runtime、Cloudflare Workers 直連,支援自架 `AUTONOMIA_PG_WS_PROXY` 閘道);Workers 另可經 Hyperdrive 綁定走 TCP。兩種驅動共用同一套互動式交易語意(`FOR UPDATE` 行鎖、`pg_advisory_xact_lock`),計費不變式不因拓撲妥協。詳見 `docs/DEPLOYMENT.md` 的 Topology C。
 - **API 金鑰管理**:`sk-autonomia-live_/sk-autonomia-test_` 金鑰、只顯示一次、pepper-HMAC digest 落庫;可設定過期時間、模型白名單、RPM、最大併發與美元消費上限。金鑰級 RPM/併發由資料庫交易內原子計數強制;登入與金鑰管理的 IP 限流同樣以 SQLite 固定窗口計數(單程序全域生效),資料庫不可用時降級為 in-process 記憶體視窗。
 - **內建帳號系統**:註冊/登入(JWT cookie + CSRF 雙提交,pre-auth 端點另以 Origin/Referer 檢查擋 login CSRF)、migrate 時可種子管理員、新戶送點、可關閉公開註冊。
-- **開發者控制台**:總覽、金鑰、串流測試(逐字渲染、usage 統計)、模型目錄(含免費額度)、請求紀錄與單筆詳情。
+- **開發者控制台**:總覽、金鑰、串流測試(逐字渲染、usage 統計)、模型目錄、請求紀錄與單筆詳情。(模型目錄暫不含免費額度——尚未實作,所有用量皆計費)
 - **維運探針與結構化日誌**:`GET /healthz` 回報程序與資料庫狀態(200 ok / 503 degraded),供負載平衡與監控探測;Node 自架拓撲另提供 `GET /metrics`(Prometheus 文字格式:請求數、延遲、token 用量、消費金額,以及各上游供應商的嘗試/失敗/延遲維度——failover 健康度一目瞭然;`AUTONOMIA_METRICS_ENABLED=false` 可關閉);內部日誌以單行 JSON 輸出,可直接交由 Cloudflare observability、journald 等採集。
 - **契約測試護欄**:openapi.yaml、前後端 catalog、路由與安全不變式都有測試釘死,漂移即擋建置。Biome lint/format 與 `npm audit`(high 以上)同樣在 CI 強制。
 

@@ -18,7 +18,7 @@ import { dbQuery } from "./db.ts";
 // 綁定,同鍵重送以全新請求重新執行,新回應經 ON CONFLICT DO UPDATE
 // 覆寫過期列(維護迴圈 */30 才清理,不可仰賴 DO NOTHING)。
 
-const MAX_REPLAY_PAYLOAD_BYTES = 2 * 1024 * 1024;
+export const MAX_REPLAY_PAYLOAD_BYTES = 2 * 1024 * 1024;
 
 function rows(result: any): any[] {
   return Array.isArray(result?.rows) ? result.rows : [];
@@ -149,6 +149,10 @@ export async function saveAutonomiaIdempotentReplay(
     payload: string;
     ttlSeconds: number;
     status?: number;
+    /** S-05:串流收集器在累積上限處主動降級 —— 回應實際更大,但閘道
+     * 不再為單一串流保存超出上限的複本;以 tombstone 保住「不重放、
+     * 不重新執行、不雙重扣費」的既有語意。 */
+    tombstone?: boolean;
   },
 ): Promise<boolean> {
   const ttlSeconds = Number(input.ttlSeconds);
@@ -158,7 +162,7 @@ export async function saveAutonomiaIdempotentReplay(
   // TTL),把「綁定存在但回應不可重放」變成可分辨的 409
   // idempotency_replay_not_stored——不重放、不重新執行、不雙重扣費;
   // TTL 過期後綁定隨 tombstone 一起釋放,同鍵可重新執行。
-  const oversized = payloadBytes > MAX_REPLAY_PAYLOAD_BYTES;
+  const oversized = input.tombstone === true || payloadBytes > MAX_REPLAY_PAYLOAD_BYTES;
   await ensureAiSchema(env);
   // ON CONFLICT DO UPDATE(僅限既有列已過期且指紋一致):TTL 過期後的
   // 重新執行要把新回應覆寫到過期但尚未被維護迴圈清理的列上;DO

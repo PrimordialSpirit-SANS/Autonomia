@@ -546,3 +546,38 @@ test("models listing counts toward the key's RPM admission (SN-8)", async () => 
     globalThis.fetch = originalFetch;
   }
 });
+
+// ── S-05 修復釘死:串流重放 frames 只為 opt-in 金鑰收集,且累積有上限 ──────
+// 修復前 replayFrames.push 無條件執行 —— 未 opt-in 冪等重放的金鑰(預設)也
+// 為每個串流保存整份解碼回應複本(約雙倍記憶體)。超上限時降級為 tombstone,
+// 保住「不重放、不重新執行、不雙重扣費」的既有語意(絕不存截斷回應)。
+test("S-05: replay collector gates on key opt-in and caps accumulation with tombstone semantics", async () => {
+  const { createReplayCollector } = await import("../src/routes/aiPublic.ts");
+
+  // 1. 未 opt-in(預設):完全不收集 —— 記憶體零成本。
+  const off = createReplayCollector({ idempotency_replay_ttl_seconds: 0 });
+  assert.equal(off.enabled, false);
+  off.push("data: {}\n\n".repeat(1000));
+  assert.equal(off.frames.length, 0);
+  assert.equal(off.overflowed, false);
+
+  // 2. opt-in:正常收集。
+  const on = createReplayCollector({ idempotency_replay_ttl_seconds: 3600 });
+  assert.equal(on.enabled, true);
+  on.push("data: a\n\n");
+  on.push("data: b\n\n");
+  assert.equal(on.frames.length, 2);
+  assert.equal(on.overflowed, false);
+
+  // 3. 累積超過 MAX_REPLAY_PAYLOAD_BYTES:停止收集、清空複本 ——
+  // 保存這些 frames 已無意義,落地的是 tombstone 而非截斷回應。
+  const { MAX_REPLAY_PAYLOAD_BYTES } = await import("../src/utils/aiIdempotency.ts");
+  const big = createReplayCollector({ idempotency_replay_ttl_seconds: 3600 });
+  big.push("x".repeat(MAX_REPLAY_PAYLOAD_BYTES - 8));
+  assert.equal(big.overflowed, false);
+  big.push("x".repeat(64));
+  assert.equal(big.overflowed, true);
+  assert.equal(big.frames.length, 0, "overflowed collector must drop the buffered copy");
+  big.push("x".repeat(16));
+  assert.equal(big.frames.length, 0, "overflowed collector must stay closed");
+});

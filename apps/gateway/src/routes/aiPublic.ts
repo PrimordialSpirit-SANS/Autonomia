@@ -30,6 +30,7 @@ import {
 } from "../utils/aiBilling.ts";
 import { AutonomiaError, invalidRequest, openAiErrorBody, sendOpenAiError } from "../utils/aiErrors.ts";
 import {
+  MAX_REPLAY_PAYLOAD_BYTES,
   readAutonomiaIdempotentReplay,
   recordAutonomiaIdempotentReplay,
   saveAutonomiaIdempotentReplay,
@@ -207,6 +208,7 @@ async function saveReplayForPrepared(
   prepared: any,
   contentType: string,
   payload: string,
+  options?: { tombstone?: boolean },
 ) {
   const idempotencyKey = prepared?.reservation?.idempotencyKey;
   const ttlSeconds = Number(aiKey?.idempotency_replay_ttl_seconds) || 0;
@@ -221,6 +223,7 @@ async function saveReplayForPrepared(
       contentType,
       payload,
       ttlSeconds,
+      ...(options?.tombstone ? { tombstone: true } : {}),
     });
   } catch {
     // 落地失敗不影響回應與計費;完成鍵重送會退回 409 語意,由對帳/日誌觀察。
@@ -229,6 +232,38 @@ async function saveReplayForPrepared(
 
 type MaybeKey = AutonomiaAuthenticatedKey | null | undefined;
 type MaybeKeyOrResolver = MaybeKey | (() => MaybeKey) | (() => Promise<MaybeKey>);
+
+// S-05 修復:串流重放 frames 的收集閘門。修復前 replayFrames.push 無條件
+// 執行 —— 未 opt-in 冪等重放的金鑰(預設)也為每個串流在記憶體保存整份
+// 解碼回應的複本(尖峰約雙倍記憶體,且 ReadableStream 無背壓,慢讀客戶端
+// 不會減緩收集)。修復後:
+// - 金鑰未 opt-in → 不收集;
+// - 累積超過 MAX_REPLAY_PAYLOAD_BYTES → 停止收集並降級為 tombstone
+//   (超過的回應本來就只會落地 tombstone,繼續累積純屬浪費;tombstone
+//   保住「不重放、不重新執行、不雙重扣費」的既有語意,絕不存截斷回應)。
+export function createReplayCollector(aiKey: any) {
+  const enabled = Number(aiKey?.idempotency_replay_ttl_seconds) > 0;
+  const frames: string[] = [];
+  let bytes = 0;
+  let overflowed = false;
+  return {
+    enabled,
+    frames,
+    get overflowed() {
+      return overflowed;
+    },
+    push(frame: string) {
+      if (!enabled || overflowed) return;
+      if (bytes + frame.length > MAX_REPLAY_PAYLOAD_BYTES) {
+        overflowed = true;
+        frames.length = 0;
+        return;
+      }
+      bytes += frame.length;
+      frames.push(frame);
+    },
+  };
+}
 
 aiPublicRoutes.use("*", async (c: AutonomiaContext, next: AutonomiaNext) => {
   c.set("aiRequestId", newRequestId());
@@ -358,7 +393,9 @@ export async function handleAutonomiaChatCompletions(
     const encoder = new TextEncoder();
     let cancelled = false;
     // 串流重放落地:逐 frame 累積,正常完成並結算後整串存入重放表。
-    const replayFrames: string[] = [];
+    // S-05:收集閘門見 createReplayCollector —— 未 opt-in 的金鑰不收集,
+    // 超過上限時降級 tombstone(不存截斷回應)。
+    const replaySink = createReplayCollector(aiKey);
     const stream = new ReadableStream({
       async start(controller) {
         let usage = null;
@@ -394,7 +431,7 @@ export async function handleAutonomiaChatCompletions(
             streamContext.estimatedOutputChars =
               (streamContext.estimatedOutputChars || 0) + measureStreamChunkOutputChars(chunk);
             const frame = `data: ${JSON.stringify(chunk)}\n\n`;
-            replayFrames.push(frame);
+            replaySink.push(frame);
             controller.enqueue(encoder.encode(frame));
           }
           if (!sawDone) {
@@ -407,10 +444,15 @@ export async function handleAutonomiaChatCompletions(
             });
           }
           await runtime.finalizeStream(streamContext, usage);
-          if (replayFrames.length > 0) {
+          if (replaySink.overflowed) {
+            // S-05:回應實際大於落地上限 —— tombstone 保住既有語意。
+            await saveReplayForPrepared(c.env, aiKey, prepared, "text/event-stream", "", {
+              tombstone: true,
+            });
+          } else if (replaySink.frames.length > 0) {
             // 結算已完成,整串(含結尾 [DONE])落地供完成鍵重放。
-            replayFrames.push("data: [DONE]\n\n");
-            await saveReplayForPrepared(c.env, aiKey, prepared, "text/event-stream", replayFrames.join(""));
+            replaySink.push("data: [DONE]\n\n");
+            await saveReplayForPrepared(c.env, aiKey, prepared, "text/event-stream", replaySink.frames.join(""));
           }
           controller.enqueue(encoder.encode("data: [DONE]\n\n"));
         } catch (error) {
@@ -587,7 +629,8 @@ export async function handleAutonomiaResponses(
     }
     const encoder = new TextEncoder();
     let cancelled = false;
-    const replayFrames: string[] = [];
+    // S-05:同 chat 路徑 —— 收集閘門見 createReplayCollector。
+    const replaySink = createReplayCollector(aiKey);
     // Responses SSE 以 `event:` + `data:` 雙行編頓;橋接狀態機把已正規化的
     // chat chunk 翻譯為事件序列,結束時補齊 done 序列與 response.completed。
     const bridge = createAutonomiaResponsesStreamBridge(prepared);
@@ -626,7 +669,7 @@ export async function handleAutonomiaResponses(
               (streamContext.estimatedOutputChars || 0) + measureStreamChunkOutputChars(chunk);
             for (const frame of bridge.translate(chunk)) {
               const encoded = frameOf(frame);
-              replayFrames.push(encoded);
+              replaySink.push(encoded);
               controller.enqueue(encoder.encode(encoded));
             }
           }
@@ -642,11 +685,15 @@ export async function handleAutonomiaResponses(
           await runtime.finalizeStream(streamContext, usage);
           for (const frame of bridge.finalize()) {
             const encoded = frameOf(frame);
-            replayFrames.push(encoded);
+            replaySink.push(encoded);
             controller.enqueue(encoder.encode(encoded));
           }
-          if (replayFrames.length > 0) {
-            await saveReplayForPrepared(c.env, aiKey, prepared, "text/event-stream", replayFrames.join(""));
+          if (replaySink.overflowed) {
+            await saveReplayForPrepared(c.env, aiKey, prepared, "text/event-stream", "", {
+              tombstone: true,
+            });
+          } else if (replaySink.frames.length > 0) {
+            await saveReplayForPrepared(c.env, aiKey, prepared, "text/event-stream", replaySink.frames.join(""));
           }
         } catch (error) {
           try {

@@ -112,6 +112,19 @@ versioning follows [SemVer](https://semver.org/).
 
 ### Changed
 
+- **Console `/home` redesigned as an engineering spec sheet.** The landing
+  page drops its template look (badge pill, centered hero, four-up metric
+  band, icon feature cards, six model cards, boxed 01/02/03 steps, gradient
+  final CTA card) for a quieter, product-first layout: an asymmetric hero
+  (left-aligned copy beside a real terminal window walking the 3-step
+  quickstart, one-click copyable), a hairline mono spec row for metrics, a
+  real pricing table (model / provider / context window / per-million
+  in-out pricing) in place of the model cards, a hairline icon-less 2x2
+  feature list, a new verbatim "API surface" section (POST
+  `/api/ai/v1/chat/completions`, `embeddings`, `responses`) and a flat
+  hairline final CTA band. i18n: 11 new `home.*` keys across all six
+  dictionaries (one stale key removed), parity pinned by `i18n.test.ts`.
+
 - **Model catalog & pricing refresh — revision 2026-10-25.1 (#49).** The
   authoritative `packages/core/config/backend-pricing.v1.json` (and the
   console display copy under `apps/console/public/data/autonomia/`)

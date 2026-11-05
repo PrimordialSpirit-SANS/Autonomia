@@ -10,7 +10,7 @@ Autonomia routes every public model through an upstream provider pool defined in
 
 | api_style | Transport | Providers |
 | --- | --- | --- |
-| `openai-compatible` | Bearer auth, `POST {base_url}/chat/completions`, OpenAI chunk streaming | `openrouter`, `hugging-face`, `qwencloud`, `openai`, `google`, `xai`, `groq`, `mistral`, `deepseek`, `together`, `fireworks`, `cerebras`, `perplexity`, `cohere`, `moonshot`, `zhipu`, `minimax`, `nvidia`, `deepinfra`, `sambanova`, `lambda`, `friendli`, `baichuan`, `stepfun`, `hunyuan`, `spark`, `ernie`, `ai21`, `amazon-bedrock`, `azure-openai`, `scaleway`, `ovhcloud`, `custom` |
+| `openai-compatible` | Bearer auth, `POST {base_url}/chat/completions`, OpenAI chunk streaming | `openrouter`, `hugging-face`, `qwencloud`, `openai`, `google`, `xai`, `groq`, `mistral`, `deepseek`, `together`, `fireworks`, `cerebras`, `perplexity`, `cohere`, `moonshot`, `zhipu`, `minimax`, `nvidia`, `deepinfra`, `sambanova`, `lambda`, `friendli`, `baichuan`, `stepfun`, `hunyuan`, `spark`, `ernie`, `ai21`, `amazon-bedrock`, `azure-openai`, `scaleway`, `ovhcloud`, `novita`, `liquid`, `custom` |
 | `anthropic-messages` | `x-api-key` + `anthropic-version` headers, `POST {base_url}/messages`, Anthropic Messages shape with server-side conversion to OpenAI chunks | `anthropic` |
 | `cloudflare-rest` | Bearer auth, per-model REST URL template | `cloudflare-workers-ai` |
 
@@ -75,15 +75,24 @@ secret or `.dev.vars` binding listed below.
 
 ## Models and Autonomia prices
 
-The published catalog covers 19 chat models from eight model families (OpenAI GPT,
-Anthropic Claude, Google Gemini, xAI Grok, DeepSeek, Moonshot AI Kimi, Z.ai
-GLM, and Alibaba Qwen), plus two `text-embedding-3` embedding models served
-from the OpenAI pool. Rates use each provider's official public API prices
-checked on 2026-10-25. Autonomia passes the upstream USD rate through with a small
-settlement margin (`input_usd_per_million_tokens` / `output_usd_per_million_tokens`,
-USD decimals), with a $0.0001 per-request minimum. Cache discounts, batch
-discounts, tiered long-context pricing, and promotions are excluded from the
-published rates.
+The published catalog covers 56 chat models plus two `text-embedding-3`
+embedding models served from the OpenAI pool. The original 2026-10-25 catalog
+shipped 19 chat models from eight model families (OpenAI GPT, Anthropic
+Claude, Google Gemini, xAI Grok, DeepSeek, Moonshot AI Kimi, Z.ai GLM, and
+Alibaba Qwen) at each provider's official public API prices. The
+**2026-11-05 coverage enhancement** added 36 chat models sourced from the
+live OpenRouter catalog (`https://openrouter.ai/api/v1/models`, 455 models
+surveyed) and the live Novita model list (`https://api.novita.ai/v3/openai/models`),
+introducing the Meta Llama, Microsoft Phi, ByteDance Seed, Xiaomi MiMo,
+inclusionAI Ling, Upstage Solar, Nous Hermes, Liquid LFM, Inception Mercury,
+Thinking Machines Inkling, Sakana Fugu, Reka, Writer Palmyra, IBM Granite,
+Tencent Hunyuan, MiniMax, StepFun, Mistral, Cohere, Perplexity, NVIDIA
+Nemotron, and Amazon Nova families. Rates use each source's published prices
+checked on the respective survey date. Autonomia passes the upstream USD rate
+through with a small settlement margin (`input_usd_per_million_tokens` /
+`output_usd_per_million_tokens`, USD decimals), with a $0.0001 per-request
+minimum. Cache discounts, batch discounts, tiered long-context pricing, and
+promotions are excluded from the published rates.
 
 ### OpenAI (`https://api.openai.com/v1`)
 
@@ -185,14 +194,53 @@ one public model, tried in ascending `priority` order:
 
 | Public model | Routes (priority order) |
 | --- | --- |
-| `autonomia/deepseek-v4-pro` | DeepSeek API `deepseek-v4-pro` (10) → QwenCloud `deepseek-v4-pro-0813` (20) |
+| `autonomia/deepseek-v4-pro` | DeepSeek API `deepseek-v4-pro` (10) → QwenCloud `deepseek-v4-pro-0813` (20) → Novita `deepseek/deepseek-v4-pro-0813` (30) |
 | `autonomia/deepseek-v4.1-flash` | DeepSeek API `deepseek-v4.1-flash` (10) → QwenCloud `deepseek-v4.1-flash` (20) |
-| `autonomia/kimi-k3` | Moonshot AI `kimi-k3` (10) → QwenCloud `kimi-k3` (20) |
+| `autonomia/kimi-k3` | Moonshot AI `kimi-k3` (10) → QwenCloud `kimi-k3` (20) → Novita `moonshotai/kimi-k3` (30) |
 | `autonomia/glm-5.3` | Z.ai BigModel `glm-5.3` (10) → QwenCloud `glm-5.3` (20) |
 | `autonomia/glm-5.3-flash` | Z.ai BigModel `glm-5.3-flash` (10) → QwenCloud `glm-5.3-flash` (20) |
+| `autonomia/deepseek-v3.1` | DeepSeek API `deepseek-chat` (10) → OpenRouter `deepseek/deepseek-chat-v3.1` (20) |
+| `autonomia/deepseek-r1` | DeepSeek API `deepseek-reasoner` (10) → OpenRouter `deepseek/deepseek-r1-0528` (20) |
+| `autonomia/glm-4.6` | Z.ai BigModel `glm-4.6` (10) → OpenRouter `z-ai/glm-4.6` (20) |
+| `autonomia/glm-4.5-air` | Z.ai BigModel `glm-4.5-air` (10) → OpenRouter `z-ai/glm-4.5-air` (20) |
+| `autonomia/qwen-plus` | QwenCloud `qwen-plus` (10) → OpenRouter `qwen/qwen-plus` (20) |
+| `autonomia/sonar-pro` | Perplexity API `sonar-pro` (10) → OpenRouter `perplexity/sonar-pro` (20) |
+| `autonomia/lfm-2.5-24b-a2b` | Liquid AI `lfm-2.5-24b-a2b` (10) → OpenRouter `liquid/lfm-2.5-24b-a2b` (20) |
+| `autonomia/mimo-v2.6-flash` | Novita `xiaomimimo/mimo-v2.6-flash` (10) → OpenRouter `xiaomi/mimo-v2.6-flash` (20) |
+| `autonomia/mimo-v2.6-pro` | Novita `xiaomimimo/mimo-v2.6-pro` (10) → OpenRouter `xiaomi/mimo-v2.6-pro` (20) |
 
 Public billing stays model-level and is set by the most expensive enabled
 route, so a fallback never bills below platform cost.
+
+### Aggregated routing via OpenRouter (2026-11-05)
+
+The `openrouter-production` pool now carries 33 catalog routes that were
+absent from the direct-provider catalog, covering upstream vendors Autonomia
+has no direct pool for (Meta, Microsoft, ByteDance, Xiaomi, inclusionAI,
+Upstage, Nous Research, Inception, Thinking Machines Lab, Sakana, Reka,
+Writer, IBM, Amazon, and others). The `upstream_model` of an OpenRouter route
+is the OpenRouter catalog ID (for example `meta-llama/llama-4-maverick`);
+OpenRouter then selects the concrete upstream provider and endpoint. This
+single pool lifts effective upstream coverage to the whole OpenRouter catalog
+(455 public models across 120 providers at survey time), while the 36
+direct-route models keep first-party latency, pricing, and fallback control.
+OpenRouter keys are configured through `OPENROUTER_API_KEY_1` in
+`.dev.vars` / Worker secrets like every other provider.
+
+### Novita (`https://api.novita.ai/v3/openai`)
+
+OpenAI-compatible serverless inference for open-weight and third-party
+models. The `novita-production` pool serves the seven Novita-native routes
+above (Kimi K3.1 Pro, Hunyuan 4, MiMo v2.6 Flash/Pro, MiniMax M3.1 Flash,
+plus fallbacks for DeepSeek V4 Pro and Kimi K3). Model IDs and prices were
+read from the live `GET /v3/openai/models` listing; credentials use
+`NOVITA_API_KEY_1`.
+
+### Liquid AI (`https://inference.liquid.ai/v1`)
+
+OpenAI-compatible endpoint for Liquid's LFM hybrid-architecture models. The
+`liquid-production` pool serves `lfm-2.5-24b-a2b` directly with an OpenRouter
+fallback; credentials use `LIQUID_API_KEY_1`.
 
 ## Transport-ready providers without catalog models
 
@@ -245,9 +293,9 @@ provider ecosystem. Currently wired upstreams: `openai`, `anthropic`,
 `cerebras`, `perplexity`, `cohere`, `moonshot`, `zhipu`, `minimax`, `nvidia`,
 `deepinfra`, `sambanova`, `lambda`, `friendli`, `baichuan`, `stepfun`,
 `hunyuan`, `spark`, `ernie`, `ai21`, `amazon-bedrock`, `azure-openai`,
-`scaleway`, `ovhcloud`, and the generic `custom`, plus the
-pre-existing `openrouter`, `hugging-face`, `qwencloud`, and
-`cloudflare-workers-ai`.
+`scaleway`, `ovhcloud`, the aggregator-style `openrouter`, `novita`, and
+`liquid`, and the generic `custom`, plus the pre-existing `hugging-face`,
+`qwencloud`, and `cloudflare-workers-ai`.
 
 openCode providers that need more than an API key and are therefore not
 registered yet:

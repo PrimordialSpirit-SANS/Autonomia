@@ -329,6 +329,79 @@ const de: Dictionary = {
       "OpenAIs preisgünstiges Text-Embedding-Modell für semantische Suche, Klassifikation und RAG-Retrieval. Über den Endpunkt /v1/embeddings nutzbar; nur Eingabe-Token werden abgerechnet.",
     "autonomia/text-embedding-3-large":
       "OpenAIs hochwertigstes Text-Embedding-Modell für semantische Suche und RAG-Szenarien mit höherem Recall. Über den Endpunkt /v1/embeddings nutzbar; nur Eingabe-Token werden abgerechnet.",
+
+    "autonomia/llama-4-maverick":
+      "Metas Llama-4-Flaggschiff: multimodales MoE-Modell (17B aktiv, 128 Experten) mit nativer Text- und Bildeingabe.Über Autonomia mit Text-Chat und Streaming verfügbar.",
+    "autonomia/llama-4-scout":
+      "Metas leichtes Llama-4-MoE-Multimodalmodell mit branchenweit führendem Langkontextfenster.Über Autonomia mit Text-Chat und Streaming verfügbar.",
+    "autonomia/phi-4":
+      "Microsofts kleines, hocheffizientes Modell, das größere Modelle bei Mathe- und Reasoning-Benchmarks herausfordert.Über Autonomia mit Text-Chat und Streaming verfügbar.",
+    "autonomia/seed-1.6":
+      "ByteDance Seeds multimodales Flaggschiff mit starker visueller Verarbeitung und agentischer Aufgabenplanung.Über Autonomia mit Text-Chat und Streaming verfügbar.",
+    "autonomia/mimo-v2.5-pro":
+      "Xiaomis MiO-Flaggschiff-Reasoningmodell mit Million-Token-Kontext und tiefem Denkmodus.Über Autonomia mit Text-Chat und Streaming verfügbar.",
+    "autonomia/ling-3.1-flash":
+      "inclusionAIs offenes Ling 3.1 Flash: extrem niedrige Latenz und Million-Token-Kontexte.Über Autonomia mit Text-Chat und Streaming verfügbar.",
+    "autonomia/solar-pro4":
+      "Upstage Solar Pro 4: offenes Langkontextmodell, optimiert für Koreanisch und multilinguale Workloads.Über Autonomia mit Text-Chat und Streaming verfügbar.",
+    "autonomia/hermes-4-405b":
+      "Nous Research' offenes Hermes 4 (405B), bekannt für Alignment-Qualität und agentische Tool-Aufrufe.Über Autonomia mit Text-Chat und Streaming verfügbar.",
+    "autonomia/lfm-2.5-24b-a2b":
+      "Liquid AIs LFM 2.5 (24B-A2B) mit Hybridarchitektur: Speichereffizienz und Inferenzgeschwindigkeit im Gleichgewicht.Über Autonomia mit Text-Chat und Streaming verfügbar.",
+    "autonomia/mercury-3":
+      "Inceptions diffusionsbasiertes Mercury 3: ultraniedrige Latenz über Million-Token-Kontexte dank paralleler Dekodierung.Über Autonomia mit Text-Chat und Streaming verfügbar.",
+    "autonomia/inkling":
+      "Thinking Machines Labs Inkling: Modell der neuen Generation für Long-Chain-Reasoning und agentische Aufgaben.Über Autonomia mit Text-Chat und Streaming verfügbar.",
+    "autonomia/fugu-max":
+      "Sakana AIs multimodales Flaggschiff, mit Modell-Fusionstechniken und Million-Token-Kontext gebaut.Über Autonomia mit Text-Chat und Streaming verfügbar.",
+    "autonomia/reka-flash-3":
+      "Reka Flash 3: offenes Modell, das Geschwindigkeit und Qualität des Alltags-Reasonings ausbalanciert.Über Autonomia mit Text-Chat und Streaming verfügbar.",
+    "autonomia/palmyra-x5":
+      "Writers Palmyra X5: Million-Kontext-Modell für Enterprise-RAG und Langdokument-Workflows.Über Autonomia mit Text-Chat und Streaming verfügbar.",
+    "autonomia/granite-4.2-8b":
+      "IBM Granite 4.2 (8B): leichtes offenes Modell, auf Unternehmensdaten trainiert, für Klassifikation und Zusammenfassung.Über Autonomia mit Text-Chat und Streaming verfügbar.",
+    "autonomia/hunyuan-a13b":
+      "Tencents offenes Hunyuan-A13B-MoE-Modell: kostengünstiger Allround-Chat und Reasoning mit 13B aktiven Parametern.Über Autonomia mit Text-Chat und Streaming verfügbar.",
+    "autonomia/deepseek-v3.1":
+      "DeepSeek V3.1: offenes Flaggschiff, das Alltagschat und Reasoning vereint, mit Doppel-Routing über den offiziellen Endpunkt und OpenRouter.Über Autonomia mit Text-Chat und Streaming verfügbar.",
+    "autonomia/deepseek-r1":
+      "DeepSeek R1: offenes Reasoning-Flaggschiff, trainiert mit Reinforcement Learning, mit Doppel-Routing.Über Autonomia mit Text-Chat und Streaming verfügbar.",
+    "autonomia/kimi-k2.5":
+      "Moonshot AIs Kimi K2.5: offenes Flaggschiff, optimiert für agentische Aufgaben und Werkzeugnutzung.Über Autonomia mit Text-Chat und Streaming verfügbar.",
+    "autonomia/kimi-k2-thinking":
+      "Kimi K2 Thinking: Moonshots Deep-Reasoning-Variante mit verschachteltem Denken und Tool-Aufrufen.Über Autonomia mit Text-Chat und Streaming verfügbar.",
+    "autonomia/glm-4.6":
+      "Z.ais GLM-4.6: offenes Flaggschiff mit deutlich verbessertem Coding und agentischen Fähigkeiten, mit Doppel-Routing.Über Autonomia mit Text-Chat und Streaming verfügbar.",
+    "autonomia/glm-4.5-air":
+      "GLM-4.5 Air: hält die meisten Flaggschiff-Fähigkeiten zu einem Bruchteil der Kosten, mit Doppel-Routing.Über Autonomia mit Text-Chat und Streaming verfügbar.",
+    "autonomia/qwen-plus":
+      "Alibabas Qwen-Plus: ausgewogenes Modell mit Million-Token-Kontext und starkem Preis-Leistungs-Verhältnis, mit Doppel-Routing.Über Autonomia mit Text-Chat und Streaming verfügbar.",
+    "autonomia/minimax-m2":
+      "MiniMax M2: offenes MoE-Flaggschiff mit kosteneffizienter agentischer und Reasoning-Leistung.Über Autonomia mit Text-Chat und Streaming verfügbar.",
+    "autonomia/step-3.7-flash":
+      "StepFuns Step 3.7 Flash: kosteneffizientes Modell, das Geschwindigkeit und multimodales Verständnis ausbalanciert.Über Autonomia mit Text-Chat und Streaming verfügbar.",
+    "autonomia/devstral":
+      "Mistrals Devstral 2: Coding-Modell für agentisches Software-Engineering im SWE-Bench-Stil.Über Autonomia mit Text-Chat und Streaming verfügbar.",
+    "autonomia/command-a":
+      "Cohere Command A: durchsatzstarkes Instruction-Modell für Enterprise-RAG und multilinguale Workloads.Über Autonomia mit Text-Chat und Streaming verfügbar.",
+    "autonomia/sonar-pro":
+      "Perplexity Sonar Pro: Suchmodell mit Live-Web-Retrieval und quittierten Antworten, mit Doppel-Routing.Über Autonomia mit Text-Chat und Streaming verfügbar.",
+    "autonomia/nemotron-3-ultra":
+      "NVIDIA Nemotron 3 Ultra (550B-A55B): offenes Reasoning-Flaggschiff, optimiert für wissenschaftliches und programmatisches Denken.Über Autonomia mit Text-Chat und Streaming verfügbar.",
+    "autonomia/nova-premier":
+      "Amazon Nova Premier: AWS' multimodales Flaggschiff für komplexe Dokumente, Bilder und Videoverständnis.Über Autonomia mit Text-Chat und Streaming verfügbar.",
+    "autonomia/nova-lite":
+      "Amazon Nova Lite: AWS' ultragünstiges Multimodalmodell für durchsatzstarke visuelle Verarbeitung.Über Autonomia mit Text-Chat und Streaming verfügbar.",
+    "autonomia/kimi-k3.1-pro":
+      "Moonshots Kimi K3.1 Pro: Langkontext-Flaggschiff mit Bild- und Videoeingabe, über Novitas direkten Endpunkt.Über Autonomia mit Text-Chat und Streaming verfügbar.",
+    "autonomia/hy4":
+      "Tencent Hunyuan 4 (Hy4) offizielle Version: Million-Token-Kontext und multimodales Verständnis, über Novitas direkten Endpunkt.Über Autonomia mit Text-Chat und Streaming verfügbar.",
+    "autonomia/mimo-v2.6-flash":
+      "Xiaomi MiMo v2.6 Flash: schnelles Reasoning-Modell mit Bild-, Video- und Audioeingabe, doppelt geroutet über Novita und OpenRouter.Über Autonomia mit Text-Chat und Streaming verfügbar.",
+    "autonomia/mimo-v2.6-pro":
+      "Xiaomi MiMo v2.6 Pro Flaggschiff: tiefes Reasoning mit multimodaler Eingabe, doppelt geroutet über Novita und OpenRouter.Über Autonomia mit Text-Chat und Streaming verfügbar.",
+    "autonomia/minimax-m3.1-flash":
+      "MiniMax M3.1 Flash: schnelles Reasoning-Modell der nächsten Generation mit Bild- und Videoeingabe, über Novitas direkten Endpunkt.Über Autonomia mit Text-Chat und Streaming verfügbar.",
   },
   docs: {
     title: "Schnellstart",

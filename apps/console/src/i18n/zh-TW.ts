@@ -308,6 +308,79 @@ const zhTW: Dictionary = {
       "OpenAI 高性價比文字向量模型,適合語意搜尋、分類與 RAG 檢索;透過 /v1/embeddings 端點使用,僅計輸入 token 費用。",
     "autonomia/text-embedding-3-large":
       "OpenAI 最高品質文字向量模型,適合需要更高召回率的語意搜尋與 RAG 場景;透過 /v1/embeddings 端點使用,僅計輸入 token 費用。",
+
+    "autonomia/llama-4-maverick":
+      "Meta 的 Llama 4 旗艦 MoE 多模態模型(17B 啟動參數、128 專家),原生支援文字與影像輸入。Autonomia 目前提供文字對話與串流介面。",
+    "autonomia/llama-4-scout":
+      "Meta 的 Llama 4 輕量級 MoE 多模態模型,具備業界領先的超長上下文視窗。Autonomia 目前提供文字對話與串流介面。",
+    "autonomia/phi-4":
+      "Microsoft 的小型高效率模型,在數學與推理基準上挑戰更大模型。Autonomia 目前提供文字對話與串流介面。",
+    "autonomia/seed-1.6":
+      "字節跳動 Seed 團隊的多模態旗艦,擅長視覺理解與代理式任務規劃。Autonomia 目前提供文字對話與串流介面。",
+    "autonomia/mimo-v2.5-pro":
+      "小米 MiMo 系列旗艦推理模型,具備百萬級上下文與深度思考模式。Autonomia 目前提供文字對話與串流介面。",
+    "autonomia/ling-3.1-flash":
+      "inclusionAI 的開放權重 Ling 3.1 Flash,以極低延遲與百萬上下文見長。Autonomia 目前提供文字對話與串流介面。",
+    "autonomia/solar-pro4":
+      "Upstage 的 Solar Pro 第四代,針對韓文與多語言場景優化的長上下文開放權重模型。Autonomia 目前提供文字對話與串流介面。",
+    "autonomia/hermes-4-405b":
+      "Nous Research 的開放權重 Hermes 4(405B),以對齊品質與代理工具呼叫能力著稱。Autonomia 目前提供文字對話與串流介面。",
+    "autonomia/lfm-2.5-24b-a2b":
+      "Liquid AI 以混合架構打造的 LFM 2.5(24B-A2B),兼顧記憶體效率與推論速度。Autonomia 目前提供文字對話與串流介面。",
+    "autonomia/mercury-3":
+      "Inception 以擴散式架構打造的 Mercury 3,以平行解碼實現超低延遲的百萬上下文生成。Autonomia 目前提供文字對話與串流介面。",
+    "autonomia/inkling":
+      "Thinking Machines Lab 的 Inkling,聚焦長鏈推理與代理任務的新一代模型。Autonomia 目前提供文字對話與串流介面。",
+    "autonomia/fugu-max":
+      "Sakana AI 以模型融合技術打造的多模態旗艦,具備百萬級上下文。Autonomia 目前提供文字對話與串流介面。",
+    "autonomia/reka-flash-3":
+      "Reka Flash 3,兼顧速度與品質的開放權重推理模型。Autonomia 目前提供文字對話與串流介面。",
+    "autonomia/palmyra-x5":
+      "Writer 的 Palmyra X5,面向企業 RAG 與長文件場景的百萬上下文寫作模型。Autonomia 目前提供文字對話與串流介面。",
+    "autonomia/granite-4.2-8b":
+      "IBM Granite 4.2(8B),以企業資料訓練的輕量開放模型,適合分類與摘要。Autonomia 目前提供文字對話與串流介面。",
+    "autonomia/hunyuan-a13b":
+      "騰訊混元 A13B 開放權重 MoE 模型,以 13B 啟動參數提供高性價比的通用對話與推理。Autonomia 目前提供文字對話與串流介面。",
+    "autonomia/deepseek-v3.1":
+      "DeepSeek V3.1,融合通用對話與推理模式的開放權重旗艦,具備官方端點與 OpenRouter 雙路由。Autonomia 目前提供文字對話與串流介面。",
+    "autonomia/deepseek-r1":
+      "DeepSeek R1,以強化學習訓練的開放權重推理旗艦,具備官方端點與 OpenRouter 雙路由。Autonomia 目前提供文字對話與串流介面。",
+    "autonomia/kimi-k2.5":
+      "Moonshot AI 的 Kimi K2.5,針對代理任務與工具使用優化的開放權重旗艦。Autonomia 目前提供文字對話與串流介面。",
+    "autonomia/kimi-k2-thinking":
+      "Kimi K2 Thinking,Moonshot 的深度推理版本,支援交錯思考與工具呼叫。Autonomia 目前提供文字對話與串流介面。",
+    "autonomia/glm-4.6":
+      "智譜 GLM-4.6,編碼與代理能力大幅升級的開放權重旗艦,具備官方端點與 OpenRouter 雙路由。Autonomia 目前提供文字對話與串流介面。",
+    "autonomia/glm-4.5-air":
+      "GLM-4.5 Air,以更低成本保留旗艦多數能力的輕量開放權重模型,具備官方端點與 OpenRouter 雙路由。Autonomia 目前提供文字對話與串流介面。",
+    "autonomia/qwen-plus":
+      "阿里 Qwen-Plus,兼具百萬上下文與高性價比的通用模型,具備 QwenCloud 官方端點與 OpenRouter 雙路由。Autonomia 目前提供文字對話與串流介面。",
+    "autonomia/minimax-m2":
+      "MiniMax M2 開放權重旗艦,以 MoE 架構提供高性價比的代理與推理能力。Autonomia 目前提供文字對話與串流介面。",
+    "autonomia/step-3.7-flash":
+      "StepFun 階躍星辰 Step 3.7 Flash,兼顧速度與多模態理解的高性價比模型。Autonomia 目前提供文字對話與串流介面。",
+    "autonomia/devstral":
+      "Mistral 的 Devstral 2,專為代理式軟體工程任務打造的編碼模型。Autonomia 目前提供文字對話與串流介面。",
+    "autonomia/command-a":
+      "Cohere Command A,以高吞吐與企業 RAG 場景為主的指令模型。Autonomia 目前提供文字對話與串流介面。",
+    "autonomia/sonar-pro":
+      "Perplexity Sonar Pro,結合即時網路檢索與引用的搜尋模型,具備官方端點與 OpenRouter 雙路由。Autonomia 目前提供文字對話與串流介面。",
+    "autonomia/nemotron-3-ultra":
+      "NVIDIA Nemotron 3 Ultra(550B-A55B),開放權重推理旗艦,針對科學與程式推理最佳化。Autonomia 目前提供文字對話與串流介面。",
+    "autonomia/nova-premier":
+      "Amazon Nova Premier,AWS 的多模態旗艦,擅長複雜文件、影像與影片理解。Autonomia 目前提供文字對話與串流介面。",
+    "autonomia/nova-lite":
+      "Amazon Nova Lite,AWS 的超低成本多模態模型,適合高吞吐的視覺理解場景。Autonomia 目前提供文字對話與串流介面。",
+    "autonomia/kimi-k3.1-pro":
+      "Moonshot Kimi K3.1 Pro,支援影像與影片輸入的長上下文旗艦,由 Novita 直接端點提供。Autonomia 目前提供文字對話與串流介面。",
+    "autonomia/hy4":
+      "騰訊 Hunyuan 4(Hy4)正式版,具備百萬上下文與多模態理解,由 Novita 直接端點提供。Autonomia 目前提供文字對話與串流介面。",
+    "autonomia/mimo-v2.6-flash":
+      "小米 MiMo v2.6 Flash,支援影像、影片與音訊輸入的高速推理模型,具備 Novita 與 OpenRouter 雙路由。Autonomia 目前提供文字對話與串流介面。",
+    "autonomia/mimo-v2.6-pro":
+      "小米 MiMo v2.6 Pro 旗艦,深度推理與多模態兼備,具備 Novita 與 OpenRouter 雙路由。Autonomia 目前提供文字對話與串流介面。",
+    "autonomia/minimax-m3.1-flash":
+      "MiniMax M3.1 Flash,新一代高速推理模型,支援影像與影片輸入,由 Novita 直接端點提供。Autonomia 目前提供文字對話與串流介面。",
   },
   docs: {
     title: "快速開始",

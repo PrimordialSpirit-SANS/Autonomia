@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0.0",
-  "revision": "2026-10-25.1",
+  "revision": "2026-11-05.1",
   "pools": {
     "openrouter-production": {
       "provider": "openrouter",
@@ -824,6 +824,52 @@
           "max_in_flight": 8,
           "secret_refs": {
             "api_key": "AZURE_OPENAI_API_KEY_1"
+          }
+        }
+      ]
+    },
+    "novita-production": {
+      "provider": "novita",
+      "enabled": true,
+      "api_style": "openai-compatible",
+      "base_url": "https://api.novita.ai/v3/openai",
+      "selection": {
+        "strategy": "database-weighted-round-robin",
+        "lease_ttl_ms": 90000,
+        "base_cooldown_ms": 5000,
+        "max_cooldown_ms": 300000
+      },
+      "credentials": [
+        {
+          "credential_id": "novita-primary",
+          "enabled": true,
+          "weight": 100,
+          "max_in_flight": 8,
+          "secret_refs": {
+            "api_key": "NOVITA_API_KEY_1"
+          }
+        }
+      ]
+    },
+    "liquid-production": {
+      "provider": "liquid",
+      "enabled": true,
+      "api_style": "openai-compatible",
+      "base_url": "https://inference.liquid.ai/v1",
+      "selection": {
+        "strategy": "database-weighted-round-robin",
+        "lease_ttl_ms": 90000,
+        "base_cooldown_ms": 5000,
+        "max_cooldown_ms": 300000
+      },
+      "credentials": [
+        {
+          "credential_id": "liquid-primary",
+          "enabled": true,
+          "weight": 100,
+          "max_in_flight": 8,
+          "secret_refs": {
+            "api_key": "LIQUID_API_KEY_1"
           }
         }
       ]

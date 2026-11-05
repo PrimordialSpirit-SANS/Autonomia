@@ -317,6 +317,79 @@ export const en = {
       "OpenAI's cost-effective text embedding model for semantic search, classification, and RAG retrieval. Available via the /v1/embeddings endpoint; only input tokens are billed.",
     "autonomia/text-embedding-3-large":
       "OpenAI's highest-quality text embedding model for semantic search and RAG scenarios that need higher recall. Available via the /v1/embeddings endpoint; only input tokens are billed.",
+
+    "autonomia/llama-4-maverick":
+      "Meta's flagship Llama 4 mixture-of-experts multimodal model (17B active, 128 experts) with native text and image input. Available through Autonomia with text chat and streaming.",
+    "autonomia/llama-4-scout":
+      "Meta's lightweight Llama 4 mixture-of-experts multimodal model with an industry-leading long context window. Available through Autonomia with text chat and streaming.",
+    "autonomia/phi-4":
+      "Microsoft's small high-efficiency model that challenges far larger models on math and reasoning benchmarks. Available through Autonomia with text chat and streaming.",
+    "autonomia/seed-1.6":
+      "ByteDance Seed's multimodal flagship with strong visual understanding and agentic task planning. Available through Autonomia with text chat and streaming.",
+    "autonomia/mimo-v2.5-pro":
+      "Xiaomi's MiMo flagship reasoning model with a million-token context and deep thinking mode. Available through Autonomia with text chat and streaming.",
+    "autonomia/ling-3.1-flash":
+      "inclusionAI's open-weight Ling 3.1 Flash, built for very low latency and million-token contexts. Available through Autonomia with text chat and streaming.",
+    "autonomia/solar-pro4":
+      "Upstage's Solar Pro 4, an open-weight long-context model optimized for Korean and multilingual workloads. Available through Autonomia with text chat and streaming.",
+    "autonomia/hermes-4-405b":
+      "Nous Research's open-weight Hermes 4 (405B), known for alignment quality and agentic tool calling. Available through Autonomia with text chat and streaming.",
+    "autonomia/lfm-2.5-24b-a2b":
+      "Liquid AI's LFM 2.5 (24B-A2B) hybrid architecture balancing memory efficiency and inference speed. Available through Autonomia with text chat and streaming.",
+    "autonomia/mercury-3":
+      "Inception's diffusion-based Mercury 3, delivering ultra-low-latency generation over million-token contexts. Available through Autonomia with text chat and streaming.",
+    "autonomia/inkling":
+      "Thinking Machines Lab's Inkling, a new-generation model focused on long-chain reasoning and agentic tasks. Available through Autonomia with text chat and streaming.",
+    "autonomia/fugu-max":
+      "Sakana AI's multimodal flagship built with model fusion techniques and a million-token context. Available through Autonomia with text chat and streaming.",
+    "autonomia/reka-flash-3":
+      "Reka Flash 3, an open-weight model balancing speed and quality for everyday reasoning. Available through Autonomia with text chat and streaming.",
+    "autonomia/palmyra-x5":
+      "Writer's Palmyra X5, a million-context model built for enterprise RAG and long-document workflows. Available through Autonomia with text chat and streaming.",
+    "autonomia/granite-4.2-8b":
+      "IBM Granite 4.2 (8B), a lightweight open model trained on enterprise data for classification and summarization. Available through Autonomia with text chat and streaming.",
+    "autonomia/hunyuan-a13b":
+      "Tencent's open-weight Hunyuan A13B MoE model, offering cost-effective general chat and reasoning. Available through Autonomia with text chat and streaming.",
+    "autonomia/deepseek-v3.1":
+      "DeepSeek V3.1, the open-weight flagship blending general chat and reasoning modes, with dual routing. Available through Autonomia with text chat and streaming.",
+    "autonomia/deepseek-r1":
+      "DeepSeek R1, the open-weight reasoning flagship trained with reinforcement learning, with dual routing. Available through Autonomia with text chat and streaming.",
+    "autonomia/kimi-k2.5":
+      "Moonshot AI's Kimi K2.5, an open-weight flagship tuned for agentic tasks and tool use. Available through Autonomia with text chat and streaming.",
+    "autonomia/kimi-k2-thinking":
+      "Kimi K2 Thinking, Moonshot's deep-reasoning variant with interleaved thinking and tool calls. Available through Autonomia with text chat and streaming.",
+    "autonomia/glm-4.6":
+      "Z.ai's GLM-4.6, an open-weight flagship with upgraded coding and agentic capabilities, with dual routing. Available through Autonomia with text chat and streaming.",
+    "autonomia/glm-4.5-air":
+      "GLM-4.5 Air, keeping most flagship capabilities at a fraction of the cost, with dual routing. Available through Autonomia with text chat and streaming.",
+    "autonomia/qwen-plus":
+      "Alibaba's Qwen-Plus, balancing a million-token context and strong value, with dual routing. Available through Autonomia with text chat and streaming.",
+    "autonomia/minimax-m2":
+      "MiniMax M2, an open-weight MoE flagship delivering cost-effective agentic and reasoning performance. Available through Autonomia with text chat and streaming.",
+    "autonomia/step-3.7-flash":
+      "StepFun's Step 3.7 Flash, a cost-effective model balancing speed and multimodal understanding. Available through Autonomia with text chat and streaming.",
+    "autonomia/devstral":
+      "Mistral's Devstral 2, a coding model built for agentic software engineering on SWE-Bench style tasks. Available through Autonomia with text chat and streaming.",
+    "autonomia/command-a":
+      "Cohere Command A, a high-throughput instruction model aimed at enterprise RAG and multilingual workloads. Available through Autonomia with text chat and streaming.",
+    "autonomia/sonar-pro":
+      "Perplexity Sonar Pro, a search model combining live web retrieval with cited answers, with dual routing. Available through Autonomia with text chat and streaming.",
+    "autonomia/nemotron-3-ultra":
+      "NVIDIA Nemotron 3 Ultra (550B-A55B), an open-weight reasoning flagship tuned for scientific and programmatic reasoning. Available through Autonomia with text chat and streaming.",
+    "autonomia/nova-premier":
+      "Amazon Nova Premier, the AWS multimodal flagship for complex documents, images, and video understanding. Available through Autonomia with text chat and streaming.",
+    "autonomia/nova-lite":
+      "Amazon Nova Lite, AWS' ultra-low-cost multimodal model for high-throughput visual understanding. Available through Autonomia with text chat and streaming.",
+    "autonomia/kimi-k3.1-pro":
+      "Moonshot's Kimi K3.1 Pro, a long-context flagship with image and video input, served via Novita. Available through Autonomia with text chat and streaming.",
+    "autonomia/hy4":
+      "Tencent Hunyuan 4 (Hy4) official release, with a million-token context and multimodal understanding, served via Novita. Available through Autonomia with text chat and streaming.",
+    "autonomia/mimo-v2.6-flash":
+      "Xiaomi MiMo v2.6 Flash, a fast reasoning model with image, video, and audio input, dual-routed via Novita and OpenRouter. Available through Autonomia with text chat and streaming.",
+    "autonomia/mimo-v2.6-pro":
+      "Xiaomi MiMo v2.6 Pro flagship, combining deep reasoning with multimodal input, dual-routed via Novita and OpenRouter. Available through Autonomia with text chat and streaming.",
+    "autonomia/minimax-m3.1-flash":
+      "MiniMax M3.1 Flash, a next-generation fast reasoning model with image and video input, served via Novita. Available through Autonomia with text chat and streaming.",
   },
   docs: {
     title: "Quick start",

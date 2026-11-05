@@ -58,12 +58,12 @@ describe("loadAutonomiaModels", () => {
 });
 
 describe("loadAutonomiaProviderOfferings", () => {
-  it("requires autonomia_point currency and per million tokens billing", async () => {
+  it("requires usd currency and per million tokens billing", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       jsonResponse(200, {
         schema_version: 1,
         pricing_revision: "rev-1",
-        currency: "usd",
+        currency: "autonomia_point",
         billing_unit: "per_million_tokens",
         offerings: [],
       }),
@@ -76,7 +76,7 @@ describe("loadAutonomiaProviderOfferings", () => {
       jsonResponse(200, {
         schema_version: 1,
         pricing_revision: "rev-1",
-        currency: "autonomia_point",
+        currency: "usd",
         billing_unit: "per_million_tokens",
         offerings: [{ id: "offering-1" }],
       }),

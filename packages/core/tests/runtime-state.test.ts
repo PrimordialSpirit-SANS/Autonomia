@@ -103,7 +103,7 @@ test("provider pool is lease-based, weighted, capacity bounded, and secret-free"
   });
   assert.equal(
     calls.filter(({ sql }: any) => sql.includes("INSERT INTO ai_provider_credentials")).length,
-    37,
+    39,
   );
   assert.equal(
     calls.some(({ params }: any) => params.some((value: any) => String(value).includes("API_KEY"))),

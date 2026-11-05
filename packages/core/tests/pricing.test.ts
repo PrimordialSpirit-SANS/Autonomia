@@ -60,6 +60,43 @@ test("canonical pricing exposes only enabled public models", () => {
       QWEN_38_27B,
       "autonomia/text-embedding-3-small",
       "autonomia/text-embedding-3-large",
+      // ── 2026-11-05 覆蓋加強：OpenRouter 聚合 + Novita/Liquid 直接端點 ──
+      "autonomia/llama-4-maverick",
+      "autonomia/llama-4-scout",
+      "autonomia/phi-4",
+      "autonomia/seed-1.6",
+      "autonomia/mimo-v2.5-pro",
+      "autonomia/ling-3.1-flash",
+      "autonomia/solar-pro4",
+      "autonomia/hermes-4-405b",
+      "autonomia/lfm-2.5-24b-a2b",
+      "autonomia/mercury-3",
+      "autonomia/inkling",
+      "autonomia/fugu-max",
+      "autonomia/reka-flash-3",
+      "autonomia/palmyra-x5",
+      "autonomia/granite-4.2-8b",
+      "autonomia/hunyuan-a13b",
+      "autonomia/deepseek-v3.1",
+      "autonomia/deepseek-r1",
+      "autonomia/kimi-k2.5",
+      "autonomia/kimi-k2-thinking",
+      "autonomia/glm-4.6",
+      "autonomia/glm-4.5-air",
+      "autonomia/qwen-plus",
+      "autonomia/minimax-m2",
+      "autonomia/step-3.7-flash",
+      "autonomia/devstral",
+      "autonomia/command-a",
+      "autonomia/sonar-pro",
+      "autonomia/nemotron-3-ultra",
+      "autonomia/nova-premier",
+      "autonomia/nova-lite",
+      "autonomia/kimi-k3.1-pro",
+      "autonomia/hy4",
+      "autonomia/mimo-v2.6-flash",
+      "autonomia/mimo-v2.6-pro",
+      "autonomia/minimax-m3.1-flash",
     ],
   );
   assert.equal(getModelPricing(GPT_6_ASTRA), BACKEND_PRICING.models[GPT_6_ASTRA]);
@@ -211,19 +248,87 @@ test("Grok 4.7 bills through the official xAI route", () => {
   );
 });
 
-test("DeepSeek V4 Pro falls back from the official API to QwenCloud", () => {
+test("DeepSeek V4 Pro falls back from the official API to QwenCloud, then Novita", () => {
   assert.equal(calculateActualCostMicros("autonomia/deepseek-v4-pro", 1_000_000, 1_000_000), 5280000);
   assert.deepEqual(
     listCandidateRoutes("autonomia/deepseek-v4-pro").map((route) => route.route_id),
-    ["deepseek-v4-pro-deepseek", "deepseek-v4-pro-qwencloud"],
+    ["deepseek-v4-pro-deepseek", "deepseek-v4-pro-qwencloud", "deepseek-v4-pro-novita"],
   );
 });
 
-test("Kimi K3 falls back from Moonshot AI to QwenCloud", () => {
+test("Kimi K3 falls back from Moonshot AI to QwenCloud, then Novita", () => {
   assert.equal(calculateActualCostMicros("autonomia/kimi-k3", 1_000_000, 1_000_000), 18000000);
   assert.deepEqual(
     listCandidateRoutes("autonomia/kimi-k3").map((route) => route.route_id),
-    ["kimi-k3-moonshot", "kimi-k3-qwencloud"],
+    ["kimi-k3-moonshot", "kimi-k3-qwencloud", "kimi-k3-novita"],
+  );
+});
+
+test("aggregated OpenRouter routes expose the upstream catalog model IDs", () => {
+  // OpenRouter 聚合路由：upstream_model 即 OpenRouter 目錄的 vendor/model ID。
+  assert.deepEqual(
+    listCandidateRoutes("autonomia/llama-4-maverick").map((route) => route.upstream_model),
+    ["meta-llama/llama-4-maverick"],
+  );
+  assert.deepEqual(
+    listCandidateRoutes("autonomia/inkling").map((route) => route.upstream_model),
+    ["thinkingmachines/inkling"],
+  );
+});
+
+test("dual-source models prefer the direct provider and keep OpenRouter as fallback", () => {
+  assert.deepEqual(
+    listCandidateRoutes("autonomia/deepseek-v3.1").map((route) => [route.provider, route.upstream_model]),
+    [
+      ["deepseek", "deepseek-chat"],
+      ["openrouter", "deepseek/deepseek-chat-v3.1"],
+    ],
+  );
+  assert.deepEqual(
+    listCandidateRoutes("autonomia/glm-4.6").map((route) => [route.provider, route.upstream_model]),
+    [
+      ["zhipu", "glm-4.6"],
+      ["openrouter", "z-ai/glm-4.6"],
+    ],
+  );
+  assert.deepEqual(
+    listCandidateRoutes("autonomia/qwen-plus").map((route) => [route.provider, route.upstream_model]),
+    [
+      ["qwencloud", "qwen-plus"],
+      ["openrouter", "qwen/qwen-plus"],
+    ],
+  );
+  assert.deepEqual(
+    listCandidateRoutes("autonomia/sonar-pro").map((route) => [route.provider, route.upstream_model]),
+    [
+      ["perplexity", "sonar-pro"],
+      ["openrouter", "perplexity/sonar-pro"],
+    ],
+  );
+});
+
+test("Novita and Liquid direct routes carry their platform-native model IDs", () => {
+  assert.deepEqual(
+    listCandidateRoutes("autonomia/mimo-v2.6-flash").map((route) => [route.provider, route.upstream_model]),
+    [
+      ["novita", "xiaomimimo/mimo-v2.6-flash"],
+      ["openrouter", "xiaomi/mimo-v2.6-flash"],
+    ],
+  );
+  assert.deepEqual(
+    listCandidateRoutes("autonomia/lfm-2.5-24b-a2b").map((route) => [route.provider, route.upstream_model]),
+    [
+      ["liquid", "lfm-2.5-24b-a2b"],
+      ["openrouter", "liquid/lfm-2.5-24b-a2b"],
+    ],
+  );
+  assert.deepEqual(
+    listCandidateRoutes("autonomia/kimi-k3.1-pro").map((route) => route.upstream_model),
+    ["moonshotai/kimi-k3.1-pro"],
+  );
+  assert.deepEqual(
+    listCandidateRoutes("autonomia/hy4").map((route) => route.upstream_model),
+    ["tencent/hy4"],
   );
 });
 

@@ -319,6 +319,79 @@ const ja: Dictionary = {
       "OpenAI のコストパフォーマンスに優れたテキスト埋め込みモデル。意味検索、分類、RAG 検索に適します。/v1/embeddings エンドポイントで利用でき、入力トークンのみ課金されます。",
     "autonomia/text-embedding-3-large":
       "OpenAI の最高品質テキスト埋め込みモデル。より高い再現率が求められる意味検索や RAG に適します。/v1/embeddings エンドポイントで利用でき、入力トークンのみ課金されます。",
+
+    "autonomia/llama-4-maverick":
+      "Meta の Llama 4 フラッグシップ MoE マルチモーダルモデル(17B アクティブ・128 エキスパート)。テキストと画像入力に対応。Autonomia ではテキスト対話とストリーミングに対応しています。",
+    "autonomia/llama-4-scout":
+      "Meta の軽量 Llama 4 MoE マルチモーダルモデル。業界トップクラスの長いコンテキスト窗口を備えます。Autonomia ではテキスト対話とストリーミングに対応しています。",
+    "autonomia/phi-4":
+      "Microsoft の小型高効率モデル。数学・推論ベンチマークで大型モデルに挑みます。Autonomia ではテキスト対話とストリーミングに対応しています。",
+    "autonomia/seed-1.6":
+      "ByteDance Seed のマルチモーダルフラッグシップ。視覚理解とエージェント型タスク計画に優れます。Autonomia ではテキスト対話とストリーミングに対応しています。",
+    "autonomia/mimo-v2.5-pro":
+      "Xiaomi MiMo フラッグシップ推論モデル。100万トークンのコンテキストと深い思考モードを備えます。Autonomia ではテキスト対話とストリーミングに対応しています。",
+    "autonomia/ling-3.1-flash":
+      "inclusionAI のオープンウェイト Ling 3.1 Flash。超低レイテンシと100万トークンのコンテキストが特徴です。Autonomia ではテキスト対話とストリーミングに対応しています。",
+    "autonomia/solar-pro4":
+      "Upstage の Solar Pro 第4世代。韓国語・多言語向けに最適化された長コンテキストのオープンウェイトモデルです。Autonomia ではテキスト対話とストリーミングに対応しています。",
+    "autonomia/hermes-4-405b":
+      "Nous Research のオープンウェイト Hermes 4(405B)。アライメント品質とツール呼び出しで定評があります。Autonomia ではテキスト対話とストリーミングに対応しています。",
+    "autonomia/lfm-2.5-24b-a2b":
+      "Liquid AI のハイブリッドアーキテクチャによる LFM 2.5(24B-A2B)。メモリ効率と推論速度を両立します。Autonomia ではテキスト対話とストリーミングに対応しています。",
+    "autonomia/mercury-3":
+      "Inception の拡散ベース Mercury 3。並列デコードで超低レイテンシの100万トークン生成を実現します。Autonomia ではテキスト対話とストリーミングに対応しています。",
+    "autonomia/inkling":
+      "Thinking Machines Lab の Inkling。長い推論チェーンとエージェントタスクに特化した新世代モデルです。Autonomia ではテキスト対話とストリーミングに対応しています。",
+    "autonomia/fugu-max":
+      "Sakana AI がモデル融合技術で構築したマルチモーダルフラッグシップ。100万トークンのコンテキストを備えます。Autonomia ではテキスト対話とストリーミングに対応しています。",
+    "autonomia/reka-flash-3":
+      "Reka Flash 3。速度と品質を両立したオープンウェイト推論モデルです。Autonomia ではテキスト対話とストリーミングに対応しています。",
+    "autonomia/palmyra-x5":
+      "Writer の Palmyra X5。エンタープライズ RAG と長文ドキュメント向けの100万コンテキストモデルです。Autonomia ではテキスト対話とストリーミングに対応しています。",
+    "autonomia/granite-4.2-8b":
+      "IBM Granite 4.2(8B)。エンタープライズデータで学習した軽量オープンモデルで、分類・要約に適します。Autonomia ではテキスト対話とストリーミングに対応しています。",
+    "autonomia/hunyuan-a13b":
+      "Tencent のオープンウェイト Hunyuan A13B MoE モデル。13B のアクティブパラメータでコスト効率の高い対話・推論を提供します。Autonomia ではテキスト対話とストリーミングに対応しています。",
+    "autonomia/deepseek-v3.1":
+      "DeepSeek V3.1。汎用対話と推論を融合したオープンウェイトフラッグシップで、公式エンドポイントと OpenRouter のデュアルルーティングを備えます。Autonomia ではテキスト対話とストリーミングに対応しています。",
+    "autonomia/deepseek-r1":
+      "DeepSeek R1。強化学習で訓練されたオープンウェイト推論フラッグシップで、公式エンドポイントと OpenRouter のデュアルルーティングを備えます。Autonomia ではテキスト対話とストリーミングに対応しています。",
+    "autonomia/kimi-k2.5":
+      "Moonshot AI の Kimi K2.5。エージェントタスクとツール利用に最適化されたオープンウェイトフラッグシップです。Autonomia ではテキスト対話とストリーミングに対応しています。",
+    "autonomia/kimi-k2-thinking":
+      "Kimi K2 Thinking。Moonshot の深層推論版で、交互思考とツール呼び出しに対応します。Autonomia ではテキスト対話とストリーミングに対応しています。",
+    "autonomia/glm-4.6":
+      "Z.ai の GLM-4.6。コーディングとエージェント能力を大幅に向上したオープンウェイトフラッグシップで、公式と OpenRouter のデュアルルーティングを備えます。Autonomia ではテキスト対話とストリーミングに対応しています。",
+    "autonomia/glm-4.5-air":
+      "GLM-4.5 Air。フラッグシップの能力を低コストで維持する軽量オープンウェイトモデルで、公式と OpenRouter のデュアルルーティングを備えます。Autonomia ではテキスト対話とストリーミングに対応しています。",
+    "autonomia/qwen-plus":
+      "Alibaba の Qwen-Plus。100万トークンのコンテキストと高いコスト効率を両立する汎用モデルで、QwenCloud と OpenRouter のデュアルルーティングを備えます。Autonomia ではテキスト対話とストリーミングに対応しています。",
+    "autonomia/minimax-m2":
+      "MiniMax M2。MoE アーキテクチャでコスト効率の高いエージェント・推論性能を提供するオープンウェイトフラッグシップです。Autonomia ではテキスト対話とストリーミングに対応しています。",
+    "autonomia/step-3.7-flash":
+      "StepFun の Step 3.7 Flash。速度とマルチモーダル理解を両立するコスト効率の高いモデルです。Autonomia ではテキスト対話とストリーミングに対応しています。",
+    "autonomia/devstral":
+      "Mistral の Devstral 2。エージェント型ソフトウェアエンジニアリング向けのコーディングモデルです。Autonomia ではテキスト対話とストリーミングに対応しています。",
+    "autonomia/command-a":
+      "Cohere Command A。高スループットとエンタープライズ RAG 向けのインストラクションモデルです。Autonomia ではテキスト対話とストリーミングに対応しています。",
+    "autonomia/sonar-pro":
+      "Perplexity Sonar Pro。リアルタイムのウェブ検索と引用付き回答を組み合わせた検索モデルで、公式と OpenRouter のデュアルルーティングを備えます。Autonomia ではテキスト対話とストリーミングに対応しています。",
+    "autonomia/nemotron-3-ultra":
+      "NVIDIA Nemotron 3 Ultra(550B-A55B)。科学的・プログラム的推論に最適化されたオープンウェイト推論フラッグシップです。Autonomia ではテキスト対話とストリーミングに対応しています。",
+    "autonomia/nova-premier":
+      "Amazon Nova Premier。AWS のマルチモーダルフラッグシップで、複雑なドキュメント・画像・動画の理解に優れます。Autonomia ではテキスト対話とストリーミングに対応しています。",
+    "autonomia/nova-lite":
+      "Amazon Nova Lite。AWS の超低コストマルチモーダルモデルで、高スループットの視覚理解に適します。Autonomia ではテキスト対話とストリーミングに対応しています。",
+    "autonomia/kimi-k3.1-pro":
+      "Moonshot の Kimi K3.1 Pro。画像・動画入力に対応した長コンテキストフラッグシップで、Novita の直接エンドポイントから提供されます。Autonomia ではテキスト対話とストリーミングに対応しています。",
+    "autonomia/hy4":
+      "Tencent Hunyuan 4(Hy4)正式版。100万トークンのコンテキストとマルチモーダル理解を備え、Novita の直接エンドポイントから提供されます。Autonomia ではテキスト対話とストリーミングに対応しています。",
+    "autonomia/mimo-v2.6-flash":
+      "Xiaomi MiMo v2.6 Flash。画像・動画・音声入力に対応した高速推論モデルで、Novita と OpenRouter のデュアルルーティングを備えます。Autonomia ではテキスト対話とストリーミングに対応しています。",
+    "autonomia/mimo-v2.6-pro":
+      "Xiaomi MiMo v2.6 Pro フラッグシップ。深い推論とマルチモーダル入力を兼ね備え、Novita と OpenRouter のデュアルルーティングを備えます。Autonomia ではテキスト対話とストリーミングに対応しています。",
+    "autonomia/minimax-m3.1-flash":
+      "MiniMax M3.1 Flash。画像・動画入力に対応した次世代の高速推論モデルで、Novita の直接エンドポイントから提供されます。Autonomia ではテキスト対話とストリーミングに対応しています。",
   },
   docs: {
     title: "クイックスタート",

@@ -54,7 +54,7 @@ export async function loadAutonomiaProviderOfferings(
   assertBaseCatalog(value, "catalog.offeringsName");
   if (
     typeof value.pricing_revision !== "string" ||
-    value.currency !== "autonomia_point" ||
+    value.currency !== "usd" ||
     value.billing_unit !== "per_million_tokens" ||
     !Array.isArray(value.offerings) ||
     value.offerings.some((offering) => !isRecord(offering) || typeof offering.id !== "string")

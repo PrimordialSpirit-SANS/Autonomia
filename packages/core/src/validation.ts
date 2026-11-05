@@ -44,6 +44,8 @@ const PROVIDER_API_STYLES = new Map([
   ["azure-openai", "openai-compatible"],
   ["scaleway", "openai-compatible"],
   ["ovhcloud", "openai-compatible"],
+  ["novita", "openai-compatible"],
+  ["liquid", "openai-compatible"],
   ["custom", "openai-compatible"],
 ]);
 const PROVIDERS = new Set(PROVIDER_API_STYLES.keys());

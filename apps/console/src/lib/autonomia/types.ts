@@ -288,7 +288,7 @@ export interface AutonomiaProviderOfferingsCatalog {
   pricing_revision: string;
   effective_at: string;
   updated_at: string;
-  currency: "autonomia_point";
+  currency: "usd";
   billing_unit: "per_million_tokens";
   offerings: AutonomiaProviderOffering[];
 }

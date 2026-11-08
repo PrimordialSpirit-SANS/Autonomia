@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-09-14",
+  "updated_at": "2026-11-05",
   "assets": [
     {
       "id": "autonomia",
@@ -199,6 +199,314 @@
       "status": "official-download",
       "fallback_label": "Z",
       "attribution": "沿用專案中的 Z.ai（智譜）官方標誌（本地檔）。"
+    },
+    {
+      "id": "meta",
+      "kind": "model-owner",
+      "name": "Meta",
+      "display_asset_url": "/brand/autonomia/providers/meta.svg",
+      "official_asset_url": "https://ai.meta.com/llama/",
+      "source_page_url": "https://ai.meta.com/llama/",
+      "status": "generated-badge",
+      "fallback_label": "M",
+      "attribution": "Meta 商標屬其所有權人;此處以 Autonomia 產生的字母徽章示意,供介面顯示。"
+    },
+    {
+      "id": "microsoft",
+      "kind": "model-owner",
+      "name": "Microsoft",
+      "display_asset_url": "/brand/autonomia/providers/microsoft.svg",
+      "official_asset_url": "https://azure.microsoft.com/en-us/products/ai-foundry",
+      "source_page_url": "https://azure.microsoft.com/en-us/products/ai-foundry",
+      "status": "generated-badge",
+      "fallback_label": "MS",
+      "attribution": "Microsoft 商標屬其所有權人;此處以 Autonomia 產生的字母徽章示意,供介面顯示。"
+    },
+    {
+      "id": "bytedance",
+      "kind": "model-owner",
+      "name": "ByteDance",
+      "display_asset_url": "/brand/autonomia/providers/bytedance.svg",
+      "official_asset_url": "https://seed.bytedance.com/",
+      "source_page_url": "https://seed.bytedance.com/",
+      "status": "generated-badge",
+      "fallback_label": "B",
+      "attribution": "ByteDance 商標屬其所有權人;此處以 Autonomia 產生的字母徽章示意,供介面顯示。"
+    },
+    {
+      "id": "xiaomi",
+      "kind": "model-owner",
+      "name": "Xiaomi",
+      "display_asset_url": "/brand/autonomia/providers/xiaomi.svg",
+      "official_asset_url": "https://www.xiaomi.com/",
+      "source_page_url": "https://www.xiaomi.com/",
+      "status": "generated-badge",
+      "fallback_label": "MI",
+      "attribution": "Xiaomi 商標屬其所有權人;此處以 Autonomia 產生的字母徽章示意,供介面顯示。"
+    },
+    {
+      "id": "inclusionai",
+      "kind": "model-owner",
+      "name": "inclusionAI",
+      "display_asset_url": "/brand/autonomia/providers/inclusionai.svg",
+      "official_asset_url": "https://huggingface.co/inclusionAI",
+      "source_page_url": "https://huggingface.co/inclusionAI",
+      "status": "generated-badge",
+      "fallback_label": "IN",
+      "attribution": "inclusionAI 商標屬其所有權人;此處以 Autonomia 產生的字母徽章示意,供介面顯示。"
+    },
+    {
+      "id": "upstage",
+      "kind": "model-owner",
+      "name": "Upstage",
+      "display_asset_url": "/brand/autonomia/providers/upstage.svg",
+      "official_asset_url": "https://www.upstage.ai/",
+      "source_page_url": "https://www.upstage.ai/",
+      "status": "generated-badge",
+      "fallback_label": "UP",
+      "attribution": "Upstage 商標屬其所有權人;此處以 Autonomia 產生的字母徽章示意,供介面顯示。"
+    },
+    {
+      "id": "nousresearch",
+      "kind": "model-owner",
+      "name": "Nous Research",
+      "display_asset_url": "/brand/autonomia/providers/nousresearch.svg",
+      "official_asset_url": "https://nousresearch.com/",
+      "source_page_url": "https://nousresearch.com/",
+      "status": "generated-badge",
+      "fallback_label": "N",
+      "attribution": "Nous Research 商標屬其所有權人;此處以 Autonomia 產生的字母徽章示意,供介面顯示。"
+    },
+    {
+      "id": "liquid",
+      "kind": "model-owner",
+      "name": "Liquid AI",
+      "display_asset_url": "/brand/autonomia/providers/liquid.svg",
+      "official_asset_url": "https://www.liquid.ai/",
+      "source_page_url": "https://www.liquid.ai/",
+      "status": "generated-badge",
+      "fallback_label": "L",
+      "attribution": "Liquid AI 商標屬其所有權人;此處以 Autonomia 產生的字母徽章示意,供介面顯示。"
+    },
+    {
+      "id": "inception",
+      "kind": "model-owner",
+      "name": "Inception",
+      "display_asset_url": "/brand/autonomia/providers/inception.svg",
+      "official_asset_url": "https://inceptionlabs.ai/",
+      "source_page_url": "https://inceptionlabs.ai/",
+      "status": "generated-badge",
+      "fallback_label": "IC",
+      "attribution": "Inception 商標屬其所有權人;此處以 Autonomia 產生的字母徽章示意,供介面顯示。"
+    },
+    {
+      "id": "thinkingmachines",
+      "kind": "model-owner",
+      "name": "Thinking Machines Lab",
+      "display_asset_url": "/brand/autonomia/providers/thinkingmachines.svg",
+      "official_asset_url": "https://thinkingmachines.ai/",
+      "source_page_url": "https://thinkingmachines.ai/",
+      "status": "generated-badge",
+      "fallback_label": "TM",
+      "attribution": "Thinking Machines Lab 商標屬其所有權人;此處以 Autonomia 產生的字母徽章示意,供介面顯示。"
+    },
+    {
+      "id": "sakana",
+      "kind": "model-owner",
+      "name": "Sakana AI",
+      "display_asset_url": "/brand/autonomia/providers/sakana.svg",
+      "official_asset_url": "https://sakana.ai/",
+      "source_page_url": "https://sakana.ai/",
+      "status": "generated-badge",
+      "fallback_label": "SA",
+      "attribution": "Sakana AI 商標屬其所有權人;此處以 Autonomia 產生的字母徽章示意,供介面顯示。"
+    },
+    {
+      "id": "rekaai",
+      "kind": "model-owner",
+      "name": "Reka",
+      "display_asset_url": "/brand/autonomia/providers/rekaai.svg",
+      "official_asset_url": "https://reka.ai/",
+      "source_page_url": "https://reka.ai/",
+      "status": "generated-badge",
+      "fallback_label": "R",
+      "attribution": "Reka 商標屬其所有權人;此處以 Autonomia 產生的字母徽章示意,供介面顯示。"
+    },
+    {
+      "id": "writer",
+      "kind": "model-owner",
+      "name": "Writer",
+      "display_asset_url": "/brand/autonomia/providers/writer.svg",
+      "official_asset_url": "https://writer.com/",
+      "source_page_url": "https://writer.com/",
+      "status": "generated-badge",
+      "fallback_label": "W",
+      "attribution": "Writer 商標屬其所有權人;此處以 Autonomia 產生的字母徽章示意,供介面顯示。"
+    },
+    {
+      "id": "ibm-granite",
+      "kind": "model-owner",
+      "name": "IBM Granite",
+      "display_asset_url": "/brand/autonomia/providers/ibm-granite.svg",
+      "official_asset_url": "https://www.ibm.com/granite",
+      "source_page_url": "https://www.ibm.com/granite",
+      "status": "generated-badge",
+      "fallback_label": "IB",
+      "attribution": "IBM Granite 商標屬其所有權人;此處以 Autonomia 產生的字母徽章示意,供介面顯示。"
+    },
+    {
+      "id": "tencent",
+      "kind": "model-owner",
+      "name": "Tencent",
+      "display_asset_url": "/brand/autonomia/providers/tencent.svg",
+      "official_asset_url": "https://cloud.tencent.com/",
+      "source_page_url": "https://cloud.tencent.com/",
+      "status": "generated-badge",
+      "fallback_label": "T",
+      "attribution": "Tencent 商標屬其所有權人;此處以 Autonomia 產生的字母徽章示意,供介面顯示。"
+    },
+    {
+      "id": "minimax",
+      "kind": "model-owner",
+      "name": "MiniMax",
+      "display_asset_url": "/brand/autonomia/providers/minimax.svg",
+      "official_asset_url": "https://www.minimax.io/",
+      "source_page_url": "https://www.minimax.io/",
+      "status": "generated-badge",
+      "fallback_label": "MM",
+      "attribution": "MiniMax 商標屬其所有權人;此處以 Autonomia 產生的字母徽章示意,供介面顯示。"
+    },
+    {
+      "id": "stepfun",
+      "kind": "model-owner",
+      "name": "StepFun",
+      "display_asset_url": "/brand/autonomia/providers/stepfun.svg",
+      "official_asset_url": "https://www.stepfun.com/",
+      "source_page_url": "https://www.stepfun.com/",
+      "status": "generated-badge",
+      "fallback_label": "SF",
+      "attribution": "StepFun 商標屬其所有權人;此處以 Autonomia 產生的字母徽章示意,供介面顯示。"
+    },
+    {
+      "id": "mistral",
+      "kind": "model-owner",
+      "name": "Mistral AI",
+      "display_asset_url": "/brand/autonomia/providers/mistral.svg",
+      "official_asset_url": "https://mistral.ai/",
+      "source_page_url": "https://mistral.ai/",
+      "status": "generated-badge",
+      "fallback_label": "MT",
+      "attribution": "Mistral AI 商標屬其所有權人;此處以 Autonomia 產生的字母徽章示意,供介面顯示。"
+    },
+    {
+      "id": "cohere",
+      "kind": "model-owner",
+      "name": "Cohere",
+      "display_asset_url": "/brand/autonomia/providers/cohere.svg",
+      "official_asset_url": "https://cohere.com/",
+      "source_page_url": "https://cohere.com/",
+      "status": "generated-badge",
+      "fallback_label": "C",
+      "attribution": "Cohere 商標屬其所有權人;此處以 Autonomia 產生的字母徽章示意,供介面顯示。"
+    },
+    {
+      "id": "perplexity",
+      "kind": "model-owner",
+      "name": "Perplexity",
+      "display_asset_url": "/brand/autonomia/providers/perplexity.svg",
+      "official_asset_url": "https://www.perplexity.ai/",
+      "source_page_url": "https://www.perplexity.ai/",
+      "status": "generated-badge",
+      "fallback_label": "P",
+      "attribution": "Perplexity 商標屬其所有權人;此處以 Autonomia 產生的字母徽章示意,供介面顯示。"
+    },
+    {
+      "id": "nvidia",
+      "kind": "model-owner",
+      "name": "NVIDIA",
+      "display_asset_url": "/brand/autonomia/providers/nvidia.svg",
+      "official_asset_url": "https://www.nvidia.com/",
+      "source_page_url": "https://www.nvidia.com/",
+      "status": "generated-badge",
+      "fallback_label": "N",
+      "attribution": "NVIDIA 商標屬其所有權人;此處以 Autonomia 產生的字母徽章示意,供介面顯示。"
+    },
+    {
+      "id": "amazon",
+      "kind": "model-owner",
+      "name": "Amazon",
+      "display_asset_url": "/brand/autonomia/providers/amazon.svg",
+      "official_asset_url": "https://aws.amazon.com/",
+      "source_page_url": "https://aws.amazon.com/",
+      "status": "generated-badge",
+      "fallback_label": "A",
+      "attribution": "Amazon 商標屬其所有權人;此處以 Autonomia 產生的字母徽章示意,供介面顯示。"
+    },
+    {
+      "id": "novita",
+      "kind": "model-owner",
+      "name": "Novita AI",
+      "display_asset_url": "/brand/autonomia/providers/novita.svg",
+      "official_asset_url": "https://novita.ai/",
+      "source_page_url": "https://novita.ai/",
+      "status": "generated-badge",
+      "fallback_label": "NV",
+      "attribution": "Novita AI 商標屬其所有權人;此處以 Autonomia 產生的字母徽章示意,供介面顯示。"
+    },
+    {
+      "id": "openrouter",
+      "kind": "model-owner",
+      "name": "OpenRouter",
+      "display_asset_url": "/brand/autonomia/providers/openrouter.svg",
+      "official_asset_url": "https://openrouter.ai/",
+      "source_page_url": "https://openrouter.ai/",
+      "status": "generated-badge",
+      "fallback_label": "OR",
+      "attribution": "OpenRouter 商標屬其所有權人;此處以 Autonomia 產生的字母徽章示意,供介面顯示。"
+    },
+    {
+      "id": "openrouter-provider",
+      "kind": "provider",
+      "name": "OpenRouter",
+      "display_asset_url": "/brand/autonomia/providers/openrouter.svg",
+      "official_asset_url": "https://openrouter.ai/",
+      "source_page_url": "https://openrouter.ai/",
+      "status": "generated-badge",
+      "fallback_label": "OR",
+      "attribution": "沿用 OpenRouter 的字母徽章資產。"
+    },
+    {
+      "id": "novita-provider",
+      "kind": "provider",
+      "name": "Novita AI",
+      "display_asset_url": "/brand/autonomia/providers/novita.svg",
+      "official_asset_url": "https://novita.ai/",
+      "source_page_url": "https://novita.ai/",
+      "status": "generated-badge",
+      "fallback_label": "NV",
+      "attribution": "沿用 Novita AI 的字母徽章資產。"
+    },
+    {
+      "id": "liquid-provider",
+      "kind": "provider",
+      "name": "Liquid AI",
+      "display_asset_url": "/brand/autonomia/providers/liquid.svg",
+      "official_asset_url": "https://www.liquid.ai/",
+      "source_page_url": "https://www.liquid.ai/",
+      "status": "generated-badge",
+      "fallback_label": "L",
+      "attribution": "沿用 Liquid AI 的字母徽章資產。"
+    },
+    {
+      "id": "perplexity-provider",
+      "kind": "provider",
+      "name": "Perplexity API",
+      "display_asset_url": "/brand/autonomia/providers/perplexity.svg",
+      "official_asset_url": "https://www.perplexity.ai/",
+      "source_page_url": "https://www.perplexity.ai/",
+      "status": "generated-badge",
+      "fallback_label": "P",
+      "attribution": "沿用 Perplexity 的字母徽章資產。"
     }
   ]
 }

@@ -96,7 +96,8 @@ function fakeBilling(overrides: any = {}) {
 test("public model list exposes only stable Autonomia model metadata", () => {
   const list = listPublicAutonomiaModels();
   assert.equal(list.object, "list");
-  assert.equal(list.data.length, 22);
+  // 22 個出廠模型 + 2026-11-05 覆蓋加強新增的 36 個(OpenRouter 聚合 + Novita/Liquid 直接端點)
+  assert.equal(list.data.length, 58);
   for (const model of list.data) {
     assert.match(model.id, /^autonomia\//);
     assert.equal(model.object, "model");

@@ -59,6 +59,26 @@ versioning follows [SemVer](https://semver.org/).
 
 ### Added
 
+- **Provider coverage enhancement — OpenRouter aggregation pool and
+  Novita/Liquid direct routes (refs #54).** Two openai-compatible upstream
+  providers join the registry: `novita` (`api.novita.ai/v3/openai`) and
+  `liquid` (`inference.liquid.ai/v1`). The `openrouter-production` pool
+  activates 33 aggregated routes covering the Meta, Microsoft, ByteDance,
+  Xiaomi, inclusionAI, Upstage, Nous, Inception, Thinking Machines,
+  Sakana, Reka, Writer, IBM, Tencent, MiniMax, StepFun, Mistral, Cohere,
+  Perplexity, NVIDIA and Amazon model families, and 36 catalog models
+  sourced from the live OpenRouter catalog (455 models surveyed) and
+  Novita's model list gain real per-million USD pricing in
+  `backend-pricing.v1.json` (58 models total). Dual-source fallback chains
+  now cover deepseek-v3.1/r1, glm-4.6/4.5-air, qwen-plus, sonar-pro,
+  lfm-2.5 and mimo-v2.6 (direct + OpenRouter), with Novita third-tier
+  fallbacks for deepseek-v4-pro and kimi-k3 (price-verified). The console
+  catalog syncs to 58 models / 74 provider offerings, the brand manifest
+  gains 26 generated provider SVG badges, and model descriptions land in
+  all six UI languages; the offerings loader currency guard
+  (`autonomia_point` → `usd`) is fixed so the provider-offerings catalog
+  loads at runtime. `docs/PROVIDERS.md` documents the 2026-11-05
+  enhancement notes.
 - **CSRF token bootstrap endpoint `GET /api/auth/csrf` (F-01, S-16).** In
   the documented cross-host, same-site topology (`console.example.com` +
   `api.example.com`) the host-only `csrf_token` cookie is unreadable from

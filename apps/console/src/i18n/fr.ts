@@ -359,6 +359,79 @@ const fr: Dictionary = {
       "Le modèle d'embeddings texte économique d'OpenAI pour la recherche sémantique, la classification et la récupération RAG. Disponible via le point de terminaison /v1/embeddings ; seuls les tokens d'entrée sont facturés.",
     "autonomia/text-embedding-3-large":
       "Le modèle d'embeddings texte de la plus haute qualité d'OpenAI, pour la recherche sémantique et le RAG exigeant un meilleur rappel. Disponible via le point de terminaison /v1/embeddings ; seuls les tokens d'entrée sont facturés.",
+
+    "autonomia/llama-4-maverick":
+      "Le modèle phare multimodal MoE de Meta (Llama 4, 17B actifs, 128 experts), avec entrée texte et image native.Disponible via Autonomia en chat textuel et streaming.",
+    "autonomia/llama-4-scout":
+      "Le modèle Llama 4 léger et multimodal de Meta, avec une fenêtre de contexte longue de premier plan.Disponible via Autonomia en chat textuel et streaming.",
+    "autonomia/phi-4":
+      "Le petit modèle haute efficacité de Microsoft qui rivalise avec des modèles bien plus grands en mathématiques et en raisonnement.Disponible via Autonomia en chat textuel et streaming.",
+    "autonomia/seed-1.6":
+      "Le vaisseau amiral multimodal de ByteDance Seed, excellent en compréhension visuelle et en planification d'agents.Disponible via Autonomia en chat textuel et streaming.",
+    "autonomia/mimo-v2.5-pro":
+      "Le modèle phare de raisonnement MiMo de Xiaomi, avec un contexte d'un million de tokens et un mode de réflexion profonde.Disponible via Autonomia en chat textuel et streaming.",
+    "autonomia/ling-3.1-flash":
+      "Le Ling 3.1 Flash open-weight d'inclusionAI, réputé pour sa latence très basse et son contexte d'un million de tokens.Disponible via Autonomia en chat textuel et streaming.",
+    "autonomia/solar-pro4":
+      "Le Solar Pro 4 d'Upstage, modèle ouvert à long contexte optimisé pour le coréen et le multilingue.Disponible via Autonomia en chat textuel et streaming.",
+    "autonomia/hermes-4-405b":
+      "L'Hermes 4 open-weight de Nous Research (405B), réputé pour la qualité de son alignement et ses appels d'outils agentiques.Disponible via Autonomia en chat textuel et streaming.",
+    "autonomia/lfm-2.5-24b-a2b":
+      "Le LFM 2.5 de Liquid AI (24B-A2B), architecture hybride équilibrant efficacité mémoire et vitesse d'inférence.Disponible via Autonomia en chat textuel et streaming.",
+    "autonomia/mercury-3":
+      "Le Mercury 3 d'Inception, fondé sur la diffusion, offrant une génération ultra-rapide sur des contextes d'un million de tokens.Disponible via Autonomia en chat textuel et streaming.",
+    "autonomia/inkling":
+      "L'Inkling de Thinking Machines Lab, modèle nouvelle génération axé sur le raisonnement longue chaîne et les tâches agentiques.Disponible via Autonomia en chat textuel et streaming.",
+    "autonomia/fugu-max":
+      "Le vaisseau amiral multimodal de Sakana AI, construit par fusion de modèles avec un contexte d'un million de tokens.Disponible via Autonomia en chat textuel et streaming.",
+    "autonomia/reka-flash-3":
+      "Reka Flash 3, modèle ouvert équilibrant vitesse et qualité pour le raisonnement quotidien.Disponible via Autonomia en chat textuel et streaming.",
+    "autonomia/palmyra-x5":
+      "Le Palmyra X5 de Writer, modèle à contexte d'un million conçu pour le RAG d'entreprise et les longs documents.Disponible via Autonomia en chat textuel et streaming.",
+    "autonomia/granite-4.2-8b":
+      "IBM Granite 4.2 (8B), modèle ouvert léger entraîné sur des données d'entreprise, idéal pour la classification et le résumé.Disponible via Autonomia en chat textuel et streaming.",
+    "autonomia/hunyuan-a13b":
+      "Le Hunyuan A13B open-weight de Tencent, MoE offrant dialogue et raisonnement économiques avec 13B de paramètres actifs.Disponible via Autonomia en chat textuel et streaming.",
+    "autonomia/deepseek-v3.1":
+      "DeepSeek V3.1, modèle phare open-weight mêlant conversation générale et raisonnement, avec double routage officiel et OpenRouter.Disponible via Autonomia en chat textuel et streaming.",
+    "autonomia/deepseek-r1":
+      "DeepSeek R1, modèle phare de raisonnement open-weight entraîné par apprentissage par renforcement, avec double routage.Disponible via Autonomia en chat textuel et streaming.",
+    "autonomia/kimi-k2.5":
+      "Le Kimi K2.5 de Moonshot AI, modèle phare open-weight optimisé pour les tâches agentiques et l'usage d'outils.Disponible via Autonomia en chat textuel et streaming.",
+    "autonomia/kimi-k2-thinking":
+      "Kimi K2 Thinking, la variante à raisonnement profond de Moonshot, avec réflexion entrelacée et appels d'outils.Disponible via Autonomia en chat textuel et streaming.",
+    "autonomia/glm-4.6":
+      "Le GLM-4.6 de Z.ai, modèle phare open-weight au codage et aux capacités agentiques renforcés, avec double routage.Disponible via Autonomia en chat textuel et streaming.",
+    "autonomia/glm-4.5-air":
+      "GLM-4.5 Air, conserve l'essentiel des capacités phares à moindre coût, avec double routage.Disponible via Autonomia en chat textuel et streaming.",
+    "autonomia/qwen-plus":
+      "Le Qwen-Plus d'Alibaba, alliant contexte d'un million de tokens et excellent rapport qualité-prix, avec double routage.Disponible via Autonomia en chat textuel et streaming.",
+    "autonomia/minimax-m2":
+      "MiniMax M2, modèle phare MoE open-weight offrant performance agentique et de raisonnement à coût maîtrisé.Disponible via Autonomia en chat textuel et streaming.",
+    "autonomia/step-3.7-flash":
+      "Le Step 3.7 Flash de StepFun, modèle économique équilibrant vitesse et compréhension multimodale.Disponible via Autonomia en chat textuel et streaming.",
+    "autonomia/devstral":
+      "Le Devstral 2 de Mistral, modèle de code conçu pour l'ingénierie logicielle agentique de type SWE-Bench.Disponible via Autonomia en chat textuel et streaming.",
+    "autonomia/command-a":
+      "Cohere Command A, modèle d'instruction à haut débit pensé pour le RAG d'entreprise et le multilingue.Disponible via Autonomia en chat textuel et streaming.",
+    "autonomia/sonar-pro":
+      "Perplexity Sonar Pro, modèle de recherche combinant retrieval web en direct et réponses sourcées, avec double routage.Disponible via Autonomia en chat textuel et streaming.",
+    "autonomia/nemotron-3-ultra":
+      "NVIDIA Nemotron 3 Ultra (550B-A55B), modèle phare open-weight de raisonnement, optimisé pour le raisonnement scientifique et programmatique.Disponible via Autonomia en chat textuel et streaming.",
+    "autonomia/nova-premier":
+      "Amazon Nova Premier, le modèle phare multimodal d'AWS pour la compréhension de documents complexes, d'images et de vidéos.Disponible via Autonomia en chat textuel et streaming.",
+    "autonomia/nova-lite":
+      "Amazon Nova Lite, le modèle multimodal ultra-économique d'AWS pour la compréhension visuelle à haut débit.Disponible via Autonomia en chat textuel et streaming.",
+    "autonomia/kimi-k3.1-pro":
+      "Le Kimi K3.1 Pro de Moonshot, modèle phare à long contexte avec entrée image et vidéo, servi via Novita.Disponible via Autonomia en chat textuel et streaming.",
+    "autonomia/hy4":
+      "Hunyuan 4 (Hy4) de Tencent en version officielle, contexte d'un million de tokens et compréhension multimodale, servi via Novita.Disponible via Autonomia en chat textuel et streaming.",
+    "autonomia/mimo-v2.6-flash":
+      "Le MiMo v2.6 Flash de Xiaomi, modèle de raisonnement rapide avec entrées image, vidéo et audio, double routage via Novita et OpenRouter.Disponible via Autonomia en chat textuel et streaming.",
+    "autonomia/mimo-v2.6-pro":
+      "Le MiMo v2.6 Pro de Xiaomi, modèle phare alliant raisonnement profond et entrée multimodale, double routage via Novita et OpenRouter.Disponible via Autonomia en chat textuel et streaming.",
+    "autonomia/minimax-m3.1-flash":
+      "Le MiniMax M3.1 Flash, modèle de raisonnement rapide nouvelle génération avec entrées image et vidéo, servi via Novita.Disponible via Autonomia en chat textuel et streaming.",
   },
   docs: {
     title: "Démarrage rapide",

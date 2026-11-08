@@ -112,6 +112,29 @@ versioning follows [SemVer](https://semver.org/).
 
 ### Changed
 
+- **Console `/home` rebuilt as an architecture flow; auth screens split
+  (follow-up to #52 / #53).** The landing page replaces the hero-plus-
+  terminal shape with a `landing-*` layout that answers where the gateway
+  actually sits: a three-column architecture figure (your application →
+  `baseURL → /api/ai/v1` → the gateway's key / routing / billing services
+  → upstream providers) whose caption states plainly that inference
+  requests are routed to external providers; pricing moves into a real
+  table with separate input and output per-million columns; the
+  request-example block lets both the model and the code format be
+  selected, copies out a runnable request (no line numbers, no fabricated
+  response body) and warns that `AUTONOMIA_API_KEY` must be set first;
+  model choices stay limited to chat-capable catalog entries, navigation
+  and pricing survive a failed or chat-less catalog, brand assets degrade
+  to text without losing model names or prices, and a skip-to-content
+  link now precedes the hero. `/login` and `/register` become a split
+  workspace-statement-plus-form layout with a password visibility toggle,
+  an explicit minimum-length hint matching the gateway's 8-character
+  rule, and `role="status"` / `role="alert"` result messaging. i18n:
+  `home.*` / `login.*` grow from 352 to 379 keys per dictionary (27 net
+  new, 8 rewritten) across all six locales, parity pinned by
+  `i18n.test.ts`, with marketing phrasing replaced by verifiable copy.
+  New `HomePage.test.tsx` (6 tests) and `LoginPage.test.tsx` (17 tests).
+
 - **Console `/home` redesigned as an engineering spec sheet.** The landing
   page drops its template look (badge pill, centered hero, four-up metric
   band, icon feature cards, six model cards, boxed 01/02/03 steps, gradient
